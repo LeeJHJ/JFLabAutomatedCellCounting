@@ -1,0 +1,58 @@
+# BraiAn.yml -- qupath-extension-braian (BraiAnDetect) v1.1.0 config
+# Source schema: qupath-extension-braian v1.1.0 config
+# (github.com/carlocastoldi/qupath-extension-braian/blob/master/BraiAn.yml,
+#  field names cross-checked against the installed jar's decompiled
+#  qupath/ext/braian/config/*.class -- see 02-RESEARCH.md "Standard Stack".)
+#
+# One GLOBAL config for the whole M3 series (D-03) -- do NOT re-tune per section.
+#
+# Topology (deliberate, non-default): a SINGLE channelDetections entry rooted
+# at the DAPI-T4 nuclear anchor, with BOTH marker classifiers (Fos, TdT) nested
+# under it -- NOT the upstream example's per-marker-channel topology (which
+# would require geometric-overlap merging via OverlappingDetections). Per
+# CLAUDE.md, colocalization must be nucleus-anchored ("nucleus contains marker
+# centroid"), never proximity/overlap heuristics. Applying both classifiers
+# sequentially to the SAME DAPI-derived object set (SingleClassifier merges the
+# resulting classes onto the same object) is how Double+ arises here -- no
+# separate overlap step needed. See 02-RESEARCH.md Pattern 1 / Pitfall 1.
+#
+# [ASSUMED] seed values (Assumptions A1, primary TRAP2 paper source returned
+# HTTP 403 during research): sigmaMicrons, minAreaMicrons, maxAreaMicrons,
+# cellExpansionMicrons. These are STARTING SEEDS ONLY, tuned against the D-05
+# empirical gates (nucleus-area peak 50-150 um^2; DAPI density 500-2000/mm^2)
+# in Plan 02-02 on M3 062926 3 plane entry 1 (DG + CA1) -- not locked numbers.
+
+classForDetections: null
+
+detectionsCheck:
+  apply: false          # D-07: Fos+ negative-control gate deferred, not this phase
+  controlChannel: null
+
+channelDetections:
+  - name: "DAPI-T4"                          # nuclear anchor -- matches server.json channel name exactly
+    parameters:
+      requestedPixelSizeMicrons: 0.6905355   # matches server.json PhysicalSizeX (A4) -- no resampling
+      backgroundRadiusMicrons: 10
+      backgroundByReconstruction: true
+      medianRadiusMicrons: 0.0
+      sigmaMicrons: 2.0                      # [ASSUMED] TRAP2-paper seed -- tune per D-04/D-05
+      minAreaMicrons: 20.0                   # [ASSUMED] TRAP2-paper seed -- tune per D-04/D-05
+      maxAreaMicrons: 150.0                  # [ASSUMED] TRAP2-paper seed, toward D-05's 50-150 um^2 peak gate
+      histogramThreshold:                    # D-01: histogram-relative detection threshold, NOT an absolute `threshold`
+        resolutionLevel: 0
+        smoothWindowSize: 15
+        peakProminence: 100
+        nPeak: 1
+      watershedPostProcess: true
+      cellExpansionMicrons: 5.0              # D-03 discretion seed (TRAP2 paper / QuPath default) -- creates the
+                                              # Cytoplasm compartment the TdT classifier reads; tune DG bleed per D-04
+      includeNuclei: true
+      smoothBoundaries: true
+      makeMeasurements: true
+    classifiers:
+      - channel: "AF488-T3"
+        name: "Fos_Classifier_20x"           # resolves to <project>/classifiers/object_classifiers/Fos_Classifier_20x.json
+        annotationsToClassify: []            # empty = apply to all detections
+      - channel: "AF568-T2"
+        name: "TdT_classifier"               # resolves to <project>/classifiers/object_classifiers/TdT_classifier.json
+        annotationsToClassify: []
