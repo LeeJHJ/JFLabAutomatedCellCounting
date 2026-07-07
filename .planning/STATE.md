@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-stopped_at: Phase 2 context gathered
-last_updated: "2026-07-07T15:42:49.793Z"
+stopped_at: "Plan 02-01 executed (BraiAn.yml + classifiers + QC harness); next: Plan 02-02 tune + lock"
+last_updated: "2026-07-07T22:12:23.534Z"
 progress:
   total_phases: 4
   completed_phases: 1
-  total_plans: 3
-  completed_plans: 3
+  total_plans: 5
+  completed_plans: 4
   percent: 25
 ---
 
@@ -24,15 +24,15 @@ progress:
 
 **Core value:** Biologically plausible TdT+/Fos+/Double+ counts per atlas region for M3 hippocampus, with locked detection parameters and imaging optimization notes ready for the full series.
 
-**Current focus:** Phase 02 — detection-parameter-lock (context gathered, ready to plan)
+**Current focus:** Phase 02 — detection-parameter-lock
 
 ---
 
 ## Current Position
 
 **Active phase:** Phase 2 — Detection Parameter Lock
-**Active plan:** None yet (CONTEXT.md gathered; next: /gsd-plan-phase 2)
-**Status:** Ready to execute
+**Active plan:** 02-02 (tune + lock; 02-01 complete)
+**Status:** Executing Phase 02
 
 **Progress bar:**
 
@@ -45,7 +45,7 @@ progress:
 **Phase completion:**
 
 - Phase 1: Complete (3/3 plans done, 2026-07-02)
-- Phase 2: Context gathered, not planned
+- Phase 2: In progress (1/2 plans done — 02-01 complete 2026-07-07; 02-02 tune+lock next)
 - Phase 3: Not started
 - Phase 4: Not started
 
@@ -58,10 +58,11 @@ progress:
 | Phases total | 4 |
 | Phases complete | 1 |
 | Requirements mapped | 10/10 |
-| Plans written | 3 |
-| Plans complete | 3 |
+| Plans written | 5 |
+| Plans complete | 4 |
 
 ---
+| Phase 02 P01 | 12min | 3 tasks | 6 files |
 
 ## Accumulated Context
 
@@ -77,11 +78,15 @@ progress:
 | Export in microns not pixels | CCFv3 is in microns; pixel export produces wrong atlas positions | Locked |
 | 4-argument loadWarpedAtlasAnnotations form | Verified from installed JAR bytecode; internal AtlasOntology overload not for Groovy scripts | Locked (Plan 01-01) |
 | resolveHierarchy() after load | Claude discretion per CONTEXT.md; required for BraiAnDetect parent-child region assignment | Locked (Plan 01-01) |
+| Single DAPI-T4-anchored channelDetections entry (not per-marker + OverlappingDetections) | Nucleus-anchored colocalization per CLAUDE.md; merged SingleClassifier application on the same DAPI-derived object set produces Double+ without geometric overlap | Locked (Plan 02-01) |
+| histogramThreshold (not absolute threshold) in BraiAn.yml | D-01: series-scalable, avoids brightness-drift false negatives/positives across sections | Locked (Plan 02-01) |
+| TdT classifier reads Cytoplasm: AF568-T2 mean (was Nucleus) | TdTomato is cytosolic; prior TRAP2TdT_Classifier_20x.json analog had the wrong compartment (real mis-count bug) | Locked (Plan 02-01) |
+| All BraiAn.yml sigma/area/threshold values are [ASSUMED] TRAP2-paper seeds | Primary paper source returned HTTP 403 during research; not load-bearing, D-05 empirical gates will catch a bad seed | Pending tuning (Plan 02-02) |
 
 ### Critical Risks (to monitor)
 
-- TdTomato classified from nuclear compartment instead of cytoplasmic ring — verify in Phase 2
-- Channel name mismatch between OME-TIFF and BraiAn.yml/classifiers — silent failure (zero cells detected per channel)
+- TdTomato classified from nuclear compartment instead of cytoplasmic ring — FIXED in Plan 02-01 (TdT_classifier.json now reads Cytoplasm: AF568-T2 mean); still needs a live detection run + visual DG bleed-check in Plan 02-02 to confirm no over/under-count in practice
+- Channel name mismatch between OME-TIFF and BraiAn.yml/classifiers — silent failure (zero cells detected per channel); BraiAn.yml + both classifiers verified to use exact server.json channel names (AF568-T2, AF488-T3, DAPI-T4) in Plan 02-01, but not yet exercised against a live detection run
 - Duplicate ABBA ROI loads double-count regions — `clearAllObjects()` guard in SCRI-01 (mitigated in Plan 01-01)
 - Atlas coordinate unit mismatch (mm vs µm) — verify Atlas_X range in Phase 3
 
@@ -98,7 +103,8 @@ progress:
 
 - [x] Phase 1 complete — script authored, ABBA registration (BigWarp) done, QC approved (2026-07-02)
 - [x] Phase 2 context gathered (2026-07-07) — threshold + tuning decisions locked in CONTEXT.md
-- [ ] Plan Phase 2: /gsd-plan-phase 2 (author BraiAn.yml + verify Fos classifier)
+- [x] Plan 02-01 executed (2026-07-07) — BraiAn.yml, Fos/TdT classifiers, and qc_detection_gates.groovy authored
+- [ ] Plan 02-02: run BraiAnDetect in QuPath on M3 062926 3 plane entry 1, run qc_detection_gates.groovy, tune sigma/area/threshold against D-05 gates (DG + CA1), write 02-LOCK-RECORD.md
 
 ### Blockers
 
@@ -114,13 +120,13 @@ None (Plan 02 is a human GUI step in Fiji; not a blocker, just a handoff).
 
 ## Session Continuity
 
-**Last session:** 2026-07-07T14:15:35.622Z
-**Stopped at:** Phase 2 context gathered
-**Resume file:** .planning/phases/02-detection-parameter-lock/02-CONTEXT.md
+**Last session:** 2026-07-07T22:12:08.238Z
+**Stopped at:** Plan 02-01 executed (BraiAn.yml + classifiers + QC harness); next: Plan 02-02 tune + lock
+**Resume file:** None
 
-**To resume:** Phase 1 is complete (atlas annotations loaded + QC approved on M3 062926 entry 1 via DeepSlice → tilt → BigWarp). Phase 2 context is gathered (`02-CONTEXT.md`). Next: `/gsd-plan-phase 2` to plan authoring `BraiAn.yml` (histogram-relative thresholds, 5µm cytoplasmic expansion) and verifying the Fos classifier reads the nuclear compartment. Tune on M3 062926 entry 1, DG + CA1.
+**To resume:** Plan 02-01 authored the full scriptable half of the detection-parameter lock: `BraiAn.yml` (single DAPI-T4-anchored channelDetections entry, histogramThreshold, cellExpansionMicrons 5.0), `Fos_Classifier_20x.json` (reused, nuclear) and `TdT_classifier.json` (rebuilt, cytoplasmic — fixed the Nucleus-compartment bug), and `scripts/qc_detection_gates.groovy` (+ project hard-copy) for the D-05 gate measurements. All numeric seeds ([ASSUMED] sigma/area/thresholds) are unlocked. Next: Plan 02-02 (human-in-the-loop) — run BraiAnDetect in QuPath on M3 062926 3 plane entry 1, run `qc_detection_gates.groovy`, tune params against the D-05 hard gates (nucleus-area peak 50–150µm² AND DAPI density 500–2000/mm² on both DG and CA1), and write `02-LOCK-RECORD.md` once both PASS.
 
-**Phase 2 locked decisions (see 02-CONTEXT.md):** histogram-relative detection threshold + relative classifier cutoffs + one global BraiAn.yml (drift-monitored via SERIES-02); hard lock gates = nucleus-area peak 50–150µm² AND DAPI density 500–2000/mm²; Double+ ratio advisory only; Fos+ negative-control gate deferred. Reuse `Fos_Classifier_20x.json` (correct nuclear compartment), rebuild TdT classifier to read Cytoplasm.
+**Phase 2 locked decisions (see 02-CONTEXT.md):** histogram-relative detection threshold + relative classifier cutoffs + one global BraiAn.yml (drift-monitored via SERIES-02); hard lock gates = nucleus-area peak 50–150µm² AND DAPI density 500–2000/mm²; Double+ ratio advisory only; Fos+ negative-control gate deferred. Reuse `Fos_Classifier_20x.json` (correct nuclear compartment), rebuild TdT classifier to read Cytoplasm — both done in Plan 02-01.
 
 **Side task:** TRACR registration for another lab in progress (rough, may need a per-section second pass) — see memory.
 

@@ -62,10 +62,10 @@
   3. `Fos_classifier.json` feature field reads `Nucleus: AF488-T3 mean` (not cytoplasm), confirmed by opening the JSON and by the detection overlay showing Fos+ only in nuclei
   4. Visual overlay on one representative dense region (e.g., DG) shows cytoplasmic expansion rings not bleeding into adjacent nuclei
 
-**Plans**: 2 plans
+**Plans**: 1/2 plans executed
 **Wave 1**
 
-- [ ] 02-01-PLAN.md — Author BraiAn.yml (single DAPI-anchored entry, histogramThreshold, cellExpansion 5µm), both compartment-correct classifiers, and the D-05 QC harness
+- [x] 02-01-PLAN.md — Author BraiAn.yml (single DAPI-anchored entry, histogramThreshold, cellExpansion 5µm), both compartment-correct classifiers, and the D-05 QC harness
 
 **Wave 2** *(blocked on Wave 1 completion)*
 
@@ -114,7 +114,7 @@
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Atlas Registration and ROI Loading | 3/3 | Complete    | 2026-07-02 |
-| 2. Detection Parameter Lock | 0/2 | Not started | - |
+| 2. Detection Parameter Lock | 1/2 | In Progress|  |
 | 3. Detection Script and Single-Section End-to-End Test | 0/? | Not started | - |
 | 4. Biological Plausibility Validation and Imaging Optimization Notes | 0/? | Not started | - |
 
