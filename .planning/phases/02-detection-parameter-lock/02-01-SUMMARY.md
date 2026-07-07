@@ -137,3 +137,20 @@ Plan 02-02 can proceed immediately: `BraiAn.yml`, both classifier JSONs, and the
 ---
 *Phase: 02-detection-parameter-lock*
 *Completed: 2026-07-07*
+
+## Self-Check: PASSED
+
+All 7 created files verified present on disk:
+- FOUND: `M3 Hippocampus 20x 062926 3 plane/BraiAn.yml`
+- FOUND: `M3 Hippocampus 20x 062926 3 plane/classifiers/object_classifiers/Fos_Classifier_20x.json`
+- FOUND: `M3 Hippocampus 20x 062926 3 plane/classifiers/object_classifiers/TdT_classifier.json`
+- FOUND: `scripts/qc_detection_gates.groovy`
+- FOUND: `M3 Hippocampus 20x 062926 3 plane/scripts/qc_detection_gates.groovy`
+- FOUND: `scripts/check_classifier_compartment.py`
+- FOUND: `.planning/phases/02-detection-parameter-lock/02-01-SUMMARY.md`
+
+All 4 commit hashes verified present in `git log --oneline --all`:
+- FOUND: `5e3dc3b` (Task 1)
+- FOUND: `1b6b05f` (Task 2)
+- FOUND: `8dcdf43` (Task 3)
+- FOUND: `edf980d` (Summary)
