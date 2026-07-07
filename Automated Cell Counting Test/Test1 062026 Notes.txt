@@ -1,0 +1,7 @@
+LA DAPI Data:
+Perimeter: 4259.2
+Area (um^2): 311775.8
+Counts: 801
+
+
+

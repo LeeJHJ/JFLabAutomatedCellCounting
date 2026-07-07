@@ -1,0 +1,17 @@
+{
+  "object_classifier_type": "SimpleClassifier",
+  "function": {
+    "classifier_fun": "ClassifyByMeasurementFunction",
+    "measurement": "Nucleus: AF568-T2 mean",
+    "pathClassBelow": "Negative",
+    "pathClassEquals": "Other",
+    "pathClassAbove": "Other",
+    "threshold": 10200.8443
+  },
+  "pathClasses": [
+    "Negative",
+    "Other"
+  ],
+  "filter": "DETECTIONS_ALL",
+  "timestamp": 1782251202151
+}

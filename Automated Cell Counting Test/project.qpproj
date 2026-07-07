@@ -1,0 +1,146 @@
+{
+  "version": "0.6.0",
+  "createTimestamp": 1781908285616,
+  "modifyTimestamp": 1781908285616,
+  "uri": "file:/home/jflab/Analysis/Automated%20Cell%20Counting%20Test/project.qpproj",
+  "lastID": 1,
+  "images": [
+    {
+      "serverBuilder": {
+        "builderType": "pyramidize",
+        "builder": {
+          "builderType": "uri",
+          "providerClassName": "qupath.lib.images.servers.bioformats.BioFormatsServerBuilder",
+          "uri": "file:/home/jflab/Analysis/Automated%20Cell%20Counting/M3_scene1_MIP.ome.tiff",
+          "args": [
+            "--series",
+            "0"
+          ],
+          "metadata": {
+            "name": "M3_scene1_MIP.ome.tiff",
+            "width": 6504,
+            "height": 4200,
+            "sizeZ": 1,
+            "sizeT": 1,
+            "channelType": "DEFAULT",
+            "isRGB": false,
+            "pixelType": "UINT8",
+            "levels": [
+              {
+                "downsample": 1.0,
+                "width": 6504,
+                "height": 4200
+              }
+            ],
+            "channels": [
+              {
+                "name": "DAPI-T1",
+                "color": -16735745
+              },
+              {
+                "name": "Cy3-T1",
+                "color": -21248
+              },
+              {
+                "name": "EGFP-T2",
+                "color": -16711845
+              },
+              {
+                "name": "Cy5-T2",
+                "color": -65516
+              }
+            ],
+            "pixelCalibration": {
+              "pixelWidth": {
+                "value": 1.65728521,
+                "unit": "µm"
+              },
+              "pixelHeight": {
+                "value": 1.65728521,
+                "unit": "µm"
+              },
+              "zSpacing": {
+                "value": 1.0,
+                "unit": "z-slice"
+              },
+              "timeUnit": "SECONDS",
+              "timepoints": []
+            },
+            "magnification": 10.0,
+            "preferredTileWidth": 6504,
+            "preferredTileHeight": 4200
+          }
+        },
+        "metadata": {
+          "name": "M3_scene1_MIP.ome.tiff",
+          "width": 6504,
+          "height": 4200,
+          "sizeZ": 1,
+          "sizeT": 1,
+          "channelType": "DEFAULT",
+          "isRGB": false,
+          "pixelType": "UINT8",
+          "levels": [
+            {
+              "downsample": 1.0,
+              "width": 6504,
+              "height": 4200
+            },
+            {
+              "downsample": 4.0,
+              "width": 1626,
+              "height": 1050
+            },
+            {
+              "downsample": 16.0,
+              "width": 406,
+              "height": 262
+            }
+          ],
+          "channels": [
+            {
+              "name": "DAPI-T1",
+              "color": -16735745
+            },
+            {
+              "name": "Cy3-T1",
+              "color": -21248
+            },
+            {
+              "name": "EGFP-T2",
+              "color": -16711845
+            },
+            {
+              "name": "Cy5-T2",
+              "color": -65516
+            }
+          ],
+          "pixelCalibration": {
+            "pixelWidth": {
+              "value": 1.65728521,
+              "unit": "µm"
+            },
+            "pixelHeight": {
+              "value": 1.65728521,
+              "unit": "µm"
+            },
+            "zSpacing": {
+              "value": 1.0,
+              "unit": "z-slice"
+            },
+            "timeUnit": "SECONDS",
+            "timepoints": []
+          },
+          "magnification": 10.0,
+          "preferredTileWidth": 256,
+          "preferredTileHeight": 256
+        }
+      },
+      "entryID": 1,
+      "randomizedName": "d15e4d1b-4bb0-4613-95de-39025738d839",
+      "imageName": "M3_scene1_MIP.ome.tiff",
+      "metadata": {},
+      "tags": []
+    }
+  ]
+}

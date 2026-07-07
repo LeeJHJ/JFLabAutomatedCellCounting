@@ -1,0 +1,35 @@
+# ─────────────────────────────────────────────────────────────
+# Section Pipeline (.gitignore)
+# Track: source (.py/.groovy), config (.yml/.json), planning (.md),
+#        QuPath project structure (.qpproj), registration artifacts.
+# Never track: multi-GB microscopy image data or regenerable binary caches.
+# ─────────────────────────────────────────────────────────────
+
+# ── Microscopy image data (multi-GB — NEVER commit) ──
+*.tif
+*.tiff
+*.ome.tif
+*.ome.tiff
+*.czi
+*.lif
+*.nd2
+*.ims
+
+# ── QuPath binary object stores & Bio-Formats caches (regenerable, large) ──
+*.qpdata
+*.qpdata.backup
+*.bfmemo
+**/thumbnail.jpg
+
+# ── Python ──
+__pycache__/
+*.py[cod]
+.ipynb_checkpoints/
+.venv/
+*.egg-info/
+
+# ── OS / editor cruft ──
+.DS_Store
+Thumbs.db
+*.swp
+*~

@@ -1,0 +1,17 @@
+{
+  "object_classifier_type": "SimpleClassifier",
+  "function": {
+    "classifier_fun": "ClassifyByMeasurementFunction",
+    "measurement": "Cell: EGFP-T2 mean",
+    "pathClassBelow": "Negative",
+    "pathClassEquals": "Other",
+    "pathClassAbove": "Other",
+    "threshold": 24.658744743617028
+  },
+  "pathClasses": [
+    "Negative",
+    "Other"
+  ],
+  "filter": "DETECTIONS_ALL",
+  "timestamp": 1782140770679
+}

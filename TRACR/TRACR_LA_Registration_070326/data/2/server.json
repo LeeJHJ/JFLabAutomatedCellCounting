@@ -1,0 +1,50 @@
+{
+  "builderType": "uri",
+  "providerClassName": "qupath.lib.images.servers.bioformats.BioFormatsServerBuilder",
+  "uri": "file:/home/jflab/Analysis/TRACR/registration_input/Ai63TRACR_1-2_S_R_sxn6_DAPI.ome.tiff",
+  "args": [
+    "--series",
+    "0"
+  ],
+  "metadata": {
+    "name": "Ai63TRACR_1-2_S_R_sxn6_DAPI.ome.tiff",
+    "width": 7345,
+    "height": 4641,
+    "sizeZ": 1,
+    "sizeT": 1,
+    "channelType": "DEFAULT",
+    "isRGB": false,
+    "pixelType": "UINT8",
+    "levels": [
+      {
+        "downsample": 1.0,
+        "width": 7345,
+        "height": 4641
+      }
+    ],
+    "channels": [
+      {
+        "name": "Leica/DAPI",
+        "color": -16776961
+      }
+    ],
+    "pixelCalibration": {
+      "pixelWidth": {
+        "value": 1.4444131263616558,
+        "unit": "µm"
+      },
+      "pixelHeight": {
+        "value": 1.4444133620689654,
+        "unit": "µm"
+      },
+      "zSpacing": {
+        "value": 1.0,
+        "unit": "z-slice"
+      },
+      "timeUnit": "SECONDS",
+      "timepoints": []
+    },
+    "preferredTileWidth": 7344,
+    "preferredTileHeight": 4640
+  }
+}

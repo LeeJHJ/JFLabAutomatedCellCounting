@@ -1,0 +1,128 @@
+{
+  "version": "0.6.0",
+  "createTimestamp": 1782770152432,
+  "modifyTimestamp": 1782770152432,
+  "uri": "file:/home/jflab/Analysis/cohort%201%20ant_%20LP%20%231%20whole/project.qpproj",
+  "lastID": 1,
+  "images": [
+    {
+      "serverBuilder": {
+        "builderType": "pyramidize",
+        "builder": {
+          "builderType": "uri",
+          "providerClassName": "qupath.lib.images.servers.bioformats.BioFormatsServerBuilder",
+          "uri": "file:/home/jflab/Analysis/Automated%20Cell%20Counting/cohort%201%20ant_%20LP%20%231%20whole.ome_MIP_Z1_2.ome.tiff",
+          "args": [
+            "--series",
+            "0"
+          ],
+          "metadata": {
+            "name": "cohort 1 ant_ LP #1 whole.ome_MIP_Z1_2.ome.tiff - czi_to_mip",
+            "width": 6042,
+            "height": 3738,
+            "sizeZ": 1,
+            "sizeT": 1,
+            "channelType": "DEFAULT",
+            "isRGB": false,
+            "pixelType": "UINT8",
+            "levels": [
+              {
+                "downsample": 1.0,
+                "width": 6042,
+                "height": 3738
+              }
+            ],
+            "channels": [
+              {
+                "name": "AF488-T3",
+                "color": -65536
+              },
+              {
+                "name": "DAPI-T4",
+                "color": -16711936
+              }
+            ],
+            "pixelCalibration": {
+              "pixelWidth": {
+                "value": 1.84142792,
+                "unit": "µm"
+              },
+              "pixelHeight": {
+                "value": 1.84142792,
+                "unit": "µm"
+              },
+              "zSpacing": {
+                "value": 1.0,
+                "unit": "z-slice"
+              },
+              "timeUnit": "SECONDS",
+              "timepoints": []
+            },
+            "preferredTileWidth": 6042,
+            "preferredTileHeight": 3738
+          }
+        },
+        "metadata": {
+          "name": "cohort 1 ant_ LP #1 whole.ome_MIP_Z1_2.ome.tiff - czi_to_mip",
+          "width": 6042,
+          "height": 3738,
+          "sizeZ": 1,
+          "sizeT": 1,
+          "channelType": "DEFAULT",
+          "isRGB": false,
+          "pixelType": "UINT8",
+          "levels": [
+            {
+              "downsample": 1.0,
+              "width": 6042,
+              "height": 3738
+            },
+            {
+              "downsample": 4.0,
+              "width": 1510,
+              "height": 934
+            },
+            {
+              "downsample": 16.0,
+              "width": 377,
+              "height": 233
+            }
+          ],
+          "channels": [
+            {
+              "name": "AF488-T3",
+              "color": -65536
+            },
+            {
+              "name": "DAPI-T4",
+              "color": -16711936
+            }
+          ],
+          "pixelCalibration": {
+            "pixelWidth": {
+              "value": 1.84142792,
+              "unit": "µm"
+            },
+            "pixelHeight": {
+              "value": 1.84142792,
+              "unit": "µm"
+            },
+            "zSpacing": {
+              "value": 1.0,
+              "unit": "z-slice"
+            },
+            "timeUnit": "SECONDS",
+            "timepoints": []
+          },
+          "preferredTileWidth": 256,
+          "preferredTileHeight": 256
+        }
+      },
+      "entryID": 1,
+      "randomizedName": "3d678f3a-b5a4-48e8-bc23-d22753d72a2a",
+      "imageName": "cohort 1 ant_ LP #1 whole.ome_MIP_Z1_2.ome.tiff - czi_to_mip",
+      "metadata": {},
+      "tags": []
+    }
+  ]
+}

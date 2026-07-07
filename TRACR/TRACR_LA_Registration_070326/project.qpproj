@@ -1,0 +1,294 @@
+{
+  "version": "0.6.0",
+  "createTimestamp": 1783098187692,
+  "modifyTimestamp": 1783098187692,
+  "uri": "file:/home/jflab/Analysis/TRACR/TRACR_LA_Registration_070326/project.qpproj",
+  "lastID": 5,
+  "images": [
+    {
+      "serverBuilder": {
+        "builderType": "uri",
+        "providerClassName": "qupath.lib.images.servers.bioformats.BioFormatsServerBuilder",
+        "uri": "file:/home/jflab/Analysis/TRACR/registration_input/Ai63TRACR_1-2_S_R_sxn2_DAPI.ome.tiff",
+        "args": [
+          "--series",
+          "0"
+        ],
+        "metadata": {
+          "name": "Ai63TRACR_1-2_S_R_sxn2_DAPI.ome.tiff",
+          "width": 7346,
+          "height": 4641,
+          "sizeZ": 1,
+          "sizeT": 1,
+          "channelType": "DEFAULT",
+          "isRGB": false,
+          "pixelType": "UINT8",
+          "levels": [
+            {
+              "downsample": 1.0,
+              "width": 7346,
+              "height": 4641
+            }
+          ],
+          "channels": [
+            {
+              "name": "Leica/DAPI",
+              "color": -16776961
+            }
+          ],
+          "pixelCalibration": {
+            "pixelWidth": {
+              "value": 1.444413886997958,
+              "unit": "µm"
+            },
+            "pixelHeight": {
+              "value": 1.4444133620689654,
+              "unit": "µm"
+            },
+            "zSpacing": {
+              "value": 1.0,
+              "unit": "z-slice"
+            },
+            "timeUnit": "SECONDS",
+            "timepoints": []
+          },
+          "preferredTileWidth": 7344,
+          "preferredTileHeight": 4640
+        }
+      },
+      "entryID": 1,
+      "randomizedName": "5ac85137-2542-4dab-9ada-a11b121ca7cb",
+      "imageName": "Ai63TRACR_1-2_S_R_sxn2_DAPI.ome.tiff",
+      "metadata": {},
+      "tags": []
+    },
+    {
+      "serverBuilder": {
+        "builderType": "uri",
+        "providerClassName": "qupath.lib.images.servers.bioformats.BioFormatsServerBuilder",
+        "uri": "file:/home/jflab/Analysis/TRACR/registration_input/Ai63TRACR_1-2_S_R_sxn6_DAPI.ome.tiff",
+        "args": [
+          "--series",
+          "0"
+        ],
+        "metadata": {
+          "name": "Ai63TRACR_1-2_S_R_sxn6_DAPI.ome.tiff",
+          "width": 7345,
+          "height": 4641,
+          "sizeZ": 1,
+          "sizeT": 1,
+          "channelType": "DEFAULT",
+          "isRGB": false,
+          "pixelType": "UINT8",
+          "levels": [
+            {
+              "downsample": 1.0,
+              "width": 7345,
+              "height": 4641
+            }
+          ],
+          "channels": [
+            {
+              "name": "Leica/DAPI",
+              "color": -16776961
+            }
+          ],
+          "pixelCalibration": {
+            "pixelWidth": {
+              "value": 1.4444131263616558,
+              "unit": "µm"
+            },
+            "pixelHeight": {
+              "value": 1.4444133620689654,
+              "unit": "µm"
+            },
+            "zSpacing": {
+              "value": 1.0,
+              "unit": "z-slice"
+            },
+            "timeUnit": "SECONDS",
+            "timepoints": []
+          },
+          "preferredTileWidth": 7344,
+          "preferredTileHeight": 4640
+        }
+      },
+      "entryID": 2,
+      "randomizedName": "92a6f332-8b6c-4923-8e07-3fa52bbf7875",
+      "imageName": "Ai63TRACR_1-2_S_R_sxn6_DAPI.ome.tiff",
+      "metadata": {},
+      "tags": []
+    },
+    {
+      "serverBuilder": {
+        "builderType": "uri",
+        "providerClassName": "qupath.lib.images.servers.bioformats.BioFormatsServerBuilder",
+        "uri": "file:/home/jflab/Analysis/TRACR/registration_input/Ai63TRACR_2-2_Ronly_sxn3_DAPI.ome.tiff",
+        "args": [
+          "--series",
+          "0"
+        ],
+        "metadata": {
+          "name": "Ai63TRACR_2-2_Ronly_sxn3_DAPI.ome.tiff",
+          "width": 7345,
+          "height": 4641,
+          "sizeZ": 1,
+          "sizeT": 1,
+          "channelType": "DEFAULT",
+          "isRGB": false,
+          "pixelType": "UINT8",
+          "levels": [
+            {
+              "downsample": 1.0,
+              "width": 7345,
+              "height": 4641
+            }
+          ],
+          "channels": [
+            {
+              "name": "Leica/DAPI",
+              "color": -16776961
+            }
+          ],
+          "pixelCalibration": {
+            "pixelWidth": {
+              "value": 1.4444131263616558,
+              "unit": "µm"
+            },
+            "pixelHeight": {
+              "value": 1.4444133620689654,
+              "unit": "µm"
+            },
+            "zSpacing": {
+              "value": 1.0,
+              "unit": "z-slice"
+            },
+            "timeUnit": "SECONDS",
+            "timepoints": []
+          },
+          "preferredTileWidth": 7344,
+          "preferredTileHeight": 4640
+        }
+      },
+      "entryID": 3,
+      "randomizedName": "e01f2125-1b28-4e11-b375-d58095034e37",
+      "imageName": "Ai63TRACR_2-2_Ronly_sxn3_DAPI.ome.tiff",
+      "metadata": {},
+      "tags": []
+    },
+    {
+      "serverBuilder": {
+        "builderType": "uri",
+        "providerClassName": "qupath.lib.images.servers.bioformats.BioFormatsServerBuilder",
+        "uri": "file:/home/jflab/Analysis/TRACR/registration_input/Ai63TRACR_3-4_S_R_sxn2_DAPI.ome.tiff",
+        "args": [
+          "--series",
+          "0"
+        ],
+        "metadata": {
+          "name": "Ai63TRACR_3-4_S_R_sxn2_DAPI.ome.tiff",
+          "width": 7348,
+          "height": 4646,
+          "sizeZ": 1,
+          "sizeT": 1,
+          "channelType": "DEFAULT",
+          "isRGB": false,
+          "pixelType": "UINT8",
+          "levels": [
+            {
+              "downsample": 1.0,
+              "width": 7348,
+              "height": 4646
+            }
+          ],
+          "channels": [
+            {
+              "name": "Leica/DAPI",
+              "color": -16776961
+            }
+          ],
+          "pixelCalibration": {
+            "pixelWidth": {
+              "value": 1.4444126854498434,
+              "unit": "µm"
+            },
+            "pixelHeight": {
+              "value": 1.4444133476856835,
+              "unit": "µm"
+            },
+            "zSpacing": {
+              "value": 1.0,
+              "unit": "z-slice"
+            },
+            "timeUnit": "SECONDS",
+            "timepoints": []
+          },
+          "preferredTileWidth": 7344,
+          "preferredTileHeight": 4640
+        }
+      },
+      "entryID": 4,
+      "randomizedName": "8f599e36-9ce3-4d06-a169-0e29400d7cd8",
+      "imageName": "Ai63TRACR_3-4_S_R_sxn2_DAPI.ome.tiff",
+      "metadata": {},
+      "tags": []
+    },
+    {
+      "serverBuilder": {
+        "builderType": "uri",
+        "providerClassName": "qupath.lib.images.servers.bioformats.BioFormatsServerBuilder",
+        "uri": "file:/home/jflab/Analysis/TRACR/registration_input/Ai63TRACR_3-4_S_R_sxn4_DAPI.ome.tiff",
+        "args": [
+          "--series",
+          "0"
+        ],
+        "metadata": {
+          "name": "Ai63TRACR_3-4_S_R_sxn4_DAPI.ome.tiff",
+          "width": 7346,
+          "height": 4645,
+          "sizeZ": 1,
+          "sizeT": 1,
+          "channelType": "DEFAULT",
+          "isRGB": false,
+          "pixelType": "UINT8",
+          "levels": [
+            {
+              "downsample": 1.0,
+              "width": 7346,
+              "height": 4645
+            }
+          ],
+          "channels": [
+            {
+              "name": "Leica/DAPI",
+              "color": -16776961
+            }
+          ],
+          "pixelCalibration": {
+            "pixelWidth": {
+              "value": 1.444413886997958,
+              "unit": "µm"
+            },
+            "pixelHeight": {
+              "value": 1.4444132213608958,
+              "unit": "µm"
+            },
+            "zSpacing": {
+              "value": 1.0,
+              "unit": "z-slice"
+            },
+            "timeUnit": "SECONDS",
+            "timepoints": []
+          },
+          "preferredTileWidth": 7344,
+          "preferredTileHeight": 4640
+        }
+      },
+      "entryID": 5,
+      "randomizedName": "e2aa982b-cf35-4368-8baf-b8cbe62462e8",
+      "imageName": "Ai63TRACR_3-4_S_R_sxn4_DAPI.ome.tiff",
+      "metadata": {},
+      "tags": []
+    }
+  ]
+}

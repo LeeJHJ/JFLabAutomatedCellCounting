@@ -1,0 +1,36 @@
+{
+  "object_classifier_type": "CompositeClassifier",
+  "classifiers": [
+    {
+      "object_classifier_type": "SimpleClassifier",
+      "function": {
+        "classifier_fun": "ClassifyByMeasurementFunction",
+        "measurement": "Nucleus: AF568-T2 mean",
+        "pathClassBelow": "Negative",
+        "threshold": 7750.4311
+      },
+      "pathClasses": [
+        "Negative"
+      ],
+      "filter": "DETECTIONS_ALL",
+      "timestamp": 1782234321506
+    },
+    {
+      "object_classifier_type": "SimpleClassifier",
+      "function": {
+        "classifier_fun": "ClassifyByMeasurementFunction",
+        "measurement": "Nucleus: AF488-T3 mean",
+        "pathClassBelow": "Negative",
+        "pathClassEquals": "Other",
+        "pathClassAbove": "Other",
+        "threshold": 8982.035928143712
+      },
+      "pathClasses": [
+        "Negative",
+        "Other"
+      ],
+      "filter": "DETECTIONS_ALL",
+      "timestamp": 1782234057221
+    }
+  ]
+}
