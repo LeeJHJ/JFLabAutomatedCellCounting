@@ -97,7 +97,7 @@ progress:
 - Fiji: `$HOME/section-pipeline/tools/Fiji.app/fiji-linux-x64`
 - elastix: 5.2.0 at `$HOME/section-pipeline/tools/elastix/bin/`; LD_LIBRARY_PATH set
 - Channel names: `AF568-T2` (TdTomato cytosolic), `AF488-T3` (Fos nuclear), `DAPI-T4`
-- Git: NOT installed on this machine — no git tracking
+- Git: installed (v2.53.0) and repo INITIALIZED 2026-07-07 (branch `main`, no remote). `.gitignore` excludes all microscopy data (*.tif/*.tiff/*.czi/*.lif), *.qpdata, *.bfmemo (~23 GB). GSD executors now commit atomically; worktrees auto-degrade to sequential-on-main (no origin/HEAD, #683).
 
 ### Todos
 
