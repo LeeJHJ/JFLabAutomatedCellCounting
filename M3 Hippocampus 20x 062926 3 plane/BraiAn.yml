@@ -45,8 +45,8 @@ channelDetections:
       histogramThreshold:                    # D-01: histogram-relative detection threshold, NOT an absolute `threshold`
         resolutionLevel: 0
         smoothWindowSize: 15
-        peakProminence: 100
-        nPeak: 1
+        peakProminence: 500                  # only prominent histogram peaks qualify (series-robust; 100/500/1000 all gave the same threshold on entry 1)
+        nPeak: 2                             # take the 2nd (tissue/nuclear) peak, skipping the background peak. Empirically on entry 1: nPeak=1 -> 45 (background floor, over-detects); nPeak=2 -> ~2536. Verify against the D-05 DAPI-density gate.
       watershedPostProcess: true
       cellExpansionMicrons: 5.0              # D-03 discretion seed (TRAP2 paper / QuPath default) -- creates the
                                               # Cytoplasm compartment the TdT classifier reads; tune DG bleed per D-04
