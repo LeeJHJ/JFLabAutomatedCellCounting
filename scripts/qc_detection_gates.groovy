@@ -25,10 +25,15 @@
  * risks tuning toward the hypothesis / circularity). Do not use this ratio to
  * decide pass/fail on detection parameters.
  *
+ * NOTE (QuPath 0.6.0 API): measurement access uses PathObject.getMeasurements()
+ * (a Map<String,Number>); MeasurementList.getMeasurementValue() was removed.
+ * JSON is parsed with the bundled Gson (com.google.gson.JsonParser) because
+ * QuPath's Groovy does not ship the groovy.json module.
+ *
  * @author [researcher name]
  */
 
-import groovy.json.JsonSlurper
+import com.google.gson.JsonParser
 
 // ── Configuration ────────────────────────────────────────────────────────────
 def FALLBACK_PIXEL_SIZE_UM = 0.6905355   // server.json PhysicalSizeX, M3 062926 3 plane entry 1
@@ -73,7 +78,7 @@ if (detections.isEmpty()) {
 // ── Gate 1: nucleus-area distribution peak bin ──────────────────────────────
 // Prefer the exact key produced by WatershedCellDetection; fall back to the
 // first measurement name containing "Area" if that exact key is absent.
-def sampleMeasurementNames = detections[0].getMeasurementList().getMeasurementNames()
+def sampleMeasurementNames = detections[0].getMeasurements().keySet()
 def areaKey = "Nucleus: Area µm^2"
 if (!sampleMeasurementNames.contains(areaKey)) {
     def fallbackKey = sampleMeasurementNames.find { it.toLowerCase().contains("area") }
@@ -87,8 +92,10 @@ if (!sampleMeasurementNames.contains(areaKey)) {
     println "Using nucleus-area measurement key: '${areaKey}'"
 }
 
-def areas = detections.collect { it.getMeasurementList().getMeasurementValue(areaKey) }
-                       .findAll { it != null && !it.isNaN() }
+def areas = detections.collect { it.getMeasurements().get(areaKey) }
+                       .findAll { it != null }
+                       .collect { it.doubleValue() }
+                       .findAll { !Double.isNaN(it) }
 println "Detections with a valid area measurement: ${areas.size()} / ${detections.size()}"
 
 def bins = [:].withDefault { 0 }
@@ -179,11 +186,12 @@ def loadClassifierSpec = { String fileName ->
         println "  WARNING: classifier file not found: ${f} -- skipping D-06 computation for it"
         return null
     }
-    def json = new JsonSlurper().parse(f)
+    // QuPath's Groovy lacks groovy.json; use the bundled Gson instead.
+    def fn = JsonParser.parseString(f.text).getAsJsonObject().getAsJsonObject("function")
     return [
         fileName   : fileName,
-        measurement: json.function.measurement,
-        threshold  : (json.function.threshold as double),
+        measurement: fn.get("measurement").getAsString(),
+        threshold  : fn.get("threshold").getAsDouble(),
     ]
 }
 
@@ -192,8 +200,8 @@ def tdtSpec = loadClassifierSpec("TdT_classifier.json")
 
 def isPositive = { detection, spec ->
     if (spec == null) return false
-    def v = detection.getMeasurementList().getMeasurementValue(spec.measurement)
-    return v != null && !v.isNaN() && v >= spec.threshold
+    def v = detection.getMeasurements().get(spec.measurement)
+    return v != null && !Double.isNaN(v.doubleValue()) && v.doubleValue() >= spec.threshold
 }
 
 if (fosSpec != null) {
