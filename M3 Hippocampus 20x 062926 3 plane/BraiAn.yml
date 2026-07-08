@@ -50,9 +50,13 @@ channelDetections:
       smoothBoundaries: true
       makeMeasurements: true
     classifiers:
+      # BraiAn.resolvePath (v1.1.0) searches <projectBaseDir> then its PARENT for
+      # `<name>.json` -- it does NOT look inside classifiers/object_classifiers/.
+      # So `name` carries the project-relative path, keeping each JSON in QuPath's
+      # standard object_classifiers folder (still GUI-loadable, single source of truth).
       - channel: "AF488-T3"
-        name: "Fos_Classifier_20x"           # resolves to <project>/classifiers/object_classifiers/Fos_Classifier_20x.json
+        name: "classifiers/object_classifiers/Fos_Classifier_20x"
         annotationsToClassify: []            # empty = apply to all detections
       - channel: "AF568-T2"
-        name: "TdT_classifier"               # resolves to <project>/classifiers/object_classifiers/TdT_classifier.json
+        name: "classifiers/object_classifiers/TdT_classifier"
         annotationsToClassify: []
