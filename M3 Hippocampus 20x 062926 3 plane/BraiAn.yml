@@ -41,7 +41,7 @@ channelDetections:
       medianRadiusMicrons: 0.0
       sigmaMicrons: 2.0                      # [ASSUMED] TRAP2-paper seed -- tune per D-04/D-05
       minAreaMicrons: 20.0                   # [ASSUMED] TRAP2-paper seed -- tune per D-04/D-05
-      maxAreaMicrons: 150.0                  # [ASSUMED] TRAP2-paper seed, toward D-05's 50-150 um^2 peak gate
+      maxAreaMicrons: 250.0                  # raised from 150 (entry-1 tuning): 150 clipped larger nuclei/blobs (esp. DG). D-05.1 PEAK stays 50-150 um^2; this only stops discarding the upper tail.
       histogramThreshold:                    # D-01: histogram-relative detection threshold, NOT an absolute `threshold`
         resolutionLevel: 0
         smoothWindowSize: 15
