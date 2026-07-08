@@ -22,7 +22,11 @@
 # empirical gates (nucleus-area peak 50-150 um^2; DAPI density 500-2000/mm^2)
 # in Plan 02-02 on M3 062926 3 plane entry 1 (DG + CA1) -- not locked numbers.
 
-classForDetections: null
+# Confine detection to the ABBA atlas Root annotation (its ROI is the 56 mm^2 brain
+# outline, class "allen_mouse_10um_java") instead of the full 77 mm^2 image rectangle.
+# With null, ChannelDetections watersheds the whole image -> ~380k spurious background
+# "nuclei" outside the brain. Detections are still assigned to leaf regions at export.
+classForDetections: "allen_mouse_10um_java"
 
 detectionsCheck:
   apply: false          # D-07: Fos+ negative-control gate deferred, not this phase
