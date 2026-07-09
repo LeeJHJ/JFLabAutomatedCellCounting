@@ -87,7 +87,22 @@
   3. Printed Atlas_X values for detected cells fall in the range 5,000–10,000 µm (confirms CCFv3 micron units, not mm)
   4. Per-region count table for hippocampal subfields (CA1, CA2, CA3, DG, at minimum) is readable in the QuPath annotation pane
 
-**Plans**: TBD
+**Plans**: 4 plans
+**Wave 1**
+
+- [ ] 03-01-PLAN.md — Runnable classify script + per-cell atlas region labels (SC1 + SC2)
+
+**Wave 2** *(blocked on Wave 1)*
+
+- [ ] 03-02-PLAN.md — Per-region count rollup + Atlas_X micron sanity print (SC4 + SC3)
+
+**Wave 3** *(blocked on Wave 2)*
+
+- [ ] 03-03-PLAN.md — Local-background-subtracted measure (D-04) + re-derived thresholds (D-05)
+
+**Wave 4** *(blocked on Wave 3)*
+
+- [ ] 03-04-PLAN.md — Human-in-the-loop end-to-end verification of all four success criteria
 
 ---
 
@@ -115,7 +130,7 @@
 |-------|----------------|--------|-----------|
 | 1. Atlas Registration and ROI Loading | 3/3 | Complete    | 2026-07-02 |
 | 2. Detection Parameter Lock | 2/2 | Complete   | 2026-07-09 |
-| 3. Detection Script and Single-Section End-to-End Test | 0/? | Not started | - |
+| 3. Detection Script and Single-Section End-to-End Test | 0/4 | Not started | - |
 | 4. Biological Plausibility Validation and Imaging Optimization Notes | 0/? | Not started | - |
 
 ---
