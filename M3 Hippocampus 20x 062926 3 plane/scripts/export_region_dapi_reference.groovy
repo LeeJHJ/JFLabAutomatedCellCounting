@@ -40,7 +40,7 @@ def configTag = "sigma${sigma}_nPeak${nPeak}_prom${prom}_min${minA}_max${maxA}_e
 
 def entry = getProjectEntry()
 def imageName = entry != null ? entry.getImageName() : server.getMetadata().getName()
-def timestamp = new Date().format("yyyy-MM-dd'T'HH:mm:ss")
+def timestamp = new java.text.SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss").format(new Date())
 
 def detections = getDetectionObjects()
 if (detections.isEmpty()) { println "No detections — run BraiAnDetect first. Aborting."; return }
