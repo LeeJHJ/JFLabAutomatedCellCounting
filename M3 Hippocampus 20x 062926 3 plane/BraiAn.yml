@@ -39,7 +39,7 @@ channelDetections:
       backgroundRadiusMicrons: 10
       backgroundByReconstruction: true
       medianRadiusMicrons: 0.0
-      sigmaMicrons: 3.0                      # raised 2.0->3.0 (entry-1 test): more smoothing -> fewer split nuclei -> lower density + larger area toward D-05. Revert to 2.0 if it over-merges.
+      sigmaMicrons: 2.5                      # compromise (entry-1): 2.0 over-split (density high, area 30-40); 3.0 merged/missed larger cortical nuclei; 2.5 balances split vs cortical completeness.
       minAreaMicrons: 20.0                   # [ASSUMED] TRAP2-paper seed -- tune per D-04/D-05
       maxAreaMicrons: 250.0                  # raised from 150 (entry-1 tuning): 150 clipped larger nuclei/blobs (esp. DG). D-05.1 PEAK stays 50-150 um^2; this only stops discarding the upper tail.
       histogramThreshold:                    # D-01: histogram-relative detection threshold, NOT an absolute `threshold`

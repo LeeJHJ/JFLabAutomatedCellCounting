@@ -1,5 +1,5 @@
 /**
- * classify_markers.groovy — nucleus-anchored Fos/TdT/Double classification
+ * classify_markers.groovy — nucleus-anchored Fos/TdT/Double classification (+ region exclusion)
  *
  * WHY: BraiAnDetect's config-driven classifier list (BraiAn.yml `classifiers:`) can only
  * apply ONE classifier per detection entry, and it must output [<entry>, Other: <entry>]
@@ -12,16 +12,22 @@
  *   TdT+  iff  (Cytoplasm: AF568-T2 mean) >= TdT threshold      (cytoplasmic ring)
  * Compound class per nucleus: Double+ / Fos+ / TdT+ / Negative. No proximity/overlap.
  *
- * Thresholds are read at runtime from the classifier JSONs, so this stays correct after
- * the D-02 re-derivation writes the locked cutoffs into those files.
+ * EXCLUSIONS: detections whose centroid falls in an excluded region (default: DG +
+ * ventricular systems VS) are set to "Excluded" and NOT marker-classified. DG granule
+ * cells are too dense to trust per-cell marker calls (use density instead); ventricles
+ * have no real nuclei. Edit EXCLUDE_ACRONYMS to taste. Excluded detections still exist
+ * (so DAPI density is still countable if wanted) — they're just out of the marker fractions.
  *
- * Run AFTER a BraiAnDetect detection pass. Sets visible classes (for CLASS-01 overlay)
- * and prints per-class counts + the advisory Double+/TdT+ ratio.
+ * Thresholds are read at runtime from the classifier JSONs, so this stays correct after
+ * D-02 cutoffs are written. Run AFTER a BraiAnDetect detection pass.
  *
  * @author section-pipeline
  */
 import com.google.gson.JsonParser
 import static qupath.lib.scripting.QP.*
+
+// ── excluded regions (Allen acronyms; parent ROI covers its subfields) ──
+def EXCLUDE_ACRONYMS = ["DG", "VS"] as Set   // dentate gyrus + ventricular systems
 
 def base = new File(getProject().getBaseDirectory(), "classifiers/object_classifiers")
 def readSpec = { fn ->
@@ -33,11 +39,27 @@ def tdt = readSpec("TdT_classifier.json")
 println "Fos rule: ${fos.meas} >= ${fos.thr}"
 println "TdT rule: ${tdt.meas} >= ${tdt.thr}"
 
+// build exclusion ROIs (parent region annotations whose acronym is in EXCLUDE_ACRONYMS)
+def excludeRois = []
+getAnnotationObjects().each { ann ->
+    def label = ann.getPathClass()?.toString() ?: ann.getName()
+    if (label == null || ann.getROI() == null) return
+    def m = (label =~ /(?i)^(?:Left|Right):\s*(.+)$/)
+    def acr = m.find() ? m.group(1) : label
+    if (EXCLUDE_ACRONYMS.contains(acr)) excludeRois << ann.getROI()
+}
+println "Exclusion regions (${EXCLUDE_ACRONYMS}): ${excludeRois.size()} annotation ROI(s)"
+
 def dets = getDetectionObjects()
 if (dets.isEmpty()) { println "No detections — run BraiAnDetect first. Aborting."; return }
 
-int cFos = 0, cTdt = 0, cDbl = 0, cNeg = 0
+int cFos = 0, cTdt = 0, cDbl = 0, cNeg = 0, cExc = 0
 dets.each { d ->
+    def r = d.getROI()
+    double x = r.getCentroidX(), y = r.getCentroidY()
+    if (excludeRois.any { it.contains(x, y) }) {
+        d.setPathClass(getPathClass("Excluded")); cExc++; return
+    }
     def vf = d.getMeasurements().get(fos.meas)
     def vt = d.getMeasurements().get(tdt.meas)
     boolean isF = vf != null && !Double.isNaN(vf.doubleValue()) && vf.doubleValue() >= fos.thr
@@ -49,8 +71,9 @@ dets.each { d ->
 fireHierarchyUpdate()
 
 int n = dets.size()
-def pct = { c -> 100.0 * c / n }
-println "Classified ${n} nuclei (nucleus-anchored, no overlap):"
+int classified = n - cExc
+def pct = { c -> classified > 0 ? 100.0 * c / classified : 0.0 }   // % of CLASSIFIED (non-excluded) nuclei
+println "Total nuclei: ${n}  |  Excluded (DG/ventricles): ${cExc}  |  Classified: ${classified}"
 println String.format("  Negative : %d (%.1f%%)", cNeg, pct(cNeg))
 println String.format("  Fos+ only: %d (%.1f%%)", cFos, pct(cFos))
 println String.format("  TdT+ only: %d (%.1f%%)", cTdt, pct(cTdt))
