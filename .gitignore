@@ -21,6 +21,11 @@
 *.bfmemo
 **/thumbnail.jpg
 
+# ── QuPath / BraiAnDetect per-run exports (regenerable; churn every detection pass) ──
+# NOTE: this is per-project output, NOT the top-level reference/ accumulator (which IS tracked).
+**/results/
+**/regions_to_exclude/
+
 # ── Python ──
 __pycache__/
 *.py[cod]
