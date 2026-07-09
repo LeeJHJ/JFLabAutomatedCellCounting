@@ -3,8 +3,8 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-stopped_at: "Phase 2 COMPLETE — detection params + classifier thresholds locked (02-LOCK-RECORD.md); next: Phase 3"
-last_updated: "2026-07-09T18:00:00.000Z"
+stopped_at: Phase 3 context gathered
+last_updated: "2026-07-09T20:05:21.795Z"
 progress:
   total_phases: 4
   completed_phases: 2
@@ -120,9 +120,9 @@ None (Plan 02 is a human GUI step in Fiji; not a blocker, just a handoff).
 
 ## Session Continuity
 
-**Last session:** 2026-07-07T22:12:08.238Z
-**Stopped at:** Plan 02-01 executed (BraiAn.yml + classifiers + QC harness); next: Plan 02-02 tune + lock
-**Resume file:** None
+**Last session:** 2026-07-09T20:05:21.790Z
+**Stopped at:** Phase 3 context gathered
+**Resume file:** .planning/phases/03-detection-script-and-single-section-end-to-end-test/03-CONTEXT.md
 
 **To resume:** Plan 02-01 authored the full scriptable half of the detection-parameter lock: `BraiAn.yml` (single DAPI-T4-anchored channelDetections entry, histogramThreshold, cellExpansionMicrons 5.0), `Fos_Classifier_20x.json` (reused, nuclear) and `TdT_classifier.json` (rebuilt, cytoplasmic — fixed the Nucleus-compartment bug), and `scripts/qc_detection_gates.groovy` (+ project hard-copy) for the D-05 gate measurements. All numeric seeds ([ASSUMED] sigma/area/thresholds) are unlocked. Next: Plan 02-02 (human-in-the-loop) — run BraiAnDetect in QuPath on M3 062926 3 plane entry 1, run `qc_detection_gates.groovy`, tune params against the D-05 hard gates (nucleus-area peak 50–150µm² AND DAPI density 500–2000/mm² on both DG and CA1), and write `02-LOCK-RECORD.md` once both PASS.
 
