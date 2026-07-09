@@ -6,7 +6,7 @@
     "pathClassBelow": "Negative",
     "pathClassEquals": "Positive",
     "pathClassAbove": "Positive",
-    "threshold": 24454.7
+    "threshold": 13000.4538
   },
   "pathClasses": [
     "Negative",

@@ -11,7 +11,7 @@
 ## Phases
 
 - [x] **Phase 1: Atlas Registration and ROI Loading** - ABBA registers M3 sections in Fiji and atlas annotations are loaded into QuPath via Groovy script (completed 2026-07-02)
-- [ ] **Phase 2: Detection Parameter Lock** - BraiAn.yml authored with tuned parameters and Fos classifier compartment verified
+- [x] **Phase 2: Detection Parameter Lock** - BraiAn.yml authored with tuned parameters and Fos classifier compartment verified (completed 2026-07-09)
 - [ ] **Phase 3: Detection Script and Single-Section End-to-End Test** - `02_detect_classify.groovy` written, tested, and produces classified cell data on one section
 - [ ] **Phase 4: Biological Plausibility Validation and Imaging Optimization Notes** - Cell counts pass bioplausibility checks and imaging optimization recommendations are documented
 
@@ -62,14 +62,14 @@
   3. `Fos_classifier.json` feature field reads `Nucleus: AF488-T3 mean` (not cytoplasm), confirmed by opening the JSON and by the detection overlay showing Fos+ only in nuclei
   4. Visual overlay on one representative dense region (e.g., DG) shows cytoplasmic expansion rings not bleeding into adjacent nuclei
 
-**Plans**: 1/2 plans executed
+**Plans**: 2/2 plans complete
 **Wave 1**
 
 - [x] 02-01-PLAN.md — Author BraiAn.yml (single DAPI-anchored entry, histogramThreshold, cellExpansion 5µm), both compartment-correct classifiers, and the D-05 QC harness
 
 **Wave 2** *(blocked on Wave 1 completion)*
 
-- [ ] 02-02-PLAN.md — Human-in-the-loop: tune detection on entry 1 (DG+CA1) to PASS the D-05 gates, re-derive classifier thresholds, and lock the values
+- [x] 02-02-PLAN.md — Human-in-the-loop: tune detection on entry 1 (DG+CA1) to PASS the D-05 gates, re-derive classifier thresholds, and lock the values
 
 ---
 
@@ -114,7 +114,7 @@
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Atlas Registration and ROI Loading | 3/3 | Complete    | 2026-07-02 |
-| 2. Detection Parameter Lock | 1/2 | In Progress|  |
+| 2. Detection Parameter Lock | 2/2 | Complete   | 2026-07-09 |
 | 3. Detection Script and Single-Section End-to-End Test | 0/? | Not started | - |
 | 4. Biological Plausibility Validation and Imaging Optimization Notes | 0/? | Not started | - |
 
