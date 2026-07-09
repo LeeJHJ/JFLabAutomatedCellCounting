@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-stopped_at: "Plan 02-01 executed (BraiAn.yml + classifiers + QC harness); next: Plan 02-02 tune + lock"
-last_updated: "2026-07-07T22:12:23.534Z"
+stopped_at: "Phase 2 COMPLETE — detection params + classifier thresholds locked (02-LOCK-RECORD.md); next: Phase 3"
+last_updated: "2026-07-09T18:00:00.000Z"
 progress:
   total_phases: 4
-  completed_phases: 1
+  completed_phases: 2
   total_plans: 5
-  completed_plans: 4
-  percent: 25
+  completed_plans: 5
+  percent: 50
 ---
 
 # Project State: M3 Hippocampus Section Pipeline — First Run
@@ -24,28 +24,28 @@ progress:
 
 **Core value:** Biologically plausible TdT+/Fos+/Double+ counts per atlas region for M3 hippocampus, with locked detection parameters and imaging optimization notes ready for the full series.
 
-**Current focus:** Phase 02 — detection-parameter-lock
+**Current focus:** Phase 2 complete (detection params locked) → Phase 3 next
 
 ---
 
 ## Current Position
 
-**Active phase:** Phase 2 — Detection Parameter Lock
-**Active plan:** 02-02 (tune + lock; 02-01 complete)
-**Status:** Executing Phase 02
+**Active phase:** Phase 2 — Detection Parameter Lock — **COMPLETE** (2026-07-09)
+**Active plan:** None — both plans done; ready for Phase 3
+**Status:** Phase 2 complete
 
 **Progress bar:**
 
 ```
 [Phase 1] [Phase 2] [Phase 3] [Phase 4]
-[======] [      ] [      ] [      ]
-  25% (Phase 1 complete)
+[======] [======] [      ] [      ]
+  50% (Phases 1-2 complete)
 ```
 
 **Phase completion:**
 
 - Phase 1: Complete (3/3 plans done, 2026-07-02)
-- Phase 2: In progress (1/2 plans done — 02-01 complete 2026-07-07; 02-02 tune+lock next)
+- Phase 2: Complete (2/2 plans done, 2026-07-09 — detection params + classifier thresholds locked; see 02-LOCK-RECORD.md)
 - Phase 3: Not started
 - Phase 4: Not started
 
