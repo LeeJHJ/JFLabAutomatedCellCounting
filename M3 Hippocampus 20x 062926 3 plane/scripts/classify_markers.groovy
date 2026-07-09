@@ -27,7 +27,7 @@ import com.google.gson.JsonParser
 import static qupath.lib.scripting.QP.*
 
 // ── excluded regions (Allen acronyms; parent ROI covers its subfields) ──
-def EXCLUDE_ACRONYMS = ["DG", "VS"] as Set   // dentate gyrus + ventricular systems
+def EXCLUDE_ACRONYMS = ["DG-sg", "VS"] as Set   // DG granule cell layer (too dense) + ventricular systems. (DG-mo/DG-po stay in.)
 
 def base = new File(getProject().getBaseDirectory(), "classifiers/object_classifiers")
 def readSpec = { fn ->
