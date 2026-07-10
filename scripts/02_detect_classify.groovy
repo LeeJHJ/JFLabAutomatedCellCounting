@@ -18,13 +18,24 @@
  * the batch.
  *
  * CLASSIFICATION (nucleus-anchored, no proximity/overlap — CLAUDE.md, locked):
- *   Fos+  iff  (Nucleus:  AF488-T3 mean) >= Fos threshold   (nuclear compartment)
- *   TdT+  iff  (Cytoplasm: AF568-T2 mean) >= TdT threshold   (cytoplasmic ring)
+ *   Fos+  iff  (Nucleus:  AF488-T3 mean (bg-sub)) >= Fos threshold   (nuclear compartment)
+ *   TdT+  iff  (Cytoplasm: AF568-T2 mean (bg-sub)) >= TdT threshold   (cytoplasmic ring)
  * Compound class per nucleus: Double+ / Fos+ / TdT+ / Negative. This is the
  * exact classify_markers.groovy core (base for this script) — reused verbatim,
  * NOT BraiAn.yml's classifiers:/OverlappingDetections path (Deviation #1,
  * forbidden: that path cannot classify one DAPI detection set by two
  * independent markers without proximity/overlap heuristics).
+ *
+ * D-03/D-05: classification reads the (bg-sub) measure (D-04 above) against
+ * thresholds RE-DERIVED on that measure via qupath.ext.braian.ChannelHistogram
+ * peak-finding (Pattern 2) -- NOT the old absolute cutoffs (Fos 13000.4538 /
+ * TdT 16766.4671, Fos_Classifier_20x.json / TdT_classifier.json). Those two
+ * JSONs and their thresholds are SUPERSEDED for classification and retained
+ * only as a documented reference point / self-check anchor (see below). The
+ * operative bg-sub thresholds live in Fos_Classifier_20x_bgsub.json /
+ * TdT_classifier_bgsub.json, which this script re-derives and overwrites on
+ * every run (Pitfall 9: do not let the old absolute cutoffs leak back in
+ * against the new measure).
  *
  * EXCLUSIONS: detections whose centroid falls in an excluded region (DG-sg +
  * ventricular systems VS) are set to "Excluded" and NOT marker-classified.
@@ -48,8 +59,10 @@
  * memory-inefficient, and MeasurementList is numeric-only by design (cannot
  * hold a region acronym string). See regionOf below.
  *
- * Thresholds are read at runtime from the classifier JSONs (Fos_Classifier_20x.json,
- * TdT_classifier.json), so this stays correct after future threshold edits.
+ * Thresholds are read at runtime from the bg-sub classifier JSONs
+ * (Fos_Classifier_20x_bgsub.json, TdT_classifier_bgsub.json), which this
+ * script itself (re-)derives and writes each run (D-05), so this stays
+ * correct after future re-derivation without a separate edit step.
  * Run AFTER a BraiAnDetect detection pass.
  *
  * @author section-pipeline
@@ -63,6 +76,10 @@ import qupath.lib.analysis.features.ObjectMeasurements
 import qupath.lib.analysis.features.ObjectMeasurements.Measurements
 import qupath.lib.analysis.features.ObjectMeasurements.Compartments
 import qupath.lib.regions.ImageRegion
+import qupath.ext.braian.ChannelHistogram
+import com.google.gson.JsonObject
+import com.google.gson.JsonArray
+import com.google.gson.GsonBuilder
 import static qupath.lib.scripting.QP.*
 
 // ── Entry confirmation ──────────────────────────────────────────────────────
@@ -193,18 +210,121 @@ dets.each { d ->
 fireHierarchyUpdate()
 println "Background-subtracted measures written for ${dets.size()} detections (D-04)."
 
+// ── isExcluded: shared centroid-in-excludeRois test (reused by threshold ───
+// derivation population below AND the classification loop, replacing the
+// previously-inlined check with a single named closure).
+def isExcluded = { detection ->
+    def r = detection.getROI()
+    double x = r.getCentroidX(), y = r.getCentroidY()
+    excludeRois.any { it.contains(x, y) }
+}
+
+// ── D-05 / Pattern 2: re-derive positive thresholds on the bg-sub measure ──
+// Reuses qupath.ext.braian.ChannelHistogram.findPeaks/zeroPhaseFilter -- the
+// exact histogram-peak-finding primitives already locked into BraiAn.yml's
+// D-01 detection threshold -- applied here to a self-built histogram of the
+// per-cell (bg-sub) measurement rather than a raw image channel histogram.
+def classifiable = dets.findAll { !isExcluded(it) }   // Pitfall 6: exclude DG-sg/VS from the derivation population
+println "Threshold derivation population (excluding DG-sg/VS): ${classifiable.size()} / ${dets.size()} detections"
+
+double BIN_WIDTH = 50.0                    // seed bin width for the self-built histogram
+double[] SMOOTH_KERNEL = [1, 2, 3, 2, 1] as double[]   // example smoothing kernel (RESEARCH Pattern 2)
+double PEAK_PROMINENCE = 500               // same D-01 seed value locked in BraiAn.yml
+int N_PEAK = 2                             // same locked semantic as BraiAn.yml's nPeak: 2 (skip background peak)
+
+/** Bins values into a histogram, smooths + finds peaks via ChannelHistogram, returns the nPeak-th peak's bin-center threshold (or NaN if no data/peaks). */
+def derivePeakThreshold = { List<Double> values, double binWidth, double[] kernel, double peakProminence, int nPeak ->
+    if (values == null || values.isEmpty()) return Double.NaN
+    double minV = values.min(), maxV = values.max()
+    if (!(maxV > minV)) return Double.NaN
+    int nBins = Math.max(1, Math.ceil((maxV - minV) / binWidth) as int)
+    double[] hist = new double[nBins + 1]
+    values.each { v ->
+        int idx = Math.min(nBins, (int) ((v - minV) / binWidth))
+        hist[idx]++
+    }
+    def smoothed = ChannelHistogram.zeroPhaseFilter(hist, kernel)
+    int[] peakIndices = ChannelHistogram.findPeaks(smoothed, peakProminence)
+    if (peakIndices.length == 0) return Double.NaN
+    int pick = Math.min(nPeak - 1, peakIndices.length - 1)
+    return minV + peakIndices[pick] * binWidth
+}
+
+// Mandatory self-check (RESEARCH Open Question 1): re-derive on the EXISTING
+// raw measures first and compare to the already-locked absolute thresholds --
+// validates the histogram-kernel/window semantics transfer to a measurement
+// histogram before trusting the bg-sub-measure re-derivation below.
+def rawFosValues = classifiable.collect { it.getMeasurements().get("Nucleus: AF488-T3 mean")?.doubleValue() }.findAll { it != null && !Double.isNaN(it) }
+def rawTdtValues = classifiable.collect { it.getMeasurements().get("Cytoplasm: AF568-T2 mean")?.doubleValue() }.findAll { it != null && !Double.isNaN(it) }
+double rawFosRederived = derivePeakThreshold(rawFosValues, BIN_WIDTH, SMOOTH_KERNEL, PEAK_PROMINENCE, N_PEAK)
+double rawTdtRederived = derivePeakThreshold(rawTdtValues, BIN_WIDTH, SMOOTH_KERNEL, PEAK_PROMINENCE, N_PEAK)
+println "Self-check (Open Question 1): raw-measure re-derivation vs the locked absolute cutoffs"
+println String.format("  Fos raw re-derived=%.4f  vs locked %.4f  -> %s", rawFosRederived, fos.thr,
+        (Double.isNaN(rawFosRederived) ? "CHECK (no data / no peak found)" :
+                (Math.abs(rawFosRederived - fos.thr) <= 0.2 * fos.thr ? "PASS (within 20%)" : "CHECK (>20% off -- inspect kernel/window semantics)")))
+println String.format("  TdT raw re-derived=%.4f  vs locked %.4f  -> %s", rawTdtRederived, tdt.thr,
+        (Double.isNaN(rawTdtRederived) ? "CHECK (no data / no peak found)" :
+                (Math.abs(rawTdtRederived - tdt.thr) <= 0.2 * tdt.thr ? "PASS (within 20%)" : "CHECK (>20% off -- inspect kernel/window semantics)")))
+
+// Re-derive on the bg-sub measure -- these are the operative D-05 thresholds.
+def bgFosValues = classifiable.collect { it.getMeasurements().get("Nucleus: AF488-T3 mean (bg-sub)")?.doubleValue() }.findAll { it != null && !Double.isNaN(it) }
+def bgTdtValues = classifiable.collect { it.getMeasurements().get("Cytoplasm: AF568-T2 mean (bg-sub)")?.doubleValue() }.findAll { it != null && !Double.isNaN(it) }
+double newFosThreshold = derivePeakThreshold(bgFosValues, BIN_WIDTH, SMOOTH_KERNEL, PEAK_PROMINENCE, N_PEAK)
+double newTdtThreshold = derivePeakThreshold(bgTdtValues, BIN_WIDTH, SMOOTH_KERNEL, PEAK_PROMINENCE, N_PEAK)
+println "Re-derived Fos threshold (bg-sub measure): ${newFosThreshold}"
+println "Re-derived TdT threshold (bg-sub measure): ${newTdtThreshold}"
+
+/** Writes a bg-sub classifier JSON in the same shape as the existing Fos/TdT classifier files, so readSpec parses it unmodified. */
+def writeBgsubClassifierSpec = { String fn, String measurement, double threshold ->
+    def obj = new JsonObject()
+    obj.addProperty("object_classifier_type", "SimpleClassifier")
+    def func = new JsonObject()
+    func.addProperty("classifier_fun", "ClassifyByMeasurementFunction")
+    func.addProperty("measurement", measurement)
+    func.addProperty("pathClassBelow", "Negative")
+    func.addProperty("pathClassEquals", "Positive")
+    func.addProperty("pathClassAbove", "Positive")
+    func.addProperty("threshold", threshold)
+    obj.add("function", func)
+    def pathClasses = new JsonArray()
+    pathClasses.add("Negative")
+    pathClasses.add("Positive")
+    obj.add("pathClasses", pathClasses)
+    obj.addProperty("filter", "DETECTIONS_ALL")
+    obj.addProperty("note", "D-05: threshold re-derived by 02_detect_classify.groovy via ChannelHistogram peak-finding on the (bg-sub) measure at ${new Date()}.")
+    new File(base, fn).text = new GsonBuilder().setPrettyPrinting().create().toJson(obj)
+}
+// Only overwrite the committed placeholder if this run actually produced a
+// valid peak (idempotent/safe: a run with insufficient/no data leaves the
+// last-known-good JSON on disk rather than clobbering it with NaN).
+if (!Double.isNaN(newFosThreshold)) {
+    writeBgsubClassifierSpec("Fos_Classifier_20x_bgsub.json", "Nucleus: AF488-T3 mean (bg-sub)", newFosThreshold)
+} else {
+    println "  WARNING: Fos bg-sub threshold re-derivation failed (NaN) -- keeping existing Fos_Classifier_20x_bgsub.json unchanged."
+}
+if (!Double.isNaN(newTdtThreshold)) {
+    writeBgsubClassifierSpec("TdT_classifier_bgsub.json", "Cytoplasm: AF568-T2 mean (bg-sub)", newTdtThreshold)
+} else {
+    println "  WARNING: TdT bg-sub threshold re-derivation failed (NaN) -- keeping existing TdT_classifier_bgsub.json unchanged."
+}
+
+// Re-read via the SAME readSpec closure used for the old JSONs (schema-compatible round-trip).
+def fosBg = readSpec("Fos_Classifier_20x_bgsub.json")
+def tdtBg = readSpec("TdT_classifier_bgsub.json")
+println "Fos rule (bg-sub, D-05, OPERATIVE): ${fosBg.meas} >= ${fosBg.thr}"
+println "TdT rule (bg-sub, D-05, OPERATIVE): ${tdtBg.meas} >= ${tdtBg.thr}"
+println "(Superseded reference only, NOT operative: Fos raw >= ${fos.thr}, TdT raw >= ${tdt.thr} -- Pitfall 9)"
+
 // ── compound classification core (nucleus-anchored, no proximity/overlap) ───
 int cFos = 0, cTdt = 0, cDbl = 0, cNeg = 0, cExc = 0
 dets.each { d ->
-    def r = d.getROI()
-    double x = r.getCentroidX(), y = r.getCentroidY()
-    if (excludeRois.any { it.contains(x, y) }) {
+    if (isExcluded(d)) {
         d.setPathClass(getPathClass("Excluded")); cExc++; return
     }
-    def vf = d.getMeasurements().get(fos.meas)
-    def vt = d.getMeasurements().get(tdt.meas)
-    boolean isF = vf != null && !Double.isNaN(vf.doubleValue()) && vf.doubleValue() >= fos.thr
-    boolean isT = vt != null && !Double.isNaN(vt.doubleValue()) && vt.doubleValue() >= tdt.thr
+    def vf = d.getMeasurements().get(fosBg.meas)
+    def vt = d.getMeasurements().get(tdtBg.meas)
+    boolean isF = vf != null && !Double.isNaN(vf.doubleValue()) && vf.doubleValue() >= fosBg.thr
+    boolean isT = vt != null && !Double.isNaN(vt.doubleValue()) && vt.doubleValue() >= tdtBg.thr
     def cls = (isF && isT) ? "Double+" : isF ? "Fos+" : isT ? "TdT+" : "Negative"
     d.setPathClass(getPathClass(cls))
     if (cls == "Double+") cDbl++ else if (cls == "Fos+") cFos++ else if (cls == "TdT+") cTdt++ else cNeg++

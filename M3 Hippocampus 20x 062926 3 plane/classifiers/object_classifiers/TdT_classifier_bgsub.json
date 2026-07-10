@@ -1,0 +1,17 @@
+{
+  "object_classifier_type": "SimpleClassifier",
+  "function": {
+    "classifier_fun": "ClassifyByMeasurementFunction",
+    "measurement": "Cytoplasm: AF568-T2 mean (bg-sub)",
+    "pathClassBelow": "Negative",
+    "pathClassEquals": "Positive",
+    "pathClassAbove": "Positive",
+    "threshold": 16766.4671
+  },
+  "pathClasses": [
+    "Negative",
+    "Positive"
+  ],
+  "filter": "DETECTIONS_ALL",
+  "note": "D-05 placeholder: threshold copied from the locked raw-measure cutoff (TdT_classifier.json) as a documented starting value. 02_detect_classify.groovy overwrites this file with a live ChannelHistogram-derived threshold on the bg-sub measure each time it is run in QuPath (Pattern 2). Not yet exercised against real image data -- superseded on first live run."
+}
