@@ -30,6 +30,16 @@
  * ventricular systems VS) are set to "Excluded" and NOT marker-classified.
  * Locked in Phase 2 — not a Phase-3 decision; EXCLUDE_ACRONYMS unchanged.
  *
+ * BACKGROUND-ROBUST MEASURE (D-04): before classification, every detection
+ * gains a compartment-agnostic local-background-subtracted measurement for
+ * each marker -- "Nucleus: AF488-T3 mean (bg-sub)" (Fos, ring built outside
+ * the nucleus ROI) and "Cytoplasm: AF568-T2 mean (bg-sub)" (TdT, ring built
+ * outside the expanded cell/cytoplasm ROI). This fixes Phase 2's Deviation #2
+ * SSp-autofluorescence false-positive bug without introducing a
+ * nucleus:cytoplasm contrast ratio (that alternative is forbidden by D-04 --
+ * it does not generalize to a future PNN pericellular-annulus compartment).
+ * See localBackgroundSubtractedMean below.
+ *
  * ATLAS REGION LABEL (SC2): each classified cell resolves to its ABBA
  * leaf-region label via the SAME centroid-in-ROI containment idiom used for
  * exclusions. Region membership is recomputed EPHEMERALLY per run via the
@@ -47,6 +57,12 @@
 import com.google.gson.JsonParser
 import qupath.ext.biop.abba.AtlasTools
 import net.imglib2.RealPoint
+import qupath.lib.roi.RoiTools
+import qupath.lib.objects.PathObjects
+import qupath.lib.analysis.features.ObjectMeasurements
+import qupath.lib.analysis.features.ObjectMeasurements.Measurements
+import qupath.lib.analysis.features.ObjectMeasurements.Compartments
+import qupath.lib.regions.ImageRegion
 import static qupath.lib.scripting.QP.*
 
 // ── Entry confirmation ──────────────────────────────────────────────────────
@@ -82,6 +98,100 @@ println "Exclusion regions (${EXCLUDE_ACRONYMS}): ${excludeRois.size()} annotati
 // ── D-02 zero-detection guard ────────────────────────────────────────────────
 def dets = getDetectionObjects()
 if (dets.isEmpty()) { println "No detections — run BraiAnDetect first. Aborting."; return }
+
+// ── image/server/hierarchy handles (shared: bg-sub pass, threshold re-derivation, Atlas_X) ──
+def imageData = getCurrentImageData()
+def server = imageData.getServer()
+def hierarchy = imageData.getHierarchy()
+
+// ── D-04 / Pattern 1: compartment-agnostic local-background-subtracted measure ──
+// Resolve pixel size (µm/px) the same fallback way as qc_detection_gates.groovy:
+// prefer the image server's own calibration (matches OME-XML PhysicalSizeX),
+// fall back to the known entry-1 value only if the server exposes none.
+def FALLBACK_PIXEL_SIZE_UM = 0.6905355   // server.json PhysicalSizeX, M3 062926 3 plane entry 1
+def cal = server.getPixelCalibration()
+def pixelUm = FALLBACK_PIXEL_SIZE_UM
+if (cal != null && cal.hasPixelSizeMicrons()) {
+    pixelUm = cal.getAveragedPixelSizeMicrons()
+    println "Pixel size read from image server: ${pixelUm} µm/px"
+} else {
+    println "WARNING: image server has no pixel calibration -- falling back to hard-coded ${FALLBACK_PIXEL_SIZE_UM} µm/px (server.json PhysicalSizeX)"
+}
+
+// Ring-geometry seed constants (µm) -- [ASSUMED] starting point (Assumption A4),
+// tune visually on DG like Phase 2's cellExpansionMicrons; ring must not eat
+// into the cell's own compartment. Buffer distances are in PIXELS (Pitfall 2),
+// so convert before use.
+double GAP_UM = 1.0
+double RING_WIDTH_UM = 8.0
+double gapPx = GAP_UM / pixelUm
+double outerPx = (GAP_UM + RING_WIDTH_UM) / pixelUm
+
+// A5 guard: print the throwaway measurement object's key set exactly once, so
+// the "Cell: <channel> mean" key name assumption is confirmed before the loop
+// trusts it on every detection.
+boolean bgKeySetPrinted = false
+
+/**
+ * Returns the local-background-subtracted mean intensity for channelName in
+ * an annulus built immediately outside baseRoi (compartment-agnostic: caller
+ * passes the nucleus ROI for Fos, the expanded cell/cytoplasm ROI for TdT --
+ * Pitfall 3). Neighboring detections are excluded from the annulus via exact
+ * geometric subtraction, using a bounding-box "quick check" neighbor query
+ * (getAllObjectsForRegion, NOT the centroid-only getAllObjectsForROI --
+ * Pitfall 8) to avoid missing neighbors whose centroid sits outside the ring
+ * but whose body intrudes into it. Uses ObjectMeasurements (the same class
+ * QuPath's own Nucleus/Cytoplasm measurements are built with) on a throwaway
+ * detection object that is never added to the hierarchy -- Don't Hand-Roll.
+ */
+def localBackgroundSubtractedMean = { baseRoi, String channelName, selfDetection ->
+    def innerRoi = RoiTools.buffer(baseRoi, gapPx)
+    def outerRoi = RoiTools.buffer(baseRoi, outerPx)
+    def annulusRoi = RoiTools.subtract(outerRoi, innerRoi)
+
+    def region = ImageRegion.createInstance(annulusRoi)
+    def neighborRois = hierarchy.getAllObjectsForRegion(region)
+            .findAll { it.isDetection() && it != selfDetection }
+            .collect { it.getROI() }
+            .findAll { it != null }
+    def cleanAnnulus = neighborRois.isEmpty() ? annulusRoi : RoiTools.subtract(annulusRoi, neighborRois)
+
+    def tempObj = PathObjects.createDetectionObject(cleanAnnulus)
+    ObjectMeasurements.addIntensityMeasurements(server, tempObj, 1.0,
+            [Measurements.MEAN], [Compartments.CELL])
+    if (!bgKeySetPrinted) {
+        println "A5 self-check: throwaway measurement object key set = ${tempObj.getMeasurements().keySet()}"
+        bgKeySetPrinted = true
+    }
+    def key = "Cell: ${channelName} mean"
+    def v = tempObj.getMeasurements().get(key)
+    (v == null || Double.isNaN(v.doubleValue())) ? Double.NaN : v.doubleValue()
+}
+
+println "Computing local-background-subtracted measures (D-04) for ${dets.size()} detections..."
+int bgProcessed = 0
+dets.each { d ->
+    // Fos ring anchors OUTSIDE the nucleus ROI; TdT ring anchors OUTSIDE the
+    // expanded cell/cytoplasm ROI -- distinct per-marker anchors (Pitfall 3).
+    def nucleusRoi = (d.respondsTo('getNucleusROI') && d.getNucleusROI() != null) ? d.getNucleusROI() : d.getROI()
+    def cellRoi = d.getROI()
+
+    def rawFosM = d.getMeasurements().get("Nucleus: AF488-T3 mean")
+    double rawFos = rawFosM != null ? rawFosM.doubleValue() : Double.NaN
+    double bgFos = localBackgroundSubtractedMean(nucleusRoi, "AF488-T3", d)
+
+    def rawTdtM = d.getMeasurements().get("Cytoplasm: AF568-T2 mean")
+    double rawTdt = rawTdtM != null ? rawTdtM.doubleValue() : Double.NaN
+    double bgTdt = localBackgroundSubtractedMean(cellRoi, "AF568-T2", d)
+
+    d.getMeasurementList().put("Nucleus: AF488-T3 mean (bg-sub)", rawFos - bgFos)
+    d.getMeasurementList().put("Cytoplasm: AF568-T2 mean (bg-sub)", rawTdt - bgTdt)
+
+    bgProcessed++
+    if (bgProcessed % 1000 == 0) println "  ...background-subtracted ${bgProcessed}/${dets.size()} detections"
+}
+fireHierarchyUpdate()
+println "Background-subtracted measures written for ${dets.size()} detections (D-04)."
 
 // ── compound classification core (nucleus-anchored, no proximity/overlap) ───
 int cFos = 0, cTdt = 0, cDbl = 0, cNeg = 0, cExc = 0
@@ -204,7 +314,7 @@ fireHierarchyUpdate()
 // is the official BIOP/ABBA-author pattern, cross-verified against the
 // installed qupath-extension-abba-0.4.0.jar + bundled imglib2-realtransform.
 println "Atlas_X sanity print (sample of classified cells, expect Atlas_X in [5000, 10000] µm per SC3):"
-def imageData = getCurrentImageData()
+// imageData already resolved above (shared handle, D-04 pre-pass) -- do not redeclare.
 def pixelToAtlasTransform = null
 try {
     pixelToAtlasTransform = AtlasTools.getAtlasToPixelTransform(imageData)?.inverse()
