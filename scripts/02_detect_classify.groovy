@@ -420,7 +420,7 @@ regionAnnotations.each { ann ->
         }
     }
     def ml = ann.getMeasurementList()
-    counts.each { cls, n -> ml.put("Count: ${cls}", n as double) }
+    counts.each { cls, cnt -> ml.put("Count: ${cls}", cnt as double) }
     println "  ${regionLabel(ann)}: " + ROLLUP_CLASSES.collect { "${it}=${counts[it]}" }.join(", ")
 }
 fireHierarchyUpdate()
