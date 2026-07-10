@@ -148,6 +148,12 @@ double outerPx = (GAP_UM + RING_WIDTH_UM) / pixelUm
 // the "Cell: <channel> mean" key name assumption is confirmed before the loop
 // trusts it on every detection.
 boolean bgKeySetPrinted = false
+// D-04 robustness: JTS OverlayNG can throw "side location conflict" (a geometry
+// robustness failure) on a small number of pathological detection ROIs during the
+// annulus subtract. One bad cell must NOT abort the full detection batch, so the
+// closure below catches it and returns NaN for that cell (which falls conservatively
+// to Negative in classification); the total skipped count is reported after the loop.
+int bgGeomFailures = 0
 
 /**
  * Returns the local-background-subtracted mean intensity for channelName in
@@ -162,27 +168,34 @@ boolean bgKeySetPrinted = false
  * detection object that is never added to the hierarchy -- Don't Hand-Roll.
  */
 def localBackgroundSubtractedMean = { baseRoi, String channelName, selfDetection ->
-    def innerRoi = RoiTools.buffer(baseRoi, gapPx)
-    def outerRoi = RoiTools.buffer(baseRoi, outerPx)
-    def annulusRoi = RoiTools.subtract(outerRoi, innerRoi)
+    try {
+        def innerRoi = RoiTools.buffer(baseRoi, gapPx)
+        def outerRoi = RoiTools.buffer(baseRoi, outerPx)
+        def annulusRoi = RoiTools.subtract(outerRoi, innerRoi)
 
-    def region = ImageRegion.createInstance(annulusRoi)
-    def neighborRois = hierarchy.getAllObjectsForRegion(region)
-            .findAll { it.isDetection() && it != selfDetection }
-            .collect { it.getROI() }
-            .findAll { it != null }
-    def cleanAnnulus = neighborRois.isEmpty() ? annulusRoi : RoiTools.subtract(annulusRoi, neighborRois)
+        def region = ImageRegion.createInstance(annulusRoi)
+        def neighborRois = hierarchy.getAllObjectsForRegion(region)
+                .findAll { it.isDetection() && it != selfDetection }
+                .collect { it.getROI() }
+                .findAll { it != null }
+        def cleanAnnulus = neighborRois.isEmpty() ? annulusRoi : RoiTools.subtract(annulusRoi, neighborRois)
 
-    def tempObj = PathObjects.createDetectionObject(cleanAnnulus)
-    ObjectMeasurements.addIntensityMeasurements(server, tempObj, 1.0,
-            [Measurements.MEAN], [Compartments.CELL])
-    if (!bgKeySetPrinted) {
-        println "A5 self-check: throwaway measurement object key set = ${tempObj.getMeasurements().keySet()}"
-        bgKeySetPrinted = true
+        def tempObj = PathObjects.createDetectionObject(cleanAnnulus)
+        ObjectMeasurements.addIntensityMeasurements(server, tempObj, 1.0,
+                [Measurements.MEAN], [Compartments.CELL])
+        if (!bgKeySetPrinted) {
+            println "A5 self-check: throwaway measurement object key set = ${tempObj.getMeasurements().keySet()}"
+            bgKeySetPrinted = true
+        }
+        def key = "Cell: ${channelName} mean"
+        def v = tempObj.getMeasurements().get(key)
+        return (v == null || Double.isNaN(v.doubleValue())) ? Double.NaN : v.doubleValue()
+    } catch (Throwable t) {
+        // JTS "side location conflict" & kin: geometry robustness failure on this
+        // cell's annulus. Skip local-bg for it rather than aborting the whole batch.
+        bgGeomFailures++
+        return Double.NaN
     }
-    def key = "Cell: ${channelName} mean"
-    def v = tempObj.getMeasurements().get(key)
-    (v == null || Double.isNaN(v.doubleValue())) ? Double.NaN : v.doubleValue()
 }
 
 println "Computing local-background-subtracted measures (D-04) for ${dets.size()} detections..."
@@ -208,6 +221,8 @@ dets.each { d ->
     if (bgProcessed % 1000 == 0) println "  ...background-subtracted ${bgProcessed}/${dets.size()} detections"
 }
 fireHierarchyUpdate()
+if (bgGeomFailures > 0)
+    println "  NOTE: ${bgGeomFailures}/${dets.size()} detections hit a geometry-robustness failure in the local-bg annulus and were assigned NaN bg-sub (→ Negative). Negligible if small; investigate if large."
 println "Background-subtracted measures written for ${dets.size()} detections (D-04)."
 
 // ── isExcluded: shared centroid-in-excludeRois test (reused by threshold ───
