@@ -126,3 +126,12 @@ Per this project's CLAUDE.md, QuPath is GUI-only and human-operated. This plan's
 ---
 *Phase: 03-detection-script-and-single-section-end-to-end-test*
 *Completed: 2026-07-10*
+
+## Self-Check: PASSED
+
+- FOUND: `scripts/02_detect_classify.groovy`
+- FOUND: `M3 Hippocampus 20x 062926 3 plane/scripts/02_detect_classify.groovy`
+- FOUND: `.planning/phases/03-detection-script-and-single-section-end-to-end-test/03-01-SUMMARY.md`
+- FOUND: commit `69c198a` (Task 1)
+- FOUND: commit `89b200d` (Task 2)
+- FOUND: commit `303971a` (docs: summary)
