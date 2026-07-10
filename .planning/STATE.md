@@ -4,13 +4,13 @@ milestone: v1.0
 milestone_name: milestone
 status: executing
 stopped_at: Plan 03-02 executed
-last_updated: "2026-07-10T03:57:00.687Z"
+last_updated: "2026-07-10T15:11:41.367Z"
 progress:
   total_phases: 4
   completed_phases: 2
   total_plans: 9
-  completed_plans: 7
-  percent: 50
+  completed_plans: 8
+  percent: 89
 ---
 
 # Project State: M3 Hippocampus Section Pipeline — First Run
@@ -31,22 +31,22 @@ progress:
 ## Current Position
 
 **Active phase:** Phase 3 — Detection Script and Single-Section End-to-End Test — IN PROGRESS
-**Active plan:** 03-03 (background-robust Fos/TdT measure) — next up
+**Active plan:** 03-04 (human-in-the-loop run) — next up
 **Status:** Executing Phase 03
 
 **Progress bar:**
 
 ```
 [Phase 1] [Phase 2] [Phase 3] [Phase 4]
-[======] [======] [====  ] [      ]
-  78% of plans complete (7/9); Phase 3: 2/4 plans done
+[======] [======] [======] [      ]
+  89% of plans complete (8/9); Phase 3: 3/4 plans done
 ```
 
 **Phase completion:**
 
 - Phase 1: Complete (3/3 plans done, 2026-07-02)
 - Phase 2: Complete (2/2 plans done, 2026-07-09 — detection params + classifier thresholds locked; see 02-LOCK-RECORD.md)
-- Phase 3: In progress (2/4 plans done, 2026-07-10 — count rollup (SC4) + Atlas_X sanity print (SC3) added; see 03-02-SUMMARY.md)
+- Phase 3: In progress (3/4 plans done, 2026-07-10 — background-robust bg-sub measure + ChannelHistogram threshold re-derivation added (D-03/D-04/D-05); see 03-03-SUMMARY.md)
 - Phase 4: Not started
 
 ---
@@ -65,6 +65,7 @@ progress:
 | Phase 02 P01 | 12min | 3 tasks | 6 files |
 | Phase 03 P01 | 10min | 2 tasks | 2 files |
 | Phase 03 P02 | 7min | 2 tasks | 2 files |
+| Phase 03 P03 | 7min | 2 tasks | 4 files |
 
 ## Accumulated Context
 
@@ -114,8 +115,8 @@ progress:
 - [x] Plan 02-02: run BraiAnDetect in QuPath on M3 062926 3 plane entry 1, run qc_detection_gates.groovy, tune sigma/area/threshold against D-05 gates (DG + CA1), write 02-LOCK-RECORD.md (2026-07-09)
 - [x] Plan 03-01 executed (2026-07-10) — 02_detect_classify.groovy authored (canonical + project hard-copy): D-01/D-02 guard, nucleus-anchored compound classification, atlas region label (regionOf/regionLabel)
 - [x] Plan 03-02 executed (2026-07-10) — per-region count rollup (SC4, MeasurementList.put("Count: ...") onto CA1/CA2/CA3/DG-* leaf annotations) + Atlas_X micron sanity print (SC3) via AtlasTools; both grep/cmp-verified, human QuPath run deferred to Plan 03-04
-- [ ] Plan 03-03: background-robust (local-background-subtraction) Fos/TdT measure (D-03/D-04/D-05); re-derive thresholds
-- [ ] Plan 03-04: human-in-the-loop run — "Run for project" on M3 entry 1, verify four-class breakdown, region labels, data.qpdata update; only then mark SCRI-03 complete
+- [x] Plan 03-03 executed (2026-07-10) — compartment-agnostic local-background-subtracted Fos/TdT measure (D-04) + ChannelHistogram-based threshold re-derivation (D-05); classification repointed to bg-sub measure + re-derived thresholds; Fos_Classifier_20x_bgsub.json/TdT_classifier_bgsub.json authored (self-bootstrapping placeholders, overwritten on live run); grep/cmp/JSON-parse verified, human QuPath run deferred to Plan 03-04
+- [ ] Plan 03-04: human-in-the-loop run — "Run for project" on M3 entry 1, verify four-class breakdown (now bg-sub-based), region labels, count rollup, data.qpdata update, A5/self-check/SSp-reduction human-checks from Plans 03-01/03-02/03-03; only then mark SCRI-03 complete
 
 ### Blockers
 
@@ -131,11 +132,11 @@ None (Plan 02 is a human GUI step in Fiji; not a blocker, just a handoff).
 
 ## Session Continuity
 
-**Last session:** 2026-07-10T03:57:00Z
-**Stopped at:** Plan 03-02 executed — per-region count rollup (SC4) + Atlas_X micron sanity print (SC3) added
-**Resume file:** .planning/phases/03-detection-script-and-single-section-end-to-end-test/03-03-PLAN.md
+**Last session:** 2026-07-10T15:01:24Z
+**Stopped at:** Plan 03-03 executed — compartment-agnostic local-background-subtracted Fos/TdT measure (D-04) + ChannelHistogram threshold re-derivation (D-05) added
+**Resume file:** .planning/phases/03-detection-script-and-single-section-end-to-end-test/03-04-PLAN.md
 
-**To resume:** Plan 03-02 extended `scripts/02_detect_classify.groovy` (+ byte-identical project hard-copy) with two read-only reporting slices built on Plan 01's `regionAnnotations`/`regionOf`/`regionLabel` machinery: (1) a per-region count rollup writing `Count: <class>` numeric measurements (Negative/Fos+/TdT+/Double+/Excluded) onto every leaf region annotation via `MeasurementList.put`, satisfying SC4, with a console table complement; explicitly does NOT read the stale `results/<image>_regions.tsv`; (2) an Atlas_X/Y/Z micron sanity print for up to 5 sampled Fos+/TdT+/Double+ cells via `AtlasTools.getAtlasToPixelTransform(imageData).inverse()`, satisfying SC3, with a guarded skip path and a documented (not hard-coded) x10 voxel-index fallback comment. Both automated verifications (grep/cmp) passed; the plan's `<human-check>` QuPath run-through steps were explicitly NOT attempted per CLAUDE.md's GUI-human-only constraint and remain deferred to Plan 03-04. SCRI-03 requirement NOT yet marked complete (requires "tested on one section" per REQUIREMENTS.md, which only happens in Plan 03-04). Next: Plan 03-03 — background-robust (local-background-subtraction) Fos/TdT measure (D-03/D-04/D-05), re-deriving thresholds on the new measurement.
+**To resume:** Plan 03-03 extended `scripts/02_detect_classify.groovy` (+ byte-identical project hard-copy) with the phase's crux capability: (1) a `localBackgroundSubtractedMean` closure building a peri-cellular annulus outside each marker's own compartment ROI (nucleus for Fos, expanded cell/cytoplasm for TdT) via `RoiTools.buffer`/`subtract`, excluding neighboring detections via `getAllObjectsForRegion` (not centroid-only), and sampling the mean via `ObjectMeasurements` on a throwaway detection object — writes `Nucleus: AF488-T3 mean (bg-sub)` / `Cytoplasm: AF568-T2 mean (bg-sub)` on every detection (D-04); (2) a `derivePeakThreshold` closure re-deriving Fos/TdT positive thresholds on the bg-sub measure via `qupath.ext.braian.ChannelHistogram.zeroPhaseFilter`/`findPeaks`, with a mandatory raw-measure self-check printed against the locked absolute cutoffs (13000.4538/16766.4671) before trusting the bg-sub derivation; new `Fos_Classifier_20x_bgsub.json`/`TdT_classifier_bgsub.json` authored as self-bootstrapping placeholders (old locked threshold + a `note` field) that the script itself overwrites with the live re-derived value on every run, then re-reads via the existing `readSpec` closure; the compound classification loop is now repointed to the bg-sub measure + re-derived thresholds (old absolute cutoffs retained as documented reference only, Pitfall 9 guard). Two Rule-1 bugs auto-fixed: a duplicate `imageData` declaration (compile error) and RESEARCH.md's broken `hasProperty('getNucleusROI')` idiom corrected to `respondsTo('getNucleusROI')`. All static/source verification (grep/cmp/`python3` JSON parse) passed; the plan's `<human-check>` QuPath run-through steps (A5 key-set println, non-negative TdT bg-sub check, raw-measure self-check landing near the locked thresholds, measurable SSp false-positive reduction) were explicitly NOT attempted per CLAUDE.md's GUI-human-only constraint and remain deferred to Plan 03-04. SCRI-03 requirement NOT yet marked complete (requires "tested on one section" per REQUIREMENTS.md, which only happens in Plan 03-04). Next: Plan 03-04 — human-in-the-loop run: "Run for project" on M3 entry 1, verify the bg-sub-based four-class breakdown, region labels, count rollup, `data.qpdata` update, and all deferred human-check items from Plans 03-01/03-02/03-03; only then mark SCRI-03 complete.
 
 **Phase 2 locked decisions (see 02-CONTEXT.md):** histogram-relative detection threshold + relative classifier cutoffs + one global BraiAn.yml (drift-monitored via SERIES-02); hard lock gates = nucleus-area peak 50–150µm² AND DAPI density 500–2000/mm²; Double+ ratio advisory only; Fos+ negative-control gate deferred. Reuse `Fos_Classifier_20x.json` (correct nuclear compartment), rebuild TdT classifier to read Cytoplasm — both done in Plan 02-01.
 
@@ -143,3 +144,8 @@ None (Plan 02 is a human GUI step in Fiji; not a blocker, just a handoff).
 
 ---
 *State initialized: 2026-07-01 | Last updated: 2026-07-10 (Phase 3 Plan 01 executed)*
+
+## Decisions
+
+- [Phase 03]: bgsub classifier JSONs are self-bootstrapping placeholders (old locked threshold, documented via a note field); script's own runtime ChannelHistogram re-derivation overwrites them each live QuPath run — No live QuPath run is available to this executor (GUI-human-only per CLAUDE.md); the plan allows deriving in-script while preferring the JSON path for D-05's runtime-editable shape
+- [Phase 03]: Threshold write-back to bgsub classifier JSON is guarded against NaN (insufficient data / no peak found); leaves the existing file unchanged rather than clobbering it — Preserves D-02's idempotent/safe re-run property
