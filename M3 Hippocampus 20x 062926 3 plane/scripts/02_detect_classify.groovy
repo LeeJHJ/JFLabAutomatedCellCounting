@@ -45,6 +45,8 @@
  * @author section-pipeline
  */
 import com.google.gson.JsonParser
+import qupath.ext.biop.abba.AtlasTools
+import net.imglib2.RealPoint
 import static qupath.lib.scripting.QP.*
 
 // ── Entry confirmation ──────────────────────────────────────────────────────
@@ -192,3 +194,45 @@ regionAnnotations.each { ann ->
     println "  ${regionLabel(ann)}: " + ROLLUP_CLASSES.collect { "${it}=${counts[it]}" }.join(", ")
 }
 fireHierarchyUpdate()
+
+// ── SC3: Atlas_X micron sanity print (lightweight, NOT a per-cell export) ──
+// Confirms the ABBA-registered CCFv3 coordinate for a handful of classified
+// cells falls in the 5,000-10,000 µm range (proves µm units, not mm or a raw
+// atlas voxel index). This is a sanity check only, not the full per-cell
+// Atlas_X/Y/Z export column (that is v2 EXP-01/EXP-03 — Claude's-Discretion,
+// 03-CONTEXT.md). Pattern 5 (RESEARCH.md): AtlasTools.getAtlasToPixelTransform
+// is the official BIOP/ABBA-author pattern, cross-verified against the
+// installed qupath-extension-abba-0.4.0.jar + bundled imglib2-realtransform.
+println "Atlas_X sanity print (sample of classified cells, expect Atlas_X in [5000, 10000] µm per SC3):"
+def imageData = getCurrentImageData()
+def pixelToAtlasTransform = null
+try {
+    pixelToAtlasTransform = AtlasTools.getAtlasToPixelTransform(imageData)?.inverse()
+} catch (Exception e) {
+    println "  Could not obtain atlas<->pixel transform (${e.class.simpleName}: ${e.message}) — skipping Atlas_X sanity print."
+}
+if (pixelToAtlasTransform == null) {
+    println "  No ABBA registration transform available on this entry — skipping Atlas_X sanity print."
+} else {
+    def sample = dets.findAll { it.getPathClass()?.toString() in ["Fos+", "TdT+", "Double+"] }.take(5)
+    if (sample.isEmpty()) {
+        println "  No Fos+/TdT+/Double+ classified cells to sample from."
+    }
+    sample.each { d ->
+        def r = d.getROI()
+        def point = new RealPoint(3)
+        point.setPosition([r.getCentroidX(), r.getCentroidY(), 0d] as double[])
+        pixelToAtlasTransform.apply(point, point)   // in-place: same RealPoint as source and target
+        println "  [${d.getPathClass()}] Atlas_X=${point.getDoublePosition(0)}  Atlas_Y=${point.getDoublePosition(1)}  Atlas_Z=${point.getDoublePosition(2)}"
+    }
+    // Documented ×10 voxel-index fallback (RESEARCH Pitfall 10 / Assumption A3):
+    // if the printed Atlas_X values look like voxel indices (~500-1000) rather
+    // than microns (~5000-10000), the allen_mouse_10um_java atlas is 10 µm/voxel
+    // -- multiply the printed values by 10 by hand and re-check against SC3's
+    // range. No unit conversion is hard-coded here; SC3 itself is the
+    // print-and-inspect verification of this open unit question.
+    println "  NOTE: if the values above look like ~500-1000 (voxel indices) rather than"
+    println "  ~5000-10000 (µm), the allen_mouse_10um_java atlas is 10 µm/voxel -- multiply"
+    println "  by 10 and re-check against the SC3 target range. Do not hard-code this; it is"
+    println "  an empirical print-and-check gate (RESEARCH Pitfall 10 / A3)."
+}
