@@ -165,3 +165,30 @@ if (!dets.isEmpty()) {
     println "Diagnostic (A2, not depended on): sample cell parent.parent.pathClass = " +
             "${sample.getParent()?.getParent()?.getPathClass()}"
 }
+
+// ── SC4: per-region per-class count rollup onto annotation measurements ────
+// Rolls per-class counts UP onto each leaf region annotation (CA1/CA2/CA3/
+// DG-mo/DG-po/DG-sg/... ) as numeric MeasurementList entries so they render
+// natively in QuPath's annotation-pane measurement table (RESEARCH Pattern 4).
+// Counted via the SAME centroid-in-ROI containment idiom as regionOf/exclusion
+// above (qc_detection_gates.groovy template) — NOT by reading the pre-existing
+// results/<image>_regions.tsv on disk, which reflects BraiAnDetect's own
+// (incompatible, Deviation #1) classifier application and predates this
+// script's Double+/Fos+/TdT+/Negative ground truth (RESEARCH Pitfall 1).
+def ROLLUP_CLASSES = ["Negative", "Fos+", "TdT+", "Double+", "Excluded"]
+println "Per-region class count rollup (Count: <class> written onto each leaf region annotation):"
+regionAnnotations.each { ann ->
+    def roi = ann.getROI()
+    def counts = ROLLUP_CLASSES.collectEntries { [(it): 0] }
+    dets.each { d ->
+        def r = d.getROI()
+        if (roi.contains(r.getCentroidX(), r.getCentroidY())) {
+            def cls = d.getPathClass()?.toString() ?: "Negative"
+            counts[cls] = (counts[cls] ?: 0) + 1
+        }
+    }
+    def ml = ann.getMeasurementList()
+    counts.each { cls, n -> ml.put("Count: ${cls}", n as double) }
+    println "  ${regionLabel(ann)}: " + ROLLUP_CLASSES.collect { "${it}=${counts[it]}" }.join(", ")
+}
+fireHierarchyUpdate()
