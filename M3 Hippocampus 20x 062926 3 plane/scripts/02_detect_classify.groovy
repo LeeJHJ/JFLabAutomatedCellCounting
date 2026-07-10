@@ -30,6 +30,14 @@
  * ventricular systems VS) are set to "Excluded" and NOT marker-classified.
  * Locked in Phase 2 — not a Phase-3 decision; EXCLUDE_ACRONYMS unchanged.
  *
+ * ATLAS REGION LABEL (SC2): each classified cell resolves to its ABBA
+ * leaf-region label via the SAME centroid-in-ROI containment idiom used for
+ * exclusions. Region membership is recomputed EPHEMERALLY per run via the
+ * regionOf closure — never persisted as per-cell String metadata. QuPath
+ * 0.6.0 javadoc warns storing metadata on plentiful objects (detections) is
+ * memory-inefficient, and MeasurementList is numeric-only by design (cannot
+ * hold a region acronym string). See regionOf below.
+ *
  * Thresholds are read at runtime from the classifier JSONs (Fos_Classifier_20x.json,
  * TdT_classifier.json), so this stays correct after future threshold edits.
  * Run AFTER a BraiAnDetect detection pass.
@@ -105,3 +113,55 @@ println String.format("  => Total TdT+ (incl. Double+): %d (%.1f%%)", cTdt + cDb
 def denom = cTdt + cDbl
 println String.format("  Advisory Double+/TdT+ ratio: %s",
         denom > 0 ? String.format("%.3f", (double) cDbl / denom) : "n/a")
+
+// ── SC2: atlas region label per cell (ephemeral centroid-in-ROI lookup) ─────
+// Leaf region annotations only: an ABBA/Allen annotation with no annotation
+// children (parent regions like "HPF" are excluded so cells resolve to their
+// most specific subfield, e.g. CA1/CA1sp/DG-mo).
+def regionAnnotations = getAnnotationObjects().findAll { ann ->
+    def roi = ann.getROI()
+    roi != null && !ann.getChildObjects().any { it.isAnnotation() }
+}
+println "Leaf region annotations available for labeling: ${regionAnnotations.size()}"
+
+// regionOf: for a detection, returns the leaf annotation whose ROI contains
+// the detection's centroid. Recomputed on demand every call — NOT stored on
+// the detection object (Pitfall 4: metadata is memory-inefficient at
+// 10^4-10^5 detections; Pitfall 5: MeasurementList is numeric-only, cannot
+// hold a region acronym string). Region labels stay computed-on-demand.
+def regionOf = { detection ->
+    def r = detection.getROI()
+    double x = r.getCentroidX(), y = r.getCentroidY()
+    regionAnnotations.find { it.getROI().contains(x, y) }
+}
+
+// regionLabel: normalize a resolved region annotation to a bare acronym,
+// stripping the Left/Right hemisphere prefix (same normalization already
+// applied to the exclusion-region label above).
+def regionLabel = { region ->
+    if (region == null) return "(no region)"
+    def label = region.getPathClass()?.toString() ?: region.getName()
+    if (label == null) return "(no region)"
+    def m = (label =~ /(?i)^(?:Left|Right):\s*(.+)$/)
+    return m.find() ? m.group(1) : label
+}
+
+// Sample println for the first 5 classified cells: cell centroid -> resolved
+// region acronym, proving SC2's per-cell region association exists.
+println "Sample cell -> atlas region (first 5 classified cells):"
+dets.take(5).each { d ->
+    def r = d.getROI()
+    def region = regionOf(d)
+    println "  Cell at (${r.getCentroidX()}, ${r.getCentroidY()}) [${d.getPathClass()}] -> ${regionLabel(region)}"
+}
+
+// Diagnostic-only probe of the BraiAnDetect container-nesting hypothesis (A2):
+// does detection.getParent().getParent() already resolve to the containing
+// ABBA region annotation? The implementation above does NOT depend on the
+// answer either way — the centroid-in-ROI path (regionOf) is authoritative
+// regardless. This println is purely informational.
+if (!dets.isEmpty()) {
+    def sample = dets[0]
+    println "Diagnostic (A2, not depended on): sample cell parent.parent.pathClass = " +
+            "${sample.getParent()?.getParent()?.getPathClass()}"
+}
