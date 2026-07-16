@@ -120,7 +120,15 @@
   3. Per-section file size recorded (CZI raw and MIP OME-TIFF); a written assessment of MIP-immediately vs. store-raw-Z tradeoff for the full series
   4. Resolution assessment written: whether 20x Airyscan is required throughout or a lower-power survey would suffice for non-DG hippocampal subfields; identifies which subfields actually require Airyscan resolution
 
-**Plans**: TBD
+**Plans**: 3 plans
+**Wave 1** *(parallel — no file conflicts)*
+
+- [ ] 04-01-PLAN.md — VAL-01 tooling: Groovy per-cell/per-region export + Python metrics script (VAL-01)
+- [ ] 04-02-PLAN.md — Imaging optimization notes: Z-plane audit + file-size tradeoff + resolution assessment (OPT-01, OPT-02, OPT-03)
+
+**Wave 2** *(blocked on 04-01)*
+
+- [ ] 04-03-PLAN.md — VAL-01 record: human QuPath export run + metrics on real data + 04-VALIDATION-RECORD.md (VAL-01)
 
 ---
 
@@ -131,7 +139,7 @@
 | 1. Atlas Registration and ROI Loading | 3/3 | Complete    | 2026-07-02 |
 | 2. Detection Parameter Lock | 2/2 | Complete   | 2026-07-09 |
 | 3. Detection Script and Single-Section End-to-End Test | 4/4 | Complete    | 2026-07-16 |
-| 4. Biological Plausibility Validation and Imaging Optimization Notes | 0/? | Not started | - |
+| 4. Biological Plausibility Validation and Imaging Optimization Notes | 0/3 | Planned | - |
 
 ---
 

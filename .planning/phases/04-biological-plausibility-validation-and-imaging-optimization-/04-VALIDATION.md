@@ -1,8 +1,8 @@
 ---
 phase: 4
 slug: biological-plausibility-validation-and-imaging-optimization
-status: draft
-nyquist_compliant: false
+status: approved
+nyquist_compliant: true
 wave_0_complete: false
 created: 2026-07-16
 ---
