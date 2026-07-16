@@ -14,7 +14,7 @@
 
 - [x] **SCRI-01**: `01_load_abba_rois.groovy` written and tested — calls `clearAllObjects()` then `loadWarpedAtlasAnnotations`; runs cleanly on M3 QuPath project via "Run for project"
 - [x] **SCRI-02**: `BraiAn.yml` authored at project root — contains locked sigma, min/max area, threshold (histogram-relative), and `cellExpansionMicrons > 0` for TdTomato channel (seed: 5 µm); channel names match project (`AF568-T2`, `AF488-T3`, `DAPI-T4`)
-- [ ] **SCRI-03**: `02_detect_classify.groovy` written and tested on one section — runs WatershedCellDetection, cytoplasmic expansion, TdT and Fos classifiers, OverlappingDetections (Double+) via BraiAnDetect; produces `data.qpdata` with classified cells
+- [x] **SCRI-03**: `02_detect_classify.groovy` written and tested on one section — runs WatershedCellDetection, cytoplasmic expansion, TdT and Fos classifiers, OverlappingDetections (Double+) via BraiAnDetect; produces `data.qpdata` with classified cells
 
 ### Classifiers
 
@@ -77,7 +77,7 @@
 | SCRI-01 | Phase 1 | Complete |
 | SCRI-02 | Phase 2 | Complete |
 | CLASS-01 | Phase 2 | Complete |
-| SCRI-03 | Phase 3 | Pending |
+| SCRI-03 | Phase 3 | Complete |
 | VAL-01 | Phase 4 | Pending |
 | OPT-01 | Phase 4 | Pending |
 | OPT-02 | Phase 4 | Pending |

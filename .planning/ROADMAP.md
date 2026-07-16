@@ -12,7 +12,7 @@
 
 - [x] **Phase 1: Atlas Registration and ROI Loading** - ABBA registers M3 sections in Fiji and atlas annotations are loaded into QuPath via Groovy script (completed 2026-07-02)
 - [x] **Phase 2: Detection Parameter Lock** - BraiAn.yml authored with tuned parameters and Fos classifier compartment verified (completed 2026-07-09)
-- [ ] **Phase 3: Detection Script and Single-Section End-to-End Test** - `02_detect_classify.groovy` written, tested, and produces classified cell data on one section
+- [x] **Phase 3: Detection Script and Single-Section End-to-End Test** - `02_detect_classify.groovy` written, tested, and produces classified cell data on one section (completed 2026-07-16)
 - [ ] **Phase 4: Biological Plausibility Validation and Imaging Optimization Notes** - Cell counts pass bioplausibility checks and imaging optimization recommendations are documented
 
 ---
@@ -87,7 +87,7 @@
   3. Printed Atlas_X values for detected cells fall in the range 5,000–10,000 µm (confirms CCFv3 micron units, not mm)
   4. Per-region count table for hippocampal subfields (CA1, CA2, CA3, DG, at minimum) is readable in the QuPath annotation pane
 
-**Plans**: 3/4 plans executed
+**Plans**: 4/4 plans complete
 **Wave 1**
 
 - [x] 03-01-PLAN.md — Runnable classify script + per-cell atlas region labels (SC1 + SC2)
@@ -102,7 +102,7 @@
 
 **Wave 4** *(blocked on Wave 3)*
 
-- [ ] 03-04-PLAN.md — Human-in-the-loop end-to-end verification of all four success criteria
+- [x] 03-04-PLAN.md — Human-in-the-loop end-to-end verification of all four success criteria
 
 ---
 
@@ -130,7 +130,7 @@
 |-------|----------------|--------|-----------|
 | 1. Atlas Registration and ROI Loading | 3/3 | Complete    | 2026-07-02 |
 | 2. Detection Parameter Lock | 2/2 | Complete   | 2026-07-09 |
-| 3. Detection Script and Single-Section End-to-End Test | 3/4 | In Progress|  |
+| 3. Detection Script and Single-Section End-to-End Test | 4/4 | Complete    | 2026-07-16 |
 | 4. Biological Plausibility Validation and Imaging Optimization Notes | 0/? | Not started | - |
 
 ---

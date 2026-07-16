@@ -2,20 +2,20 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: executing
-stopped_at: Plan 03-02 executed
-last_updated: "2026-07-10T15:11:41.367Z"
+status: planning
+stopped_at: Phase 03 complete — all 4 plans done; 03-04 human gate PASSED on M3 entry 1; SCRI-03 verified (03-VERIFICATION.md 7/7)
+last_updated: "2026-07-16T19:14:33.814Z"
 progress:
   total_phases: 4
-  completed_phases: 2
+  completed_phases: 3
   total_plans: 9
-  completed_plans: 8
-  percent: 89
+  completed_plans: 9
+  percent: 75
 ---
 
 # Project State: M3 Hippocampus Section Pipeline — First Run
 
-**Last updated:** 2026-07-10
+**Last updated:** 2026-07-16
 **Milestone:** 1 — Single-Section Validation Run
 
 ---
@@ -24,29 +24,29 @@ progress:
 
 **Core value:** Biologically plausible TdT+/Fos+/Double+ counts per atlas region for M3 hippocampus, with locked detection parameters and imaging optimization notes ready for the full series.
 
-**Current focus:** Phase 03 — detection-script-and-single-section-end-to-end-test
+**Current focus:** Phase 04 — biological-plausibility-validation-and-imaging-optimization-notes (Phase 03 complete)
 
 ---
 
 ## Current Position
 
-**Active phase:** Phase 3 — Detection Script and Single-Section End-to-End Test — IN PROGRESS
-**Active plan:** 03-04 (human-in-the-loop run) — next up
-**Status:** Executing Phase 03
+**Active phase:** Phase 4 — Biological Plausibility Validation and Imaging Optimization Notes — NOT STARTED
+**Active plan:** none yet (Phase 4 not planned)
+**Status:** Phase 3 complete — ready to discuss/plan Phase 4
 
 **Progress bar:**
 
 ```
 [Phase 1] [Phase 2] [Phase 3] [Phase 4]
 [======] [======] [======] [      ]
-  89% of plans complete (8/9); Phase 3: 3/4 plans done
+  9/9 planned plans complete; Phase 3 done (4/4); Phase 4 not yet planned
 ```
 
 **Phase completion:**
 
 - Phase 1: Complete (3/3 plans done, 2026-07-02)
 - Phase 2: Complete (2/2 plans done, 2026-07-09 — detection params + classifier thresholds locked; see 02-LOCK-RECORD.md)
-- Phase 3: In progress (3/4 plans done, 2026-07-10 — background-robust bg-sub measure + ChannelHistogram threshold re-derivation added (D-03/D-04/D-05); see 03-03-SUMMARY.md)
+- Phase 3: Complete (4/4 plans done, 2026-07-16 — 03-04 human gate PASSED on M3 entry 1; D-04/D-05 all-Negative bug resolved; SCRI-03 verified end-to-end, 03-VERIFICATION.md 7/7)
 - Phase 4: Not started
 
 ---
@@ -56,10 +56,10 @@ progress:
 | Metric | Value |
 |--------|-------|
 | Phases total | 4 |
-| Phases complete | 1 |
+| Phases complete | 3 |
 | Requirements mapped | 10/10 |
-| Plans written | 5 |
-| Plans complete | 4 |
+| Plans written | 9 |
+| Plans complete | 9 |
 
 ---
 | Phase 02 P01 | 12min | 3 tasks | 6 files |
@@ -116,7 +116,7 @@ progress:
 - [x] Plan 03-01 executed (2026-07-10) — 02_detect_classify.groovy authored (canonical + project hard-copy): D-01/D-02 guard, nucleus-anchored compound classification, atlas region label (regionOf/regionLabel)
 - [x] Plan 03-02 executed (2026-07-10) — per-region count rollup (SC4, MeasurementList.put("Count: ...") onto CA1/CA2/CA3/DG-* leaf annotations) + Atlas_X micron sanity print (SC3) via AtlasTools; both grep/cmp-verified, human QuPath run deferred to Plan 03-04
 - [x] Plan 03-03 executed (2026-07-10) — compartment-agnostic local-background-subtracted Fos/TdT measure (D-04) + ChannelHistogram-based threshold re-derivation (D-05); classification repointed to bg-sub measure + re-derived thresholds; Fos_Classifier_20x_bgsub.json/TdT_classifier_bgsub.json authored (self-bootstrapping placeholders, overwritten on live run); grep/cmp/JSON-parse verified, human QuPath run deferred to Plan 03-04
-- [ ] Plan 03-04: human-in-the-loop run — "Run for project" on M3 entry 1, verify four-class breakdown (now bg-sub-based), region labels, count rollup, data.qpdata update, A5/self-check/SSp-reduction human-checks from Plans 03-01/03-02/03-03; only then mark SCRI-03 complete
+- [x] Plan 03-04: human-in-the-loop run PASSED (2026-07-16) — all four SC confirmed on M3 entry 1 with the final bg-sub script (Fos+ ~20%, TdT+ ~3.5%, Double+/TdT+ ~0.45, SSp suppressed); D-04/D-05 all-Negative bug resolved; SCRI-03 marked complete; Phase 3 verified (03-VERIFICATION.md 7/7)
 
 ### Blockers
 
@@ -132,18 +132,18 @@ None (Plan 02 is a human GUI step in Fiji; not a blocker, just a handoff).
 
 ## Session Continuity
 
-**Last session:** 2026-07-10T15:01:24Z
-**Stopped at:** Plan 03-03 executed — compartment-agnostic local-background-subtracted Fos/TdT measure (D-04) + ChannelHistogram threshold re-derivation (D-05) added
-**Resume file:** .planning/phases/03-detection-script-and-single-section-end-to-end-test/03-04-PLAN.md
+**Last session:** 2026-07-16
+**Stopped at:** Phase 3 COMPLETE — 03-04 human gate PASSED on M3 entry 1; Phase 3 verified (03-VERIFICATION.md 7/7). Next: Phase 4 (not yet planned).
+**Resume file:** .planning/ROADMAP.md — Phase 4: Biological Plausibility Validation and Imaging Optimization Notes
 
-**To resume:** Plan 03-03 extended `scripts/02_detect_classify.groovy` (+ byte-identical project hard-copy) with the phase's crux capability: (1) a `localBackgroundSubtractedMean` closure building a peri-cellular annulus outside each marker's own compartment ROI (nucleus for Fos, expanded cell/cytoplasm for TdT) via `RoiTools.buffer`/`subtract`, excluding neighboring detections via `getAllObjectsForRegion` (not centroid-only), and sampling the mean via `ObjectMeasurements` on a throwaway detection object — writes `Nucleus: AF488-T3 mean (bg-sub)` / `Cytoplasm: AF568-T2 mean (bg-sub)` on every detection (D-04); (2) a `derivePeakThreshold` closure re-deriving Fos/TdT positive thresholds on the bg-sub measure via `qupath.ext.braian.ChannelHistogram.zeroPhaseFilter`/`findPeaks`, with a mandatory raw-measure self-check printed against the locked absolute cutoffs (13000.4538/16766.4671) before trusting the bg-sub derivation; new `Fos_Classifier_20x_bgsub.json`/`TdT_classifier_bgsub.json` authored as self-bootstrapping placeholders (old locked threshold + a `note` field) that the script itself overwrites with the live re-derived value on every run, then re-reads via the existing `readSpec` closure; the compound classification loop is now repointed to the bg-sub measure + re-derived thresholds (old absolute cutoffs retained as documented reference only, Pitfall 9 guard). Two Rule-1 bugs auto-fixed: a duplicate `imageData` declaration (compile error) and RESEARCH.md's broken `hasProperty('getNucleusROI')` idiom corrected to `respondsTo('getNucleusROI')`. All static/source verification (grep/cmp/`python3` JSON parse) passed; the plan's `<human-check>` QuPath run-through steps (A5 key-set println, non-negative TdT bg-sub check, raw-measure self-check landing near the locked thresholds, measurable SSp false-positive reduction) were explicitly NOT attempted per CLAUDE.md's GUI-human-only constraint and remain deferred to Plan 03-04. SCRI-03 requirement NOT yet marked complete (requires "tested on one section" per REQUIREMENTS.md, which only happens in Plan 03-04). Next: Plan 03-04 — human-in-the-loop run: "Run for project" on M3 entry 1, verify the bg-sub-based four-class breakdown, region labels, count rollup, `data.qpdata` update, and all deferred human-check items from Plans 03-01/03-02/03-03; only then mark SCRI-03 complete.
+**To resume:** Plan 03-03 extended `scripts/02_detect_classify.groovy` (+ byte-identical project hard-copy) with the phase's crux capability: (1) a `localBackgroundSubtractedMean` closure building a peri-cellular annulus outside each marker's own compartment ROI (nucleus for Fos, expanded cell/cytoplasm for TdT) via `RoiTools.buffer`/`subtract`, excluding neighboring detections via `getAllObjectsForRegion` (not centroid-only), and sampling the mean via `ObjectMeasurements` on a throwaway detection object — writes `Nucleus: AF488-T3 mean (bg-sub)` / `Cytoplasm: AF568-T2 mean (bg-sub)` on every detection (D-04); (2) a `derivePeakThreshold` closure re-deriving Fos/TdT positive thresholds on the bg-sub measure via `qupath.ext.braian.ChannelHistogram.zeroPhaseFilter`/`findPeaks`, with a mandatory raw-measure self-check printed against the locked absolute cutoffs (13000.4538/16766.4671) before trusting the bg-sub derivation; new `Fos_Classifier_20x_bgsub.json`/`TdT_classifier_bgsub.json` authored as self-bootstrapping placeholders (old locked threshold + a `note` field) that the script itself overwrites with the live re-derived value on every run, then re-reads via the existing `readSpec` closure; the compound classification loop is now repointed to the bg-sub measure + re-derived thresholds (old absolute cutoffs retained as documented reference only, Pitfall 9 guard). Two Rule-1 bugs auto-fixed: a duplicate `imageData` declaration (compile error) and RESEARCH.md's broken `hasProperty('getNucleusROI')` idiom corrected to `respondsTo('getNucleusROI')`. All static/source verification (grep/cmp/`python3` JSON parse) passed; the plan's `<human-check>` QuPath run-through steps (A5 key-set println, non-negative TdT bg-sub check, raw-measure self-check landing near the locked thresholds, measurable SSp false-positive reduction) were explicitly NOT attempted per CLAUDE.md's GUI-human-only constraint and remain deferred to Plan 03-04. SCRI-03 requirement NOT yet marked complete (requires "tested on one section" per REQUIREMENTS.md, which only happens in Plan 03-04). Outcome: Plan 03-04 ran on M3 entry 1 (2026-07-16) and initially failed 100% Negative; root-caused via /gsd-debug to a D-04 annulus measurement-key mismatch + a buffered-write path, fixed, and the D-05 threshold redesigned to a robust median+k·1.4826·MAD (k=3) cut. On re-run the operator confirmed all four SC with plausible biology (Fos+ ~20%, TdT+ ~3.5%, Double+/TdT+ ~0.45, SSp suppressed). SCRI-03 complete; Phase 3 verified. Next: Phase 4 — Biological Plausibility Validation and Imaging Optimization Notes (not yet planned).
 
 **Phase 2 locked decisions (see 02-CONTEXT.md):** histogram-relative detection threshold + relative classifier cutoffs + one global BraiAn.yml (drift-monitored via SERIES-02); hard lock gates = nucleus-area peak 50–150µm² AND DAPI density 500–2000/mm²; Double+ ratio advisory only; Fos+ negative-control gate deferred. Reuse `Fos_Classifier_20x.json` (correct nuclear compartment), rebuild TdT classifier to read Cytoplasm — both done in Plan 02-01.
 
 **Side task:** TRACR registration for another lab in progress (rough, may need a per-section second pass) — see memory.
 
 ---
-*State initialized: 2026-07-01 | Last updated: 2026-07-10 (Phase 3 Plan 01 executed)*
+*State initialized: 2026-07-01 | Last updated: 2026-07-16 (Phase 3 complete — 03-04 gate passed, verified)*
 
 ## Decisions
 
