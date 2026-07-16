@@ -17,20 +17,18 @@ Biologically plausible TdT+/Fos+/Double+ counts per atlas region for M3 hippocam
 - ✓ QuPath v0.6.0 with ABBA + BraiAnDetect + Warpy extensions installed
 - ✓ Three conda envs operational: deepslice (py3.10), braian (py3.11), brainrender (py3.11)
 - ✓ elastix 5.2.0 at `$HOME/section-pipeline/tools/elastix/`; LD_LIBRARY_PATH set in `~/.bashrc`
+- ✓ M3 hippocampus sections ABBA-registered (Z→MIP) in Fiji, atlas ROIs loaded into QuPath — Phase 1 (REG-01/REG-02/SCRI-01)
+- ✓ Detection parameters locked on one M3 section (BraiAn.yml: sigma/area/histogram-threshold + 5 µm cytoplasmic expansion) — Phase 2, 02-LOCK-RECORD.md (SCRI-02)
+- ✓ Fos+ reads nuclear compartment (AF488-T3); TdTomato+ reads cytoplasmic compartment (bg-sub AF568-T2) — validated end-to-end on M3 entry 1, Phase 3 (CLASS-01)
+- ✓ Nucleus-anchored Double+ colocalization (no proximity heuristics) yields plausible counts — Phase 3: Fos+ ~20%, TdT+ ~3.5%, Double+/TdT+ ~0.45, SSp autofluorescence suppressed
+- ✓ `02_detect_classify.groovy` runs end-to-end on one section → classified TdT+/Fos+/Double+/Negative cells with atlas region labels + per-region counts (SCRI-03) — Phase 3, 03-VERIFICATION.md 7/7; robust threshold seed k=3 locked series-ready
 
 ### Active
 
-- [ ] ABBA-register M3 hippocampus sections (Z-planes → MIP) in Fiji (GUI)
-- [ ] Tune BraiAnDetect nuclear segmentation params on one section (sigma, min/max area, threshold)
-- [ ] Set cytoplasmic expansion ring radius for TdTomato channel measurement
-- [ ] Validate TdTomato+ classifier: nucleus contains TdT centroid via cytoplasmic compartment
-- [ ] Validate Fos+ classifier: nuclear compartment only
-- [ ] Confirm Double+ logic: nucleus-anchored colocalization (no proximity heuristics)
-- [ ] Export cell coordinates in microns per atlas region
-- [ ] Document locked detection parameters (all BraiAnDetect settings) for series application
-- [ ] Measure how many Z-planes are actually needed vs. acquired (MIP efficiency)
-- [ ] Assess whether 20x is needed throughout vs. lower-power survey for future runs
-- [ ] Document per-section file sizes and identify compression / MIP-immediately strategies
+- [ ] Export cell coordinates in microns per atlas region (SC3 confirmed CCFv3 micron units on M3; full per-region export is Phase 4 / v2 scope)
+- [ ] Measure how many Z-planes are actually needed vs. acquired (MIP efficiency) — Phase 4
+- [ ] Assess whether 20x is needed throughout vs. lower-power survey for future runs — Phase 4
+- [ ] Document per-section file sizes and identify compression / MIP-immediately strategies — Phase 4
 
 ### Out of Scope
 
@@ -47,6 +45,7 @@ Biologically plausible TdT+/Fos+/Double+ counts per atlas region for M3 hippocam
 - M3 hippocampus MIP OME-TIFFs exist and are ready for ABBA registration
 - Detection starting parameters should be seeded from F1000Research 2026 / bioRxiv 2024.09.16.611953 TRAP2 paper, then tuned visually on one section
 - This is the section pipeline (vibratome + Airyscan); a parallel cleared light-sheet / ClearMap2 pipeline runs on a different machine ("engram") — do not conflate
+- **Phase 3 complete (2026-07-16):** `02_detect_classify.groovy` validated end-to-end on M3 entry 1 (four-class breakdown, atlas labels, per-region counts). The D-04/D-05 "100% Negative" bug was root-caused (annulus measurement-key mismatch + buffered-write path) and fixed; positive thresholds now use a self-calibrating robust cut (median + k·1.4826·MAD, k=3). Next: Phase 4 — bioplausibility validation + imaging optimization notes.
 
 ## Constraints
 
@@ -55,7 +54,7 @@ Biologically plausible TdT+/Fos+/Double+ counts per atlas region for M3 hippocam
 - **Colocalization rule**: Nucleus-anchored only — detect DAPI nuclei, cytoplasmic ring for TdTomato, nuclear compartment for Fos; no proximity/overlap heuristics
 - **Coordinate units**: Export in microns, not pixels — QuPath pixel calibration must be verified against OME-XML `PhysicalSizeX`
 - **Stats convention**: Aggregate to animal level before any group comparison; no pseudoreplication on section- or cell-level n
-- **No git installed**: Planning docs tracked locally only; git init blocked until git is installed
+- **Git**: installed (v2.53.0), repo initialized 2026-07-07 (branch `main`, no remote); `.gitignore` excludes microscopy data (*.tif/*.tiff/*.czi/*.lif, *.qpdata, *.bfmemo — ~23 GB). GSD commits planning + code atomically on `main`
 
 ## Key Decisions
 
@@ -63,7 +62,7 @@ Biologically plausible TdT+/Fos+/Double+ counts per atlas region for M3 hippocam
 |----------|-----------|---------|
 | No Affine+Spline in ABBA | Elastix degrades without tissue mask; background pixels dominate optimization — confirmed 2026-06-23 | ✓ Good |
 | Channel order override in czi_mip.py | aicspylibczi reads CZI channels in wrong order vs metadata; always pass explicit `--channels` | ✓ Good |
-| Cytoplasmic expansion ring for TdTomato | TdTomato is cytosolic, not nuclear; must measure in cytoplasmic compartment to avoid mis-counting | — Pending (to be validated this run) |
+| Cytoplasmic expansion ring for TdTomato | TdTomato is cytosolic, not nuclear; must measure in cytoplasmic compartment to avoid mis-counting | ✓ Good (validated Phase 3 — bg-sub AF568-T2 cytoplasmic measure; TdT+ ~3.5% on M3 entry 1) |
 | DeepSlice → manual angle → export only | Minimal registration steps that produce correct overlay; Affine/Spline excluded | ✓ Good |
 
 ## Evolution
@@ -84,4 +83,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-06-30 after initialization*
+*Last updated: 2026-07-16 after Phase 3 completion (03-04 gate passed, SCRI-03 validated)*
