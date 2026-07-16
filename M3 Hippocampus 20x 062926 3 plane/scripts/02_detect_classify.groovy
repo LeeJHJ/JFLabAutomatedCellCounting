@@ -27,12 +27,14 @@
  * independent markers without proximity/overlap heuristics).
  *
  * D-03/D-05: classification reads the (bg-sub) measure (D-04 above) against
- * thresholds RE-DERIVED on that measure via qupath.ext.braian.ChannelHistogram
- * peak-finding (Pattern 2) -- NOT the old absolute cutoffs (Fos 13000.4538 /
- * TdT 16766.4671, Fos_Classifier_20x.json / TdT_classifier.json). Those two
- * JSONs and their thresholds are SUPERSEDED for classification and retained
- * only as a documented reference point / self-check anchor (see below). The
- * operative bg-sub thresholds live in Fos_Classifier_20x_bgsub.json /
+ * thresholds RE-DERIVED on that measure at runtime via a self-calibrating robust
+ * cut (background median + k*1.4826*MAD, k=3 seed) -- NOT the old absolute cutoffs
+ * (Fos 13000.4538 / TdT 16766.4671, Fos_Classifier_20x.json / TdT_classifier.json),
+ * and NOT the superseded nth-histogram-peak strategy (which assumed a bimodality
+ * that sparse markers don't have -> NaN -> 100% Negative, the D-05 gate failure).
+ * Those two raw-cutoff JSONs are SUPERSEDED for classification and retained only
+ * as a documented reference point. The operative bg-sub thresholds live in
+ * Fos_Classifier_20x_bgsub.json /
  * TdT_classifier_bgsub.json, which this script re-derives and overwrites on
  * every run (Pitfall 9: do not let the old absolute cutoffs leak back in
  * against the new measure).
@@ -76,7 +78,6 @@ import qupath.lib.analysis.features.ObjectMeasurements
 import qupath.lib.analysis.features.ObjectMeasurements.Measurements
 import qupath.lib.analysis.features.ObjectMeasurements.Compartments
 import qupath.lib.regions.ImageRegion
-import qupath.ext.braian.ChannelHistogram
 import com.google.gson.JsonObject
 import com.google.gson.JsonArray
 import com.google.gson.GsonBuilder
@@ -187,8 +188,16 @@ def localBackgroundSubtractedMean = { baseRoi, String channelName, selfDetection
             println "A5 self-check: throwaway measurement object key set = ${tempObj.getMeasurements().keySet()}"
             bgKeySetPrinted = true
         }
-        def key = "Cell: ${channelName} mean"
-        def v = tempObj.getMeasurements().get(key)
+        // A plain detection object (the annulus is NOT a cell with sub-ROIs) names
+        // its intensity measurement "<channel>: Mean" -- NOT "Cell: <channel> mean".
+        // The A5 self-check above empirically prints e.g. [AF488-T3: Mean, ...], so
+        // resolve the key by matching the channel name rather than assuming a
+        // compartment prefix (the old "Cell: ${channelName} mean" assumption returned
+        // null -> NaN for every cell -> empty D-05 population -> 100% Negative).
+        def key = tempObj.getMeasurements().keySet().find {
+            it.startsWith(channelName) && it.toLowerCase().endsWith("mean")
+        }
+        def v = key == null ? null : tempObj.getMeasurements().get(key)
         return (v == null || Double.isNaN(v.doubleValue())) ? Double.NaN : v.doubleValue()
     } catch (Throwable t) {
         // JTS "side location conflict" & kin: geometry robustness failure on this
@@ -199,12 +208,24 @@ def localBackgroundSubtractedMean = { baseRoi, String channelName, selfDetection
 }
 
 println "Computing local-background-subtracted measures (D-04) for ${dets.size()} detections..."
+// Self-diagnosing finite-value counters: isolate WHICH input goes NaN if the
+// bg-sub population ends up empty again (raw compartment read vs local-bg annulus).
 int bgProcessed = 0
+int nFiniteRawFos = 0, nFiniteRawTdt = 0, nFiniteBgFos = 0, nFiniteBgTdt = 0
+int nFiniteBgsubFos = 0, nFiniteBgsubTdt = 0
+boolean realKeySetPrinted = false
 dets.each { d ->
     // Fos ring anchors OUTSIDE the nucleus ROI; TdT ring anchors OUTSIDE the
     // expanded cell/cytoplasm ROI -- distinct per-marker anchors (Pitfall 3).
     def nucleusRoi = (d.respondsTo('getNucleusROI') && d.getNucleusROI() != null) ? d.getNucleusROI() : d.getROI()
     def cellRoi = d.getROI()
+
+    // Print the REAL detection's key set once (the throwaway A5 print above only
+    // reveals the plain-annulus keys, not the compartment keys on actual cells).
+    if (!realKeySetPrinted) {
+        println "A5b self-check: REAL detection key set = ${d.getMeasurements().keySet()}"
+        realKeySetPrinted = true
+    }
 
     def rawFosM = d.getMeasurements().get("Nucleus: AF488-T3 mean")
     double rawFos = rawFosM != null ? rawFosM.doubleValue() : Double.NaN
@@ -214,8 +235,17 @@ dets.each { d ->
     double rawTdt = rawTdtM != null ? rawTdtM.doubleValue() : Double.NaN
     double bgTdt = localBackgroundSubtractedMean(cellRoi, "AF568-T2", d)
 
-    d.getMeasurementList().put("Nucleus: AF488-T3 mean (bg-sub)", rawFos - bgFos)
-    d.getMeasurementList().put("Cytoplasm: AF568-T2 mean (bg-sub)", rawTdt - bgTdt)
+    double bgsubFos = rawFos - bgFos
+    double bgsubTdt = rawTdt - bgTdt
+    d.getMeasurements().put("Nucleus: AF488-T3 mean (bg-sub)", bgsubFos)
+    d.getMeasurements().put("Cytoplasm: AF568-T2 mean (bg-sub)", bgsubTdt)
+
+    if (!Double.isNaN(rawFos))   nFiniteRawFos++
+    if (!Double.isNaN(rawTdt))   nFiniteRawTdt++
+    if (!Double.isNaN(bgFos))    nFiniteBgFos++
+    if (!Double.isNaN(bgTdt))    nFiniteBgTdt++
+    if (!Double.isNaN(bgsubFos)) nFiniteBgsubFos++
+    if (!Double.isNaN(bgsubTdt)) nFiniteBgsubTdt++
 
     bgProcessed++
     if (bgProcessed % 1000 == 0) println "  ...background-subtracted ${bgProcessed}/${dets.size()} detections"
@@ -223,6 +253,7 @@ dets.each { d ->
 fireHierarchyUpdate()
 if (bgGeomFailures > 0)
     println "  NOTE: ${bgGeomFailures}/${dets.size()} detections hit a geometry-robustness failure in the local-bg annulus and were assigned NaN bg-sub (→ Negative). Negligible if small; investigate if large."
+println "D-04 finite-value counts (of ${dets.size()}): rawFos=${nFiniteRawFos} rawTdt=${nFiniteRawTdt} | bgFos=${nFiniteBgFos} bgTdt=${nFiniteBgTdt} | bgsubFos=${nFiniteBgsubFos} bgsubTdt=${nFiniteBgsubTdt}"
 println "Background-subtracted measures written for ${dets.size()} detections (D-04)."
 
 // ── isExcluded: shared centroid-in-excludeRois test (reused by threshold ───
@@ -234,60 +265,96 @@ def isExcluded = { detection ->
     excludeRois.any { it.contains(x, y) }
 }
 
-// ── D-05 / Pattern 2: re-derive positive thresholds on the bg-sub measure ──
-// Reuses qupath.ext.braian.ChannelHistogram.findPeaks/zeroPhaseFilter -- the
-// exact histogram-peak-finding primitives already locked into BraiAn.yml's
-// D-01 detection threshold -- applied here to a self-built histogram of the
-// per-cell (bg-sub) measurement rather than a raw image channel histogram.
+// ── D-05 (redesign): self-calibrating robust threshold on the bg-sub measure ──
+// The original strategy took the nth (2nd) histogram peak, assuming a BIMODAL
+// distribution (background peak + positive peak). TdT+/Fos+ are SPARSE markers
+// (a few % positive), so the bg-sub histogram is unimodal/background-dominated,
+// findPeaks returns 0 peaks -> NaN -> the safe-write guard kept placeholder JSONs
+// carrying RAW-scale cutoffs, and 100% of cells classified Negative (D-05 gate
+// failure, 2026-07-10). Replaced with a robust cut a few outlier-resistant SDs
+// above the near-zero background band:
+//     threshold = background_mode + k * (1.4826 * MAD)
+// background_mode: median of the bg-sub population (a cell in its own local
+//   background has bg-sub ~= 0, so the median tracks the background mode). MAD:
+//   median absolute deviation; 1.4826*MAD is a robust SD estimate. Auto-derives
+//   per section (D-01 series-scalability), needs no bimodality assumption.
 def classifiable = dets.findAll { !isExcluded(it) }   // Pitfall 6: exclude DG-sg/VS from the derivation population
 println "Threshold derivation population (excluding DG-sg/VS): ${classifiable.size()} / ${dets.size()} detections"
 
-double BIN_WIDTH = 50.0                    // seed bin width for the self-built histogram
-double[] SMOOTH_KERNEL = [1, 2, 3, 2, 1] as double[]   // example smoothing kernel (RESEARCH Pattern 2)
-double PEAK_PROMINENCE = 500               // same D-01 seed value locked in BraiAn.yml
-int N_PEAK = 2                             // same locked semantic as BraiAn.yml's nPeak: 2 (skip background peak)
+// Single tunable seed. Default k=3 (sweep 3-5 on this section, then lock as the
+// series seed). Higher k = stricter positive call.
+double K_ROBUST = 3.0
 
-/** Bins values into a histogram, smooths + finds peaks via ChannelHistogram, returns the nPeak-th peak's bin-center threshold (or NaN if no data/peaks). */
-def derivePeakThreshold = { List<Double> values, double binWidth, double[] kernel, double peakProminence, int nPeak ->
+/** Median of a list of Doubles (linear-interpolated for even n); NaN if empty. */
+def medianOf = { List<Double> xs ->
+    if (xs == null || xs.isEmpty()) return Double.NaN
+    def s = xs.toSorted()
+    int m = s.size()
+    int mid = m.intdiv(2)
+    return (m % 2 == 1) ? (s[mid] as double) : 0.5d * ((s[mid - 1] as double) + (s[mid] as double))
+}
+/** Median absolute deviation of xs about med (raw MAD, not yet scaled); NaN if empty. */
+def madOf = { List<Double> xs, double med ->
+    if (xs == null || xs.isEmpty() || Double.isNaN(med)) return Double.NaN
+    return medianOf(xs.collect { Math.abs((it as double) - med) })
+}
+/**
+ * Robust self-calibrating positive-call threshold for a sparse, background-
+ * subtracted marker population (D-05 redesign): background_mode + k*(1.4826*MAD),
+ * with the background_mode approximated by the population median (bg-sub ~= 0 for
+ * a cell in its own local background) and 1.4826*MAD a robust SD. Returns NaN only
+ * when there is no usable data, so the safe-write guard keeps the last-known-good
+ * JSON rather than clobbering it.
+ */
+def robustThreshold = { List<Double> values, double k ->
     if (values == null || values.isEmpty()) return Double.NaN
-    double minV = values.min(), maxV = values.max()
-    if (!(maxV > minV)) return Double.NaN
-    int nBins = Math.max(1, Math.ceil((maxV - minV) / binWidth) as int)
-    double[] hist = new double[nBins + 1]
-    values.each { v ->
-        int idx = Math.min(nBins, (int) ((v - minV) / binWidth))
-        hist[idx]++
-    }
-    def smoothed = ChannelHistogram.zeroPhaseFilter(hist, kernel)
-    int[] peakIndices = ChannelHistogram.findPeaks(smoothed, peakProminence)
-    if (peakIndices.length == 0) return Double.NaN
-    int pick = Math.min(nPeak - 1, peakIndices.length - 1)
-    return minV + peakIndices[pick] * binWidth
+    double med = medianOf(values)
+    if (Double.isNaN(med)) return Double.NaN
+    double mad = madOf(values, med)
+    if (Double.isNaN(mad)) return Double.NaN
+    return med + k * (1.4826d * mad)
+}
+/** Fraction of values at or above threshold (for the self-check sanity band); NaN if no data/threshold. */
+def positiveFraction = { List<Double> values, double threshold ->
+    if (values == null || values.isEmpty() || Double.isNaN(threshold)) return Double.NaN
+    int pos = values.count { (it as double) >= threshold }
+    return (double) pos / values.size()
 }
 
-// Mandatory self-check (RESEARCH Open Question 1): re-derive on the EXISTING
-// raw measures first and compare to the already-locked absolute thresholds --
-// validates the histogram-kernel/window semantics transfer to a measurement
-// histogram before trusting the bg-sub-measure re-derivation below.
-def rawFosValues = classifiable.collect { it.getMeasurements().get("Nucleus: AF488-T3 mean")?.doubleValue() }.findAll { it != null && !Double.isNaN(it) }
-def rawTdtValues = classifiable.collect { it.getMeasurements().get("Cytoplasm: AF568-T2 mean")?.doubleValue() }.findAll { it != null && !Double.isNaN(it) }
-double rawFosRederived = derivePeakThreshold(rawFosValues, BIN_WIDTH, SMOOTH_KERNEL, PEAK_PROMINENCE, N_PEAK)
-double rawTdtRederived = derivePeakThreshold(rawTdtValues, BIN_WIDTH, SMOOTH_KERNEL, PEAK_PROMINENCE, N_PEAK)
-println "Self-check (Open Question 1): raw-measure re-derivation vs the locked absolute cutoffs"
-println String.format("  Fos raw re-derived=%.4f  vs locked %.4f  -> %s", rawFosRederived, fos.thr,
-        (Double.isNaN(rawFosRederived) ? "CHECK (no data / no peak found)" :
-                (Math.abs(rawFosRederived - fos.thr) <= 0.2 * fos.thr ? "PASS (within 20%)" : "CHECK (>20% off -- inspect kernel/window semantics)")))
-println String.format("  TdT raw re-derived=%.4f  vs locked %.4f  -> %s", rawTdtRederived, tdt.thr,
-        (Double.isNaN(rawTdtRederived) ? "CHECK (no data / no peak found)" :
-                (Math.abs(rawTdtRederived - tdt.thr) <= 0.2 * tdt.thr ? "PASS (within 20%)" : "CHECK (>20% off -- inspect kernel/window semantics)")))
-
-// Re-derive on the bg-sub measure -- these are the operative D-05 thresholds.
+// Re-derive the operative D-05 thresholds on the bg-sub measure via the robust
+// self-calibrating cut (background median + k robust SDs). These are the values
+// classification actually uses.
 def bgFosValues = classifiable.collect { it.getMeasurements().get("Nucleus: AF488-T3 mean (bg-sub)")?.doubleValue() }.findAll { it != null && !Double.isNaN(it) }
 def bgTdtValues = classifiable.collect { it.getMeasurements().get("Cytoplasm: AF568-T2 mean (bg-sub)")?.doubleValue() }.findAll { it != null && !Double.isNaN(it) }
-double newFosThreshold = derivePeakThreshold(bgFosValues, BIN_WIDTH, SMOOTH_KERNEL, PEAK_PROMINENCE, N_PEAK)
-double newTdtThreshold = derivePeakThreshold(bgTdtValues, BIN_WIDTH, SMOOTH_KERNEL, PEAK_PROMINENCE, N_PEAK)
-println "Re-derived Fos threshold (bg-sub measure): ${newFosThreshold}"
-println "Re-derived TdT threshold (bg-sub measure): ${newTdtThreshold}"
+double newFosThreshold = robustThreshold(bgFosValues, K_ROBUST)
+double newTdtThreshold = robustThreshold(bgTdtValues, K_ROBUST)
+println "Re-derived Fos threshold (bg-sub measure, median + ${K_ROBUST}*1.4826*MAD): ${newFosThreshold}"
+println "Re-derived TdT threshold (bg-sub measure, median + ${K_ROBUST}*1.4826*MAD): ${newTdtThreshold}"
+
+// Mandatory self-check (redesigned for the robust strategy): instead of comparing
+// to the superseded RAW cutoffs (13000.4538 / 16766.4671 -- wrong scale for the
+// bg-sub measure), verify each derived threshold lands in a sane band: finite,
+// strictly above the background band (> 0), and calling a SPARSE but non-zero
+// fraction of the classifiable population positive. posFrac == 0 reproduces the
+// exact D-05 gate failure (all-Negative); posFrac > ~0.5 means the cut is far too
+// low. Prints the median/robust-SD that fed each threshold for tuning k.
+def selfCheck = { String marker, List<Double> values, double threshold ->
+    double med = medianOf(values)
+    double mad = madOf(values, med)
+    double robustSd = 1.4826d * mad
+    double posFrac = positiveFraction(values, threshold)
+    String verdict
+    if (Double.isNaN(threshold))                        verdict = "CHECK (no data -- threshold NaN, safe-write keeps last-known-good JSON)"
+    else if (threshold <= 0.0d)                         verdict = "CHECK (threshold <= 0 -- background band not separated)"
+    else if (Double.isNaN(posFrac) || posFrac <= 0.0d)  verdict = "CHECK (0% positive -- reproduces the D-05 all-Negative failure)"
+    else if (posFrac > 0.5d)                            verdict = "CHECK (>50% positive -- cut implausibly low for a sparse marker)"
+    else                                                verdict = String.format("PASS (%.2f%% positive -- sparse, non-zero)", 100.0d * posFrac)
+    println String.format("  %s: n=%d  median=%.4f  robustSD(1.4826*MAD)=%.4f  threshold=%.4f  -> %s",
+            marker, values.size(), med, robustSd, threshold, verdict)
+}
+println "Self-check (D-05 redesign): robust-threshold sanity band on the bg-sub population"
+selfCheck("Fos (Nucleus AF488-T3 bg-sub)", bgFosValues, newFosThreshold)
+selfCheck("TdT (Cytoplasm AF568-T2 bg-sub)", bgTdtValues, newTdtThreshold)
 
 /** Writes a bg-sub classifier JSON in the same shape as the existing Fos/TdT classifier files, so readSpec parses it unmodified. */
 def writeBgsubClassifierSpec = { String fn, String measurement, double threshold ->
@@ -306,11 +373,11 @@ def writeBgsubClassifierSpec = { String fn, String measurement, double threshold
     pathClasses.add("Positive")
     obj.add("pathClasses", pathClasses)
     obj.addProperty("filter", "DETECTIONS_ALL")
-    obj.addProperty("note", "D-05: threshold re-derived by 02_detect_classify.groovy via ChannelHistogram peak-finding on the (bg-sub) measure at ${new Date()}.")
+    obj.addProperty("note", "D-05: threshold re-derived by 02_detect_classify.groovy via the robust self-calibrating cut (background median + k*1.4826*MAD, k=${K_ROBUST}) on the (bg-sub) measure at ${new Date()}.")
     new File(base, fn).text = new GsonBuilder().setPrettyPrinting().create().toJson(obj)
 }
 // Only overwrite the committed placeholder if this run actually produced a
-// valid peak (idempotent/safe: a run with insufficient/no data leaves the
+// finite threshold (idempotent/safe: a run with insufficient/no data leaves the
 // last-known-good JSON on disk rather than clobbering it with NaN).
 if (!Double.isNaN(newFosThreshold)) {
     writeBgsubClassifierSpec("Fos_Classifier_20x_bgsub.json", "Nucleus: AF488-T3 mean (bg-sub)", newFosThreshold)

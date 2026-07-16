@@ -1,6 +1,44 @@
 # Phase 3 — 03-04 gate FAILED: D-05 threshold derivation broken (debug seed)
 
-**Date:** 2026-07-10 · **Status:** gate failed on the science; needs a gap-closure / debug fix before Phase 3 can close.
+**Date:** 2026-07-10 · **Status:** ✅ RESOLVED 2026-07-16 (see `/gsd-debug` session
+`.planning/debug/resolved/d05-threshold-all-negative.md`).
+
+---
+
+## ⚠️ CORRECTION (2026-07-16): the real root cause was NOT sparse-marker unimodality
+
+The "Root cause (confirmed)" section below is **SUPERSEDED / WRONG**. Debugging traced the
+100%-Negative failure through two wrong hypotheses to the actual cause, which was upstream
+in D-04, not in the D-05 threshold logic:
+
+**True root cause — measurement-key mismatch in the D-04 local-background function.**
+`localBackgroundSubtractedMean` looked up the annulus channel mean under
+`"Cell: ${channelName} mean"`, but `ObjectMeasurements.addIntensityMeasurements(...,
+[Compartments.CELL])` on a PLAIN detection object (the annulus has no cell/nucleus sub-ROIs)
+names the measurement `"<channel>: Mean"` (e.g. `AF488-T3: Mean`). The lookup returned null
+→ local background = NaN for **every** cell → `rawFos - NaN = NaN` bg-sub for all detections
+→ the D-05 population was EMPTY (n=0) → NaN threshold → safe-write kept the placeholder
+raw-scale JSON → 100% Negative.
+
+The A5 self-check had literally printed the real keys `[AF568-T2: Mean, AF488-T3: Mean,
+DAPI-T4: Mean]` all along; they never matched the assumed `"Cell: ... mean"` key. The
+"findPeaks returns 0 peaks" in the original diagnosis below was 0 peaks because the histogram
+had **0 data points** (empty population), not because the distribution was unimodal.
+
+**Fix:** resolve the annulus key by matching the channel name against the object's actual
+key set (`keySet().find { it.startsWith(channelName) && ...endsWith("mean") }`).
+
+**Kept anyway (independently good):** the D-05 redesign to the self-calibrating robust
+threshold `median + k·(1.4826·MAD)`, k=3 — correct for sparse markers once the population is
+non-empty. Validated on M3 entry 1 AND the single-plane/MIP hybrid: Total Fos+ ≈ 20%,
+Total TdT+ ≈ 3.5%, Double+/TdT+ ≈ 0.45, SSp autofluorescence suppressed, biology plausible.
+
+Everything from `## Root cause (confirmed)` downward is retained only as the historical
+(incorrect) trail.
+
+---
+
+**Original (2026-07-10) write-up below — root cause section is WRONG, see correction above.**
 
 ## Outcome of the 03-04 human QuPath run
 Script now runs **end-to-end** on M3 entry 1 (213,106 detections) with no crash, BUT:

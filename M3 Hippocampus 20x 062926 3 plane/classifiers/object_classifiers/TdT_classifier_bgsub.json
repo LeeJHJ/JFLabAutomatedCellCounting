@@ -6,12 +6,12 @@
     "pathClassBelow": "Negative",
     "pathClassEquals": "Positive",
     "pathClassAbove": "Positive",
-    "threshold": 16766.4671
+    "threshold": 1679.0823498046873
   },
   "pathClasses": [
     "Negative",
     "Positive"
   ],
   "filter": "DETECTIONS_ALL",
-  "note": "D-05 placeholder: threshold copied from the locked raw-measure cutoff (TdT_classifier.json) as a documented starting value. 02_detect_classify.groovy overwrites this file with a live ChannelHistogram-derived threshold on the bg-sub measure each time it is run in QuPath (Pattern 2). Not yet exercised against real image data -- superseded on first live run."
+  "note": "D-05: threshold re-derived by 02_detect_classify.groovy via the robust self-calibrating cut (background median + k*1.4826*MAD, k\u003d3.0) on the (bg-sub) measure at Thu Jul 16 13:38:13 EDT 2026."
 }
