@@ -3,8 +3,8 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: planning
-stopped_at: Phase 03 complete — all 4 plans done; 03-04 human gate PASSED on M3 entry 1; SCRI-03 verified (03-VERIFICATION.md 7/7)
-last_updated: "2026-07-16T19:14:33.814Z"
+stopped_at: Phase 4 context gathered
+last_updated: "2026-07-16T19:50:09.264Z"
 progress:
   total_phases: 4
   completed_phases: 3
@@ -132,9 +132,9 @@ None (Plan 02 is a human GUI step in Fiji; not a blocker, just a handoff).
 
 ## Session Continuity
 
-**Last session:** 2026-07-16
-**Stopped at:** Phase 3 COMPLETE — 03-04 human gate PASSED on M3 entry 1; Phase 3 verified (03-VERIFICATION.md 7/7). Next: Phase 4 (not yet planned).
-**Resume file:** .planning/ROADMAP.md — Phase 4: Biological Plausibility Validation and Imaging Optimization Notes
+**Last session:** 2026-07-16T19:50:09.258Z
+**Stopped at:** Phase 4 context gathered
+**Resume file:** .planning/phases/04-biological-plausibility-validation-and-imaging-optimization-/04-CONTEXT.md
 
 **To resume:** Plan 03-03 extended `scripts/02_detect_classify.groovy` (+ byte-identical project hard-copy) with the phase's crux capability: (1) a `localBackgroundSubtractedMean` closure building a peri-cellular annulus outside each marker's own compartment ROI (nucleus for Fos, expanded cell/cytoplasm for TdT) via `RoiTools.buffer`/`subtract`, excluding neighboring detections via `getAllObjectsForRegion` (not centroid-only), and sampling the mean via `ObjectMeasurements` on a throwaway detection object — writes `Nucleus: AF488-T3 mean (bg-sub)` / `Cytoplasm: AF568-T2 mean (bg-sub)` on every detection (D-04); (2) a `derivePeakThreshold` closure re-deriving Fos/TdT positive thresholds on the bg-sub measure via `qupath.ext.braian.ChannelHistogram.zeroPhaseFilter`/`findPeaks`, with a mandatory raw-measure self-check printed against the locked absolute cutoffs (13000.4538/16766.4671) before trusting the bg-sub derivation; new `Fos_Classifier_20x_bgsub.json`/`TdT_classifier_bgsub.json` authored as self-bootstrapping placeholders (old locked threshold + a `note` field) that the script itself overwrites with the live re-derived value on every run, then re-reads via the existing `readSpec` closure; the compound classification loop is now repointed to the bg-sub measure + re-derived thresholds (old absolute cutoffs retained as documented reference only, Pitfall 9 guard). Two Rule-1 bugs auto-fixed: a duplicate `imageData` declaration (compile error) and RESEARCH.md's broken `hasProperty('getNucleusROI')` idiom corrected to `respondsTo('getNucleusROI')`. All static/source verification (grep/cmp/`python3` JSON parse) passed; the plan's `<human-check>` QuPath run-through steps (A5 key-set println, non-negative TdT bg-sub check, raw-measure self-check landing near the locked thresholds, measurable SSp false-positive reduction) were explicitly NOT attempted per CLAUDE.md's GUI-human-only constraint and remain deferred to Plan 03-04. SCRI-03 requirement NOT yet marked complete (requires "tested on one section" per REQUIREMENTS.md, which only happens in Plan 03-04). Outcome: Plan 03-04 ran on M3 entry 1 (2026-07-16) and initially failed 100% Negative; root-caused via /gsd-debug to a D-04 annulus measurement-key mismatch + a buffered-write path, fixed, and the D-05 threshold redesigned to a robust median+k·1.4826·MAD (k=3) cut. On re-run the operator confirmed all four SC with plausible biology (Fos+ ~20%, TdT+ ~3.5%, Double+/TdT+ ~0.45, SSp suppressed). SCRI-03 complete; Phase 3 verified. Next: Phase 4 — Biological Plausibility Validation and Imaging Optimization Notes (not yet planned).
 
