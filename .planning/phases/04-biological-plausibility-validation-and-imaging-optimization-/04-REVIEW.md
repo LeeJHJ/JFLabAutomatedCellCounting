@@ -13,8 +13,18 @@ findings:
   warning: 3
   info: 3
   total: 7
-status: issues_found
+status: resolved
+resolved: 2026-07-17T00:00:00Z
 ---
+
+> **Resolution (2026-07-17):** All findings addressed. CR-01 fixed in `29dbfdc` (smallest-area
+> region assignment + geometric `is_leaf` in `03_export_val01_metrics.groovy`) and `1052bc6`
+> (dropped the harmful `is_leaf` density filter in `val01_metrics.py`); operator re-ran the QuPath
+> export, `grey` attribution collapsed 95,383 → 0, and `04-VALIDATION-RECORD.md` was regenerated on
+> corrected data (`99728bb`). WR-01/02/03 + IN-01/03 fixed in `29dbfdc` and verified against
+> synthetic fixtures (strict-JSON, empty-area degrade, renamed `_px` cols). IN-02 (opt01 default
+> paths span project date-stamps) left open for user confirmation — the defaults may be intentional
+> per-variant paths.
 
 # Phase 04: Code Review Report
 
