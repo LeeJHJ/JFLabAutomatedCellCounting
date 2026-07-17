@@ -2,9 +2,12 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: completed
-stopped_at: Completed Phase 04 — milestone v1.0 complete
-last_updated: "2026-07-17T17:12:57.506Z"
+current_phase: 0
+status: Awaiting next milestone
+stopped_at: Completed 04-01-PLAN.md
+last_updated: "2026-07-17T17:52:57.082Z"
+last_activity: 2026-07-17
+last_activity_desc: Milestone v1.0 completed and archived
 progress:
   total_phases: 4
   completed_phases: 4
@@ -24,32 +27,16 @@ progress:
 
 **Core value:** Biologically plausible TdT+/Fos+/Double+ counts per atlas region for M3 hippocampus, with locked detection parameters and imaging optimization notes ready for the full series.
 
-**Current focus:** Phase 04 — biological-plausibility-validation-and-imaging-optimization-
+**Current focus:** Planning next milestone — full-series run (v1.0 shipped 2026-07-17)
 
 ---
 
 ## Current Position
 
-**Active phase:** Phase 4 — Biological Plausibility Validation and Imaging Optimization Notes — IN PROGRESS
-**Plan:** Not started
-**Status:** Milestone complete
-
-**Progress bar:**
-
-```
-[Phase 1] [Phase 2] [Phase 3] [Phase 4]
-[======] [======] [======] [      ]
-  9/9 planned plans complete; Phase 3 done (4/4); Phase 4 not yet planned
-```
-
-**Phase completion:**
-
-- Phase 1: Complete (3/3 plans done, 2026-07-02)
-- Phase 2: Complete (2/2 plans done, 2026-07-09 — detection params + classifier thresholds locked; see 02-LOCK-RECORD.md)
-- Phase 3: Complete (4/4 plans done, 2026-07-16 — 03-04 human gate PASSED on M3 entry 1; D-04/D-05 all-Negative bug resolved; SCRI-03 verified end-to-end, 03-VERIFICATION.md 7/7)
-- Phase 4: Not started
-
----
+Phase: Milestone v1.0 complete
+Plan: —
+Status: Awaiting next milestone
+Last activity: 2026-07-17 — Milestone v1.0 completed and archived
 
 ## Performance Metrics
 
@@ -69,6 +56,15 @@ progress:
 | Phase 04 P01 | 5min | 2 tasks | 3 files |
 | Phase 04 P02 | 5min | 2 tasks | 2 files |
 | Phase 04 P03 | 20min | 1 tasks | 3 files |
+
+## Deferred Items
+
+Items acknowledged and deferred at milestone close on 2026-07-17:
+
+| Category | Item | Status |
+|----------|------|--------|
+| verification | Phase 2 (Detection Parameter Lock) has no `02-VERIFICATION.md` | Deferred — override close-out; params validated downstream by Phase 3 (end-to-end) + Phase 4 (bioplausibility) |
+| imaging | IN-02: `opt01_zplane_audit.py` default paths span three project date-stamps (062026 CZI / 062226 MIP / 062926 region-TSVs) | Open — confirm same acquisition before the full-series raw:MIP ratio |
 
 ## Accumulated Context
 
@@ -158,3 +154,7 @@ None (Plan 02 is a human GUI step in Fiji; not a blocker, just a handoff).
 - [Phase 04-02]: OPT-01 plateau argument scoped explicitly to 2-of-3 (single-plane variant never detection-run); recommended plane count framed as provisional pending that deferred confirmation
 - [Phase 04-02]: OPT-03 per-subfield resolution table anchored on Phase 2's measured CA1-separable/DG-sg-not-separable finding rather than re-deriving a fresh optical argument
 - [Phase 04-03]: Fixed compute_density() region-area join bug (hemisphere-prefix mismatch); reported per-subfield Double+/TdT+ ratio breakdown showing CA1/DG-mo individually in-band despite whole-section aggregate reading out of range; logged hemisphere-resolution finding to deferred-items.md rather than fixing out-of-scope Groovy code — Scope boundary: root cause is in locked Phase-3/Plan-04-01 Groovy region-labeling closures, out of Task 2's file scope and Phase 4's D-01 mandate
+
+## Operator Next Steps
+
+- Start the next milestone with /gsd-new-milestone
