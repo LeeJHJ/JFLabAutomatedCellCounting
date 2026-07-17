@@ -13,7 +13,7 @@
 - [x] **Phase 1: Atlas Registration and ROI Loading** - ABBA registers M3 sections in Fiji and atlas annotations are loaded into QuPath via Groovy script (completed 2026-07-02)
 - [x] **Phase 2: Detection Parameter Lock** - BraiAn.yml authored with tuned parameters and Fos classifier compartment verified (completed 2026-07-09)
 - [x] **Phase 3: Detection Script and Single-Section End-to-End Test** - `02_detect_classify.groovy` written, tested, and produces classified cell data on one section (completed 2026-07-16)
-- [ ] **Phase 4: Biological Plausibility Validation and Imaging Optimization Notes** - Cell counts pass bioplausibility checks and imaging optimization recommendations are documented
+- [x] **Phase 4: Biological Plausibility Validation and Imaging Optimization Notes** - Cell counts pass bioplausibility checks and imaging optimization recommendations are documented (completed 2026-07-17)
 
 ---
 
@@ -120,7 +120,7 @@
   3. Per-section file size recorded (CZI raw and MIP OME-TIFF); a written assessment of MIP-immediately vs. store-raw-Z tradeoff for the full series
   4. Resolution assessment written: whether 20x Airyscan is required throughout or a lower-power survey would suffice for non-DG hippocampal subfields; identifies which subfields actually require Airyscan resolution
 
-**Plans**: 2/3 plans executed
+**Plans**: 3/3 plans complete
 **Wave 1** *(parallel — no file conflicts)*
 
 - [x] 04-01-PLAN.md — VAL-01 tooling: Groovy per-cell/per-region export + Python metrics script (VAL-01)
@@ -128,7 +128,7 @@
 
 **Wave 2** *(blocked on 04-01)*
 
-- [ ] 04-03-PLAN.md — VAL-01 record: human QuPath export run + metrics on real data + 04-VALIDATION-RECORD.md (VAL-01)
+- [x] 04-03-PLAN.md — VAL-01 record: human QuPath export run + metrics on real data + 04-VALIDATION-RECORD.md (VAL-01)
 
 ---
 
@@ -139,7 +139,7 @@
 | 1. Atlas Registration and ROI Loading | 3/3 | Complete    | 2026-07-02 |
 | 2. Detection Parameter Lock | 2/2 | Complete   | 2026-07-09 |
 | 3. Detection Script and Single-Section End-to-End Test | 4/4 | Complete    | 2026-07-16 |
-| 4. Biological Plausibility Validation and Imaging Optimization Notes | 2/3 | In Progress|  |
+| 4. Biological Plausibility Validation and Imaging Optimization Notes | 3/3 | Complete   | 2026-07-17 |
 
 ---
 

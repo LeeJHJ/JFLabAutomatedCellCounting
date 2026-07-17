@@ -22,7 +22,7 @@
 
 ### Validation
 
-- [ ] **VAL-01**: Bioplausibility check passed and documented: Double+ is 10–40% of TdT+; DAPI nuclei density 500–2,000/mm²; nucleus area distribution peaks 50–150 µm²; if a negative-control region is available, Fos+ rate ≈1–3%
+- [x] **VAL-01**: Bioplausibility check passed and documented: Double+ is 10–40% of TdT+; DAPI nuclei density 500–2,000/mm²; nucleus area distribution peaks 50–150 µm²; if a negative-control region is available, Fos+ rate ≈1–3%
 
 ### Imaging Optimization Notes
 
