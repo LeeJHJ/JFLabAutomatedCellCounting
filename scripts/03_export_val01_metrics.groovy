@@ -58,17 +58,42 @@ if (dets.isEmpty()) {
     return
 }
 
-// ── SC2-style region resolution (reused verbatim from 02_detect_classify.groovy) ────────────
+// ── region resolution (CR-01 fix, Phase-4 code review) ──────────────────────────────────────
+// Candidate atlas-region annotations = every annotation carrying a region label that is NOT a
+// detection container. The OLD "leaf = no annotation children" heuristic was unreliable on the
+// real ABBA hierarchy: rollups like `grey` came back child-empty on one hemisphere and so slipped
+// in as false leaves, and first-match assignment then let that ~24 mm² rollup absorb ~95k cells
+// from their true subfields. Instead we keep ALL regions as candidates and resolve to the finest.
 def regionAnnotations = getAnnotationObjects().findAll { ann ->
     def roi = ann.getROI()
-    roi != null && !ann.getChildObjects().any { it.isAnnotation() }
+    if (roi == null) return false
+    if (ann.getChildObjects().any { it.isDetection() }) return false     // skip the detection container(s)
+    def lbl = ann.getPathClass()?.toString() ?: ann.getName()
+    lbl != null && lbl != "AllDetections"
 }
-println "Leaf region annotations available for labeling: ${regionAnnotations.size()}"
+// Pre-sort ascending by ROI area so a short-circuiting `.find` returns the SMALLEST containing
+// region (finest/most-specific) without an O(cells×regions) findAll+min blowup on ~200k cells.
+def regionAnnotationsByArea = regionAnnotations.toSorted { it.getROI().getArea() }
+println "Candidate region annotations for labeling: ${regionAnnotations.size()}"
 
 def regionOf = { detection ->
     def r = detection.getROI()
     double x = r.getCentroidX(), y = r.getCentroidY()
-    regionAnnotations.find { it.getROI().contains(x, y) }
+    regionAnnotationsByArea.find { it.getROI().contains(x, y) }          // smallest containing = true leaf
+}
+
+// Geometric is_leaf (CR-01 fix): a region is a leaf iff NO smaller region's centroid falls inside
+// it — nothing finer is nested within. Topology-independent, so it cannot disagree across
+// hemispheres the way the child-annotation heuristic did (which double-counted rollup area in the
+// density metric). O(regions²) but short-circuits; fine for the few-hundred atlas annotations.
+def isLeafOf = { ann ->
+    def roi = ann.getROI()
+    double a = roi.getArea()
+    !regionAnnotations.any { other ->
+        if (other.is(ann)) return false
+        def oroi = other.getROI()
+        oroi.getArea() < a && roi.contains(oroi.getCentroidX(), oroi.getCentroidY())
+    }
 }
 
 def regionLabel = { region ->
@@ -121,7 +146,9 @@ def resultsDir = new File(getProject().getBaseDirectory(), "results")
 resultsDir.mkdirs()
 
 def percellFile = new File(resultsDir, "val01_percell_export.tsv")
-def percellHeader = ["class", "region_label", "nucleus_area_um2", "centroid_x", "centroid_y", "fos_bgsub", "tdt_bgsub"].join("\t")
+// centroid_*_px are IMAGE-space pixel coordinates (not CCFv3 atlas microns) — the _px suffix keeps
+// that explicit per CLAUDE.md's micron-export rule; they are diagnostic only, unused downstream.
+def percellHeader = ["class", "region_label", "nucleus_area_um2", "centroid_x_px", "centroid_y_px", "fos_bgsub", "tdt_bgsub"].join("\t")
 def percellSb = new StringBuilder()
 percellSb.append(percellHeader).append("\n")
 percellRows.each { row ->
@@ -138,17 +165,14 @@ percellRows.each { row ->
 percellFile.text = percellSb.toString()
 println "Wrote ${percellRows.size()} per-cell rows -> ${percellFile}"
 
-// ── per-region area export (D-04) — reuses export_region_dapi_reference.groovy's
-//    region loop verbatim (skip detection-container annotations, skip AllDetections,
-//    hemisphere/acronym regex-split, is_leaf via child-annotation emptiness) ────────────────
+// ── per-region area export (D-04) — iterate the SAME candidate region set used for per-cell
+//    labeling; hemisphere/acronym regex-split; is_leaf computed GEOMETRICALLY (isLeafOf, CR-01
+//    fix) instead of the unreliable child-annotation-emptiness heuristic. ─────────────────────
 def regionRows = []
-getAnnotationObjects().each { ann ->
+regionAnnotations.each { ann ->
     def roi = ann.getROI()
-    if (roi == null) return
-    if (ann.getChildObjects().any { it.isDetection() }) return          // skip the detection container(s)
     def label = ann.getPathClass()?.toString() ?: ann.getName()
-    if (label == null || label == "AllDetections") return
-    def isLeaf = ann.getChildObjects().findAll { it.isAnnotation() }.isEmpty()
+    def isLeaf = isLeafOf(ann)
     def hemisphere = ""; def acronym = label
     def m = (label =~ /(?i)^(Left|Right):\s*(.+)$/)
     if (m.find()) { hemisphere = m.group(1); acronym = m.group(2) }

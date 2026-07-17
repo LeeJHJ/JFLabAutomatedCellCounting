@@ -117,13 +117,19 @@ def _root_dapi_count(region_tsv: Path) -> int:
         sys.exit(f"region TSV {region_tsv} has no 'Root' row (whole-section rollup) — "
                  f"cannot read the plateau-comparison DAPI count.")
 
-    return int(root_rows.iloc[0]["Num DAPI-T4"])
+    val = root_rows.iloc[0]["Num DAPI-T4"]
+    if pd.isna(val):
+        sys.exit(f"region TSV {region_tsv}: Root row 'Num DAPI-T4' is empty/NaN — "
+                 f"cannot read the plateau-comparison DAPI count.")
+    return int(val)
 
 
 def audit_plateau(region_3plane: Path, region_hybrid: Path) -> dict:
     """OPT-01 plateau data: 3-plane vs. hybrid Root-row Num DAPI-T4, percent difference."""
     n_3plane = _root_dapi_count(region_3plane)
     n_hybrid = _root_dapi_count(region_hybrid)
+    if n_3plane == 0:
+        sys.exit("3-plane Root DAPI count is 0 — cannot compute percent difference.")
     pct_diff = abs(n_3plane - n_hybrid) / n_3plane * 100.0
 
     return {

@@ -52,7 +52,7 @@ FIBER_TRACT_LABELS = ["fiber tracts", "cc", "fx", "or", "ec", "em"]
 
 PERCELL_EXPECTED_COLS = [
     "class", "region_label", "nucleus_area_um2",
-    "centroid_x", "centroid_y", "fos_bgsub", "tdt_bgsub",
+    "centroid_x_px", "centroid_y_px", "fos_bgsub", "tdt_bgsub",
 ]
 REGION_EXPECTED_COLS = ["region_label", "hemisphere", "acronym", "is_leaf", "area_mm2"]
 
@@ -65,6 +65,10 @@ def area_histogram_mode(areas_um2: np.ndarray, bin_width: float = 10.0) -> tuple
     """
     areas_um2 = np.asarray(areas_um2, dtype=float)
     areas_um2 = areas_um2[~np.isnan(areas_um2)]
+    if areas_um2.size == 0:
+        # WR-02: degrade to n/a like every sibling stat rather than crashing np.argmax on []
+        # (guards the all-null nucleus_area_um2 regression this metric was written to detect).
+        return float("nan"), float("nan"), 0
     bin_starts = np.floor(areas_um2 / bin_width) * bin_width
     values, counts = np.unique(bin_starts, return_counts=True)
     peak_idx = np.argmax(counts)
@@ -89,7 +93,7 @@ def load_percell(path: Path) -> pd.DataFrame:
         sys.exit(f"ERROR: per-cell TSV {path} has zero rows.")
     df["class"] = df["class"].fillna("Negative")
     df["region_label"] = df["region_label"].fillna("(no region)")
-    for col in ["nucleus_area_um2", "centroid_x", "centroid_y", "fos_bgsub", "tdt_bgsub"]:
+    for col in ["nucleus_area_um2", "centroid_x_px", "centroid_y_px", "fos_bgsub", "tdt_bgsub"]:
         df[col] = pd.to_numeric(df[col], errors="coerce")
     return df
 
@@ -201,7 +205,7 @@ def print_report(ratio: dict, density: dict, area_peak: dict, fos_control: dict)
     print(f"   Double+/TdT+ ratio  (n(Double+)/n(TdT+))          = {ratio['ratio_convention']:.3f}"
           f"   [target {RATIO_TARGET[0]:.0%}-{RATIO_TARGET[1]:.0%}: {_band(ratio['ratio_convention'], *RATIO_TARGET)}]")
     print(f"   Co-expression fraction (Double+/(Double++TdT+))   = {ratio['coexpr_fraction']:.3f}"
-          f"   [target {RATIO_TARGET[0]:.0%}-{RATIO_TARGET[1]:.0%}: {_band(ratio['coexpr_fraction'], *RATIO_TARGET)}]")
+          f"   [no separate target band; the {RATIO_TARGET[0]:.0%}-{RATIO_TARGET[1]:.0%} band above is defined for the ratio convention only (IN-03)]")
     print("   Per hippocampal subfield (region_label):")
     for row in ratio["per_region"]:
         r = row["ratio"]
@@ -246,6 +250,22 @@ def print_report(ratio: dict, density: dict, area_peak: dict, fos_control: dict)
     print("=" * 78)
 
 
+def _json_safe(o):
+    """Recursively convert NaN floats to None and numpy scalars to native Python types so the
+    dump is strict-JSON parseable. json.dump's ``default=`` never fires for native floats, so a
+    NaN would otherwise be emitted as the non-standard ``NaN`` token that strict/cross-language
+    consumers reject (WR-01). Used with ``allow_nan=False``."""
+    if isinstance(o, np.generic):
+        o = o.item()
+    if isinstance(o, float):
+        return None if np.isnan(o) else o
+    if isinstance(o, dict):
+        return {k: _json_safe(v) for k, v in o.items()}
+    if isinstance(o, (list, tuple)):
+        return [_json_safe(v) for v in o]
+    return o
+
+
 def main() -> None:
     ap = argparse.ArgumentParser(
         description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter, epilog=__doc__)
@@ -271,13 +291,14 @@ def main() -> None:
 
     if args.out is not None:
         args.out.parent.mkdir(parents=True, exist_ok=True)
+        payload = {
+            "double_tdt_ratio": ratio,
+            "density": density,
+            "area_peak": area_peak,
+            "fos_control": fos_control,
+        }
         with open(args.out, "w") as f:
-            json.dump({
-                "double_tdt_ratio": ratio,
-                "density": density,
-                "area_peak": area_peak,
-                "fos_control": fos_control,
-            }, f, indent=2, default=lambda o: None if isinstance(o, float) and np.isnan(o) else o)
+            json.dump(_json_safe(payload), f, indent=2, allow_nan=False)
         print(f"\nWrote metrics JSON -> {args.out}")
 
 
