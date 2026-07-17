@@ -4,12 +4,12 @@ milestone: v1.0
 milestone_name: milestone
 status: executing
 stopped_at: Completed 04-01-PLAN.md
-last_updated: "2026-07-17T00:40:13.351Z"
+last_updated: "2026-07-17T00:46:50.890Z"
 progress:
   total_phases: 4
   completed_phases: 3
   total_plans: 12
-  completed_plans: 10
+  completed_plans: 11
   percent: 75
 ---
 
@@ -31,7 +31,7 @@ progress:
 ## Current Position
 
 **Active phase:** Phase 4 — Biological Plausibility Validation and Imaging Optimization Notes — IN PROGRESS
-**Plan:** 2 of 3
+**Plan:** 3 of 3
 **Status:** Ready to execute
 
 **Progress bar:**
@@ -67,6 +67,7 @@ progress:
 | Phase 03 P02 | 7min | 2 tasks | 2 files |
 | Phase 03 P03 | 7min | 2 tasks | 4 files |
 | Phase 04 P01 | 5min | 2 tasks | 3 files |
+| Phase 04 P02 | 5min | 2 tasks | 2 files |
 
 ## Accumulated Context
 
@@ -133,7 +134,7 @@ None (Plan 02 is a human GUI step in Fiji; not a blocker, just a handoff).
 
 ## Session Continuity
 
-**Last session:** 2026-07-17T00:40:13.344Z
+**Last session:** 2026-07-17T00:46:15.211Z
 **Stopped at:** Completed 04-01-PLAN.md
 **Resume file:** None
 
@@ -153,3 +154,5 @@ None (Plan 02 is a human GUI step in Fiji; not a blocker, just a handoff).
 - [Phase 04-01]: Double+/TdT+ ratio reported both as n(Double+)/n(TdT+) and as the co-expression fraction Double+/(Double++TdT+), per hippocampal subfield — Plan spec requires both forms; region_label is a per-cell column so subfield breakdown is free
 - [Phase 04-01]: DAPI density via pandas merge joining per-cell region counts to the D-04 per-region-area TSV; nucleus-area peak uses the RESEARCH-specified 10 um^2 histogram-mode function verbatim — Matches qc_detection_gates.groovy's Gate-1 binning for direct comparability
 - [Phase 04-01]: SSp Fos+ rate reported as a corroboration anchor (not a true negative control) — Hippocampus-only section has no clean negative control; CONTEXT.md permits documenting the absence and reporting SSp as a sanity anchor
+- [Phase 04-02]: OPT-01 plateau argument scoped explicitly to 2-of-3 (single-plane variant never detection-run); recommended plane count framed as provisional pending that deferred confirmation
+- [Phase 04-02]: OPT-03 per-subfield resolution table anchored on Phase 2's measured CA1-separable/DG-sg-not-separable finding rather than re-deriving a fresh optical argument

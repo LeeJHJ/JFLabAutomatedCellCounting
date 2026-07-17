@@ -26,9 +26,9 @@
 
 ### Imaging Optimization Notes
 
-- [ ] **OPT-01**: Z-plane count audit documented — how many Z-planes were acquired vs. the minimum needed for a good MIP at 20x Airyscan; target recommendation written for next imaging session
-- [ ] **OPT-02**: Per-section file size recorded (CZI raw + MIP OME-TIFF); MIP-immediately vs. store-raw-Z tradeoff assessed
-- [ ] **OPT-03**: Resolution assessment written — whether 20x Airyscan is required throughout or lower-power tiling would suffice for survey regions; note which hippocampal subfields actually require Airyscan resolution
+- [x] **OPT-01**: Z-plane count audit documented — how many Z-planes were acquired vs. the minimum needed for a good MIP at 20x Airyscan; target recommendation written for next imaging session
+- [x] **OPT-02**: Per-section file size recorded (CZI raw + MIP OME-TIFF); MIP-immediately vs. store-raw-Z tradeoff assessed
+- [x] **OPT-03**: Resolution assessment written — whether 20x Airyscan is required throughout or lower-power tiling would suffice for survey regions; note which hippocampal subfields actually require Airyscan resolution
 
 ## v2 Requirements
 
@@ -79,9 +79,9 @@
 | CLASS-01 | Phase 2 | Complete |
 | SCRI-03 | Phase 3 | Complete |
 | VAL-01 | Phase 4 | Pending (tooling authored Plan 04-01; findings record written Plan 04-03) |
-| OPT-01 | Phase 4 | Pending |
-| OPT-02 | Phase 4 | Pending |
-| OPT-03 | Phase 4 | Pending |
+| OPT-01 | Phase 4 | Complete |
+| OPT-02 | Phase 4 | Complete |
+| OPT-03 | Phase 4 | Complete |
 
 **Coverage:**
 
