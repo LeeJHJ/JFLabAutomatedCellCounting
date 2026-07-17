@@ -2,11 +2,27 @@
 
 ## What This Is
 
-End-to-end TRAP2 cell classification pipeline for the first real section run: M3 hippocampus slices with Z-planes already MIP'd to OME-TIFF. Starting from existing MIP files, this project covers ABBA atlas registration in Fiji, BraiAnDetect parameter tuning in QuPath, TdTomato+/Fos+/Double+ classification per atlas region, and micron-coordinate export. This run serves double duty: validating biologically plausible cell counts and locking detection parameters for the full series.
+End-to-end TRAP2 cell classification pipeline for TRAP2/Airyscan vibratome sections: ABBA atlas registration in Fiji, BraiAnDetect detection + parameter tuning in QuPath, nucleus-anchored TdTomato+/Fos+/Double+ classification per atlas region, and micron-coordinate export. **v1.0 validated the pipeline on a single M3 hippocampus section (locking detection parameters and imaging-optimization notes); v1.1 runs the first full section series — animal wBA1-3, 5 coronal sections — to quantify LA/BA amygdala engram tagging (TRAP2/tdTomato) and reactivation (Fos).**
 
 ## Core Value
 
-Biologically plausible TdT+/Fos+/Double+ counts per atlas region for M3 hippocampus, with locked detection parameters and imaging optimization notes ready for the full series.
+Biologically plausible TdT+/Fos+/Double+ counts per atlas region across a registered section series, with locked detection parameters and imaging-optimization notes ready to scale brain-wide.
+
+## Current Milestone: v1.1 First Full-Series Run — LA/BA Amygdala Engram (wBA1-3)
+
+**Goal:** Run animal wBA1-3's full 5-section series end-to-end to quantify TRAP2/tdTomato engram tagging + Fos reactivation across the LA/BA amygdala — validating re-optimized imaging, cutting registration effort, standing up a generalizable area-based readout for compact-nuclei regions, and producing animal-level aggregated counts.
+
+**Target features:**
+- Multi-scene MIP conversion — extend `czi_mip.py` for per-scene output (processed CZI → 5 section MIPs)
+- Imaging re-validation on the new 4-plane / lower-laser params (D-05 gates; re-lock detection only on drift)
+- Registration speedup — research-driven middle ground for BigWarp (`crop_to_tissue.py` + tissue-mask elastix a candidate)
+- LA/BA nucleus-anchored TdT+/Fos+/Double+ classification across the amygdala ROI (primary readout)
+- Generalizable area-based density readout for compact-nuclei regions — reusable/brain-wide-ready; DG as the in-section test case; additive/parallel to nucleus counts
+- Brain-wide region-labeling validation — CR-01 fix confirmed across all 5 sections / all regions
+- Section→animal aggregation — first BraiAnalyse roll-up (5 sections → one animal)
+- Full per-atlas-region micron export — brainrender-ready CCFv3 point cloud
+
+**Data:** `Automated Cell Counting/wBA Sungmo/-001-07_processed.czi` (16 GB Airyscan-processed, 5 mosaic scenes, Z=4, C=3, 0.69 µm/px, channels `AF568-T2`/`AF488-T3`/`DAPI-T4` — same naming as v1.0). The merged 32 GB OME-TIFF is unusable (all scenes fused into one canvas, Z not projected) — do not use it.
 
 ## Requirements
 
@@ -27,12 +43,17 @@ Biologically plausible TdT+/Fos+/Double+ counts per atlas region for M3 hippocam
 
 ### Active
 
-_(Next milestone — full-series run; not yet scoped. Start with `/gsd-new-milestone`.)_
+Milestone v1.1 (LA/BA Amygdala Engram, wBA1-3) — see `## Current Milestone` above; detailed REQ-IDs in `REQUIREMENTS.md`:
 
-- [ ] Full per-atlas-region micron coordinate export for a brainrender point cloud (SC3 confirmed CCFv3 micron units on M3; full per-region export is v1.1+ scope)
-- [ ] Scale the locked pipeline to the full registered section series (BraiAnalyse animal-level aggregation)
-- [ ] Confirm the region-labeler / geometric atlas-leaf handling brain-wide (Phase-4 CR-01 fixed it for the VAL-01 metrics; validate across all sections before series-wide per-region counts)
-- [ ] Confirm `opt01_zplane_audit.py` default paths refer to the same acquisition (IN-02)
+- [ ] Per-scene MIP conversion of the processed CZI (5 section OME-TIFFs)
+- [ ] Imaging re-validation on the new 4-plane / lower-laser params (re-lock detection only on D-05 drift)
+- [ ] Registration speedup for BigWarp (research-driven; tissue-mask elastix a candidate)
+- [ ] LA/BA nucleus-anchored TdT+/Fos+/Double+ classification across the amygdala ROI
+- [ ] Generalizable area-based density readout for compact-nuclei regions (brain-wide-ready; DG test case; additive/parallel)
+- [ ] Brain-wide region-labeling validation across all 5 sections (extends Phase-4 CR-01 fix)
+- [ ] Section→animal aggregation via BraiAnalyse (5 sections → one animal)
+- [ ] Full per-atlas-region micron coordinate export for a brainrender point cloud
+- [ ] Confirm `opt01_zplane_audit.py` default paths refer to the same acquisition (IN-02, carried from v1.0)
 
 ### Out of Scope
 
@@ -71,6 +92,7 @@ _(Next milestone — full-series run; not yet scoped. Start with `/gsd-new-miles
 | DeepSlice → manual angle → export only | Minimal registration steps that produce correct overlay; Affine/Spline excluded | ✓ Good |
 | VAL-01 is a findings record, not a pass/fail gate (D-01) | n=1 single-section run; out-of-range metrics are interpreted (biology, Phase-2 calibration, threshold sensitivity), not failed | ✓ Good (Phase 4) |
 | Per-cell atlas labeling = smallest-area containing region; `is_leaf` computed geometrically | ABBA/QuPath annotations aren't reliably nested — child-emptiness + first-match leaked ~95k cells into the `grey` rollup (Phase-4 CR-01) | ✓ Good (fixed 2026-07-17) |
+| Area-based density readout is a documented, generalizable exception to nucleus-anchored colocalization | DG-granule (and other compact-nuclei regions) defeat per-nucleus segmentation; area-over-DAPI is additive/parallel — never replacing primary counts — and built reusable for the eventual brain-wide pipeline | — Pending (v1.1) |
 
 ## Evolution
 
@@ -90,4 +112,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-07-17 after v1.0 milestone (Single-Section Validation Run shipped)*
+*Last updated: 2026-07-17 after starting milestone v1.1 (First Full-Series Run — LA/BA Amygdala Engram, wBA1-3)*
