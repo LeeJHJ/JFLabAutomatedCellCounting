@@ -2,12 +2,13 @@
 
 **Section:** `M3 Hippocampus 20x 062926 3 plane`, entry 1 (`M3_20x_MIP_Z1-3.ome.tiff`)
 **Data source:** Classified `data.qpdata` (Phase 3, human-confirmed 2026-07-16) exported by
-`scripts/03_export_val01_metrics.groovy` (Plan 04-01) on 2026-07-17 (operator run, approved at
-this plan's Task 1 checkpoint) → `M3 Hippocampus 20x 062926 3 plane/results/val01_percell_export.tsv`
-(213,106 cells) and `.../results/val01_region_area.tsv` (450 region-area rows, 285 leaf / 165
-non-leaf).
-**Metrics computed by:** `scripts/val01_metrics.py` (Plan 04-01), run 2026-07-17 in the `braian`
-conda env against the real export TSVs above.
+`scripts/03_export_val01_metrics.groovy` (Plan 04-01, corrected 2026-07-17 per CR-01 below) on
+2026-07-17 (operator re-run, prior "Run for project" export superseded) →
+`M3 Hippocampus 20x 062926 3 plane/results/val01_percell_export.tsv` (213,106 cells) and
+`.../results/val01_region_area.tsv` (450 region-area rows).
+**Metrics computed by:** `scripts/val01_metrics.py` (Plan 04-01, patched 2026-07-17 per CR-01
+follow-up below), re-run 2026-07-17 in the `braian` conda env against the corrected export TSVs
+above.
 **Register:** Findings record with interpretation, **not** a pass/fail gate (D-01, locked in
 `04-CONTEXT.md`). Every metric below is reported with its target band, the measured value, an
 in/out-of-range flag, and a written interpretation. Out-of-range values are interpreted, not
@@ -23,33 +24,55 @@ seed paper, bioRxiv 2024.09.16.611953 / F1000Research 15:410, returned HTTP 403 
 
 ---
 
-## Methodology Note: a real bug found and fixed while computing these metrics
+## Post-review correction (Phase-4 CR-01)
 
-Running `scripts/val01_metrics.py` against the real (rather than synthetic-fixture) export TSVs
-for the first time surfaced a genuine defect in `compute_density()`: the function joined
-per-cell region counts to `val01_region_area.tsv` on the bare `region_label` column, but the
-region-area export's `region_label` carries a `"Left: "` / `"Right: "` hemisphere prefix
-(e.g. `"Right: CA1"`) while the per-cell export's `region_label` is the bare leaf acronym
-(e.g. `"CA1"`) — the join matched **zero rows**, and metric #2 (DAPI density) printed an empty
-table on the first run. **[measured, this session]**
+This record supersedes an earlier version written from data corrupted by a genuine region-
+labeling defect. Phase-4 code review (`04-REVIEW.md`, **CR-01**, critical) found that the
+per-cell region-assignment closure (`regionOf`) and the leaf-area export both determined "leaf
+region" from QuPath child-annotation topology (`!ann.getChildObjects().any { isAnnotation() }`),
+which is not reliably consistent across the real ABBA hierarchy: the broad `grey` rollup
+annotation (~24.6 mm², geometrically overlapping every hippocampal subfield) qualified as a
+"leaf" on one hemisphere but not the other, and — because `regionOf` returned the *first*
+matching annotation rather than the *smallest* — **95,383 of 213,106 cells (44.8%)** were
+mis-attributed to the `grey` catch-all instead of their true finest subregion. This silently
+corrupted the per-region density and per-subfield ratio numbers the original record reported
+(e.g. hippocampal-subfield cell counts were right-hemisphere-dominated, `CA1` read 3,567 cells
+instead of the true bilateral 6,354).
 
-**Fix (Rule 1, applied in this task):** `compute_density()` now aggregates leaf-region areas
-(`is_leaf == True` rows only, to avoid double-counting area already covered by non-leaf
-ancestor annotations) across both hemispheres by `acronym`, then joins per-cell region counts
-on `acronym == region_label`. This is a bilateral-sum density (total nuclei for that acronym
-across both hemispheres ÷ total leaf-region area for that acronym across both hemispheres),
-which is the correct grain for the per-cell export's data (it does not carry a hemisphere
-column). The fix was verified by re-running the script end-to-end and spot-checking the
-whole-section `grey` aggregate (density 3877.4/mm²) against Phase 2's independently-measured
-`root` density (~3866–3900/mm² per hemisphere, `reference/dapi_region_reference.csv`) — the two
-land within noise of each other, corroborating the fix is computing a sane bilateral density.
+**Fixes applied and committed:**
+- **`29dbfdc`** — `03_export_val01_metrics.groovy`: `regionOf` now assigns each cell to the
+  **smallest-area containing region** (finest atlas leaf, area-sorted short-circuit find), so a
+  broad rollup can never out-compete a genuine subfield that also contains the point; `is_leaf`
+  is now computed **geometrically** (`isLeafOf` — a region is a leaf iff no smaller region's
+  centroid sits inside it), which cannot disagree across hemispheres the way the old
+  child-annotation-topology heuristic did. Also fixed WR-01 (non-standard `NaN` tokens in the
+  `--out` JSON), WR-02 (crash on an all-NaN area column), WR-03 (`opt01_zplane_audit.py`
+  divide-by-zero/NaN-cast edges), and IN-01/IN-03 (documentation clarity).
+- **`1052bc6`** — `val01_metrics.py compute_density()`: dropped the `is_leaf` filter from the
+  density join. The new geometric `is_leaf` is *correct* for the export's own area-double-count
+  guard but is too aggressive as a density filter — it marks genuine assignment targets
+  (CA1/CA3/DG-sg/STRd/HY) non-leaf whenever a smaller adjacent region's centroid falls inside
+  their curved ROI, which silently dropped them from the density table. Since per-cell
+  `region_label` is already the finest containing region after the `29dbfdc` fix, rollups
+  receive zero cells and are excluded by the inner join regardless — no double-counting occurs
+  without the `is_leaf` restriction, and CA1/CA3/DG-mo/DG-sg now report real densities.
 
-A second, deeper finding surfaced while investigating this (per-cell region-label resolution
-appears to under-represent one hemisphere for at least CA1 — see `deferred-items.md` §D-1) is
-**not** fixed here: its root cause lives in Phase 3's/Plan 04-01's locked Groovy region-labeling
-closures, out of this task's file scope and out of Phase 4's mandate (D-01 excludes re-tuning
-detection/classification logic). It is logged and its impact on the density/ratio numbers below
-is flagged explicitly where relevant.
+**Effect on the numbers:** the `grey` bucket went from 95,383 cells to **zero** (it no longer
+appears in the per-region breakdown at all — every cell now resolves to its true finest leaf).
+Hippocampal-subfield cell counts roughly doubled where the old hemisphere-asymmetric bug had
+been silently dropping one hemisphere's cells (e.g. CA1 3,567 → 6,354; SSp 9,324 → 24,370).
+**This is a genuine correction, not a re-interpretation**: the prior record's explanation that
+the elevated whole-section aggregate ratio was "pulled upward substantially by the `grey`
+catch-all bucket" is now **wrong** and is replaced below by the corrected finding — the elevated
+aggregate is driven by non-hippocampal regions elsewhere in the field of view, not a
+data-resolution artifact. The whole-section totals for metric 1 (n(Double+)=3,457, n(TdT+)=4,134)
+and metric 3 (nucleus-area peak) are **unchanged** — the region-labeling bug affected the
+`region_label` column only, not the `class` (TdT+/Fos+/Double+/Negative) or `nucleus_area_um2`
+columns, so those two metrics' whole-section/global numbers carry over unmodified from the
+original run. Metrics 2 (density, per-region) and 4 (Fos+ control, SSp/fiber-tract subsets) are
+region-attribution-dependent and are **fully recomputed** below. The previously-deferred
+hemisphere-asymmetry finding (`deferred-items.md` former §D-1) is now **resolved** by this fix
+— see `deferred-items.md` for the updated status.
 
 ---
 
@@ -57,91 +80,92 @@ is flagged explicitly where relevant.
 
 **Target:** 10–40% (10–40% band per `REQUIREMENTS.md`/`04-CONTEXT.md` D-02).
 
-**Measured, whole section [measured]:**
+**Measured, whole section [measured]** (unchanged from the original run — the region-labeling
+bug did not affect whole-section class totals):
 
 | Convention | n(Double+) | n(TdT+) | Value | Band check |
 |---|---|---|---|---|
 | Raw ratio `n(Double+)/n(TdT+)` | 3,457 | 4,134 | **0.836** (83.6%) | flagged out of range vs. 10–40% |
-| Co-expression fraction `Double+/(Double++TdT+)` | 3,457 | 4,134 | **0.455** (45.5%) | flagged out of range vs. 10–40% |
+| Co-expression fraction `Double+/(Double++TdT+)` | 3,457 | 4,134 | **0.455** (45.5%) | flagged out of range vs. 10–40% (IN-03: this band is defined for the ratio convention; reported against it here for direct comparability with Phase 2's D-06 advisory number) |
 
-Both conventions the script prints are reported per the plan's instruction. The
-co-expression-fraction convention (0.455) is the one directly comparable to Phase 2's own D-06
-advisory measurement and to the phase's ≈0.45 working number cited at this plan's Task 1
-checkpoint.
+**Per-hippocampal-subfield breakdown [measured, corrected]** — now computed from the finest-leaf
+region assignment (`29dbfdc`), which resolves the full bilateral cell population per subfield
+instead of the prior right-hemisphere-dominated counts:
 
-**Per-hippocampal-subfield breakdown [measured]** (the per-cell export carries a `region_label`
-column, so subfield decomposition is free; the script prints all 146 populated regions — the
-canonical hippocampal subfields are excerpted below, full breakdown reproducible via
-`conda run -n braian python3 scripts/val01_metrics.py`):
-
-| Subfield | n(Double+) | n(TdT+) | Raw ratio | Coexpr fraction | Band check (coexpr) |
+| Subfield | n(Double+) | n(TdT+) | Raw ratio | Coexpr fraction | Band check (coexpr, 10–40%) |
 |---|---|---|---|---|---|
-| CA1 | 23 | 55 | 0.418 | **0.295** | **IN RANGE** (10–40%) |
-| CA2 | 0 | 6 | 0.000 | 0.000 | below range (n=6, low count) |
-| CA3 | 1 | 59 | 0.017 | 0.017 | below range |
-| DG-mo | 12 | 107 | 0.112 | **0.101** | **IN RANGE** (borderline, at the 10% floor) |
-| DG-po | 0 | 24 | 0.000 | 0.000 | below range |
+| CA1 | 56 | 104 | 0.538 | **0.350** | **IN RANGE** |
+| CA2 | 1 | 10 | 0.100 | 0.091 | below range (n=11, low count) |
+| CA3 | 21 | 126 | 0.167 | **0.143** | **IN RANGE** |
+| DG-mo | 29 | 191 | 0.152 | **0.132** | **IN RANGE** |
+| DG-po | 1 | 37 | 0.027 | 0.026 | below range |
 | DG-sg | 0 | 0 | n/a | n/a | excluded from marker classification (Phase 2 D-05 lock: too dense for per-cell calls) |
-| `grey` (broad ancestor bucket, not a hippocampal subfield) | 1,719 | 1,796 | 0.957 | 0.489 | flagged out of range |
+
+Hippocampal subfields combined (CA1+CA2+CA3+DG-mo+DG-po+DG-sg) account for only **108 of 3,457
+Double+ cells (3.1%)** and **468 of 4,134 TdT+ cells (11.3%)** section-wide. The remaining
+non-hippocampal population — 3,349 Double+ / 3,666 TdT+ — reads a combined coexpression fraction
+of **3,349/(3,349+3,666) = 0.477 (47.7%)**, i.e. *higher* than the whole-section aggregate
+(0.455); the hippocampal subfields themselves pull the aggregate **down**, not up.
+
+**Corrected cause of the elevated aggregate [measured]:** the prior record attributed the
+elevated whole-section ratio primarily to the `grey` catch-all bucket. That explanation is now
+known to be wrong — `grey` receives zero cells after the CR-01 fix (every cell resolves to its
+true finest leaf). The elevated aggregate is instead driven by **non-hippocampal regions
+elsewhere in the field of view** reading substantially higher coexpression than the hippocampal
+subfields: auditory cortex (AUDd1 0.800, AUDd2/3 0.900, AUDd4 0.750, AUDv1 0.875, AUDv2/3 0.737,
+AUDv4 0.643) and cortical amygdala (COAa 0.549) are the clearest examples, alongside numerous
+somatosensory/retrosplenial/visual cortical regions (SSp-bfd subfields 0.55–0.71, SSs subfields
+0.53–0.77, RSPd/RSPagl subfields 0.42–0.88, VISa subfields 0.31–0.81) that individually carry
+substantial cell counts (hundreds each) and consistently read well above the 10–40% band. This
+is a real, corrected finding, not the data-resolution artifact previously suspected.
 
 **Interpretation (D-02: weigh all four candidates on paper, do not silently pass or fail):**
 
-The most important observation from the per-subfield breakdown is that the two best-resolved,
-classically recall-associated hippocampal subfields — **CA1 (0.295) and DG-mo (0.101) — actually
-land inside or at the edge of the 10–40% target band** when isolated from the rest of the
-section. The whole-section aggregate (0.455) is pulled upward substantially by (a) the `grey`
-catch-all bucket, which alone contributes 1,719 of the 3,457 total Double+ cells (49.7%) and
-1,796 of 4,134 total TdT+ cells (43.4%) at its own elevated 0.489 coexpr rate, and (b) numerous
-small-n cortical/subcortical regions elsewhere in the field of view with noisy high ratios
-(e.g. RSPagl2/3 13.0, AUDd2/3 9.0 — single-digit cell counts, not statistically meaningful on
-their own). Per the deferred D-1 finding above, `grey` is disproportionately drawn from
-whichever hemisphere's leaf-region resolution is incomplete — so a meaningful share of the
-"elevated" aggregate ratio is attributable to a data-resolution artifact concentrated outside
-the clean hippocampal subfield counts, not to CA1/CA3/DG reactivation biology directly.
-
-Weighing the four D-02 candidates against this evidence:
-
-1. **Strong recall session effect [inferred]** — CA1 landing inside the target band at 29.5% is
-   consistent with (not contradicted by) a matched-context, strong-recall session per the
-   broader engram literature's context-dependence pattern (`04-RESEARCH.md` §1) — a healthy,
-   plausible reactivation rate in the subfield most classically associated with contextual
-   recall, without needing to invoke an implausible response.
+1. **Strong recall session effect [inferred]** — CA1 (0.350), CA3 (0.143), and DG-mo (0.132)
+   all landing inside the 10–40% target band when isolated is consistent with a matched-context,
+   strong-recall session per the broader engram literature's context-dependence pattern
+   (`04-RESEARCH.md` §1) — a healthy, plausible reactivation rate in the subfields most
+   classically associated with contextual recall, without needing to invoke an implausible
+   response.
 2. **n=1 sampling [inferred]** — still applies with full force: this is one section, one animal;
-   subfield-level counts for CA2 (n(TdT+)=6) and CA3 (n(TdT+)=59, n(Double+)=1) are small enough
-   that a single mis-called cell shifts the ratio by several percentage points.
-3. **Robust-threshold (k=3) sensitivity [measured methodology-shift data point, see below;
-   candidate not independently verified]** — the same globally-derived `median + 3·1.4826·MAD`
-   cut (Phase 3 D-05) that classifies TdT+/Fos+ across the whole image is applied uniformly
-   regardless of region; a region-agnostic global threshold can inflate or deflate a subfield's
-   local positive rate relative to what a region-specific threshold would give. No k=4-vs-k=3
-   comparison has been run, so this remains a **candidate, not a verified cause**, exactly as
-   `04-RESEARCH.md` §1 flags it.
-4. **Hippocampus-specific engram reactivation asymmetry [cited general pattern, inferred
-   application to M3]** — the general engram literature documents CA1 showing more
-   repeated/promiscuous cFos expression across sessions than DG neurons (`04-RESEARCH.md` §1,
-   Nature Communications 2022 and related). This section's own DG-mo (0.101) sitting near the
-   band floor while CA1 (0.295) sits mid-band is directionally consistent with that documented
-   asymmetry, though it is a two-subfield, single-section comparison and should not be
-   over-read.
+   subfield-level counts for CA2 (n(TdT+)=10) and DG-po (n(TdT+)=37) are small enough that a
+   handful of mis-called cells shifts the ratio by several percentage points.
+3. **Robust-threshold (k=3) sensitivity [candidate, not independently verified]** — the same
+   globally-derived `median + 3·1.4826·MAD` cut (Phase 3 D-05) that classifies TdT+/Fos+ across
+   the whole image is applied uniformly regardless of region; a region-agnostic global threshold
+   can inflate or deflate a subfield's local positive rate relative to what a region-specific
+   threshold would give. This candidate is now weaker as an explanation for the *hippocampal*
+   numbers specifically (they land in-band after the region-labeling fix), but remains
+   plausible for why cortical regions elsewhere in the section read consistently high. No
+   k=4-vs-k=3 comparison has been run, so this remains a candidate, not a verified cause.
+4. **Region-specific engram/sensory reactivation [inferred]** — the non-hippocampal regions
+   driving the elevated aggregate are predominantly sensory cortex (auditory, somatosensory,
+   visual) and cortical amygdala, all plausible sites of genuine session-related activity in a
+   TRAP2 paradigm that is not restricted to hippocampal recall alone. This section's hippocampal
+   subfields (the classically engram-relevant tissue) individually land in-band, while
+   non-hippocampal cortex — which was never the target of the 10–40% seed's original
+   provenance — reads elevated. This reframes candidate 4 from the original record (a
+   CA1-vs-DG asymmetry argument, now less load-bearing since both CA1 and DG-mo land in-band)
+   toward a region-scope argument: the whole-section aggregate mixes hippocampal and
+   non-hippocampal tissue that were never expected to share one reactivation rate.
 
 **Methodology-shift data point [measured]:** Phase 2's own D-06 advisory measurement of this
-same ratio (pre-Phase-3-redesign, sigma=2.5, interactive-UI absolute thresholds) was **≈0.40**
-— inside the 10–40% advisory band (`02-LOCK-RECORD.md`). The subsequent Phase-3 background-
-subtracted + robust-threshold (k=3) redesign shifted the whole-section co-expression fraction to
-**0.455** — a real ~5.5-percentage-point shift attributable to a genuine measurement-methodology
-change, not biological variation between runs (same section, same underlying detections). This
-is direct evidence supporting candidate #3 above: the classification methodology itself is a
-non-trivial contributor to where the ratio lands relative to the 10–40% band, on top of whatever
-the true biological reactivation rate is.
+same whole-section ratio (pre-Phase-3-redesign, sigma=2.5, interactive-UI absolute thresholds)
+was **≈0.40** — inside the 10–40% advisory band (`02-LOCK-RECORD.md`). The subsequent Phase-3
+background-subtracted + robust-threshold (k=3) redesign shifted the whole-section co-expression
+fraction to **0.455** (a real ~5.5-percentage-point shift attributable to a genuine
+measurement-methodology change). This CR-01 correction pass did not change that whole-section
+number again — 0.455 coexpr / 0.836 raw ratio is the same value before and after the
+region-labeling fix, because the fix changed *region attribution*, not the underlying TdT+/Fos+
+classification. The 0.40 → 0.45 methodology-shift point stands as originally documented and
+remains direct evidence supporting candidate #3 above.
 
 **Conclusion for this metric:** flagged out of range at the whole-section aggregate level
-(0.455 vs. 10–40%), but the two best-resolved hippocampal subfields individually land inside or
-at the edge of the target band. The elevated aggregate is attributable to a mix of (a) a
-data-resolution artifact in the broad `grey` bucket (D-1, deferred), (b) small-n noise in
-peripheral cortical regions, and (c) the documented methodology-sensitivity of the k=3
-robust-threshold redesign — with strong-recall biology and hippocampal-subfield asymmetry as
-plausible, literature-consistent contributors to the CA1/DG-mo pattern specifically. Per D-01,
-this is recorded as a flagged note for the full series, not a blocker.
+(0.455 vs. 10–40%), but three of five classified hippocampal subfields (CA1, CA3, DG-mo)
+individually land inside the target band once cell counts are correctly (bilaterally) resolved.
+The elevated aggregate is attributable to non-hippocampal cortical/amygdalar regions — not, as
+previously suspected, a data-resolution artifact in a broad `grey` bucket. Per D-01, this is
+recorded as a flagged note for the full series, not a blocker.
 
 ---
 
@@ -149,25 +173,37 @@ this is recorded as a flagged note for the full series, not a blocker.
 
 **Target:** 500–2,000/mm².
 
-**Whole-section cross-check [measured]:** the broad `grey` ancestor bucket (95,383 cells /
-24.5998 mm², bilateral) reads **3,877.4/mm²** — within noise of Phase 2's independently-measured
-`root` density (~3,866–3,900/mm² per hemisphere, `reference/dapi_region_reference.csv`).
-
-**Hippocampal-subfield densities [measured]:**
+**Hippocampal-subfield densities [measured, corrected]** — now the true bilateral density per
+acronym (`1052bc6`: joined without the over-aggressive `is_leaf` filter that previously dropped
+or under-counted these subfields):
 
 | Subfield | n_nuclei | area (mm², bilateral) | density/mm² | Band check |
 |---|---|---|---|---|
-| CA1 | 3,567 | 1.8813 | 1,896.0 | **IN RANGE** |
-| CA2 | 263 | 0.1297 | 2,028.2 | flagged out of range (marginal, low n) |
-| CA3 | 2,250 | 1.2903 | 1,743.8 | **IN RANGE** |
-| DG-mo | 1,402 | 0.9299 | 1,507.7 | **IN RANGE** |
-| DG-po | 258 | 0.1104 | 2,336.2 | flagged out of range (marginal, low n) |
-| DG-sg | 372 | 0.3621 | 1,027.2 | **IN RANGE** |
+| CA1 | 6,354 | 1.8813 | 3,377.4 | flagged out of range |
+| CA2 | 465 | 0.1297 | 3,586.0 | flagged out of range |
+| CA3 | 4,375 | 1.2903 | 3,390.8 | flagged out of range |
+| DG-mo | 2,680 | 0.9299 | 2,882.1 | flagged out of range |
+| DG-po | 422 | 0.1104 | 3,821.3 | flagged out of range |
+| DG-sg | 1,090 | 0.3621 | 3,009.8 | flagged out of range |
 
-Across the full 146-region breakdown the script prints, roughly 60 of 146 regions (41%) land
-inside the 500–2,000/mm² band and 86 (59%) read above it — a materially different picture from
-Phase 2's own `dapi_region_reference.csv`, in which "nearly all regions... cluster in the
-~2,500–5,500/mm² range" (`02-LOCK-RECORD.md`).
+All six hippocampal subfields now read out of range, uniformly clustered in the ~2,900–3,800/mm²
+band. `root` (the residual, unassigned-below-root gap population) reads **772 nuclei /
+56.0999 mm² = 13.8/mm²** — negligible, consistent with root now correctly capturing only the
+small number of cells that do not resolve into any deeper leaf region, rather than acting as a
+catch-all (contrast with the pre-fix `grey` bucket, which absorbed 95,383 cells at an inflated
+3,877.4/mm² reading).
+
+**What changed from the original record:** the original record reported CA1 at 1,896.0/mm²,
+CA3 at 1,743.8/mm², DG-mo at 1,507.7/mm², and DG-sg at 1,027.2/mm² — all "IN RANGE" against the
+500–2,000/mm² seed. Those numbers were an artifact of the hemisphere-asymmetric region-labeling
+bug: CA1's per-cell count (3,567) was numerically identical to Phase 2's *right-hemisphere-only*
+raw count, meaning the left hemisphere's CA1 nuclei had been silently absorbed into `grey`
+instead of counted as CA1. With the CR-01 fix, CA1's bilateral count is 6,354 (roughly double),
+and the corrected density (3,377.4/mm²) is now consistent with — not a genuine improvement over
+— Phase 2's own per-hemisphere reference (`Left: CA1` 3,507.6/mm², `Right: CA1` 3,282.2/mm²,
+`reference/dapi_region_reference.csv`). **The apparent "in-range" reading in the original record
+was the bug; the corrected out-of-range reading is consistent with Phase 2's independently
+measured density for this same tissue.**
 
 **Interpretation — cite the prior Phase-2 finding, do not re-litigate the seed:** Phase 2 already
 established and locked the conclusion that both seed ranges (density 500–2,000/mm² and area
@@ -175,30 +211,21 @@ established and locked the conclusion that both seed ranges (density 500–2,000
 20× Airyscan MIP DAPI on this instrument**, superseded by the empirical internal per-region
 reference (`02-LOCK-RECORD.md`: "both seed ranges... judged mis-calibrated... and superseded by
 the empirical internal per-region reference"). This record does not re-derive that verdict; it
-is cited as established. The whole-section `grey` cross-check above (3,877.4/mm² vs. Phase 2's
-root ~3,866–3,900/mm²) directly corroborates that this section's overall density character is
-consistent with Phase 2's prior finding.
+is cited as established. Across the full 165-region breakdown the script prints, the large
+majority of regions read in the ~2,500–5,500/mm² range Phase 2 already characterized as this
+modality's true density character — a small number of broad ancestor/fiber-tract rollups
+(`root` 13.8, `fiber tracts` 178.1, `CH` 0.0 (n=1, negligible), `HPF` 2.3 (n=11, negligible),
+`TH` 31.0, `OLF` 100.3, `STR` 241.3, `lfbst` 225.0) read very low because their bilateral
+polygon area spans a much larger footprint than the actual nucleus-bearing tissue within it —
+an expected artifact of measuring density against a coarse ancestor region's full area rather
+than its true occupied tissue, not a biological finding.
 
-The apparent improvement — several hippocampal subfields now landing inside the seed band, where
-Phase 2's own per-hemisphere reference showed them well above it (e.g. `Left: CA1` 3,507.6/mm²,
-`Right: CA1` 3,282.2/mm² per Phase 2 vs. 1,896.0/mm² bilateral here) — is **not** interpreted as a
-genuine density decrease. Per the deferred D-1 finding (this plan's own investigation, logged in
-`deferred-items.md`), this section's `CA1`-labeled per-cell count (3,567) is numerically
-identical to Phase 2's *Right-hemisphere-only* raw count, suggesting the current bilateral
-density figures for hippocampal subfields specifically may be **right-hemisphere-dominated**
-(under-counting the left hemisphere's true contribution), which would mechanically deflate the
-computed density relative to a true bilateral count. **[measured finding, inferred mechanism]**
-This caveat is flagged rather than resolved here (out of this task's scope — the root cause is
-in locked Groovy region-labeling code, not in this task's `val01_metrics.py`/record files); it is
-logged for the full series in `deferred-items.md` §D-1.
-
-**Conclusion for this metric:** several hippocampal subfields (CA1, CA3, DG-mo, DG-sg) read
-inside the 500–2,000/mm² band on this run; CA2 and DG-po read marginally above it (low n).
-Roughly 59% of all regions read above the band, consistent with — and explained by — Phase 2's
-already-accepted mis-calibration finding for this imaging modality, not a new discrepancy. The
-possible hemisphere-resolution artifact (D-1) means the hippocampal-subfield numbers specifically
-should be treated as provisional pending confirmation for the full series, not as a precise
-measurement of true bilateral density.
+**Conclusion for this metric:** all six classified hippocampal subfields (CA1, CA2, CA3, DG-mo,
+DG-po, DG-sg) now read consistently above the 500–2,000/mm² band, in the ~2,900–3,800/mm² range
+— fully consistent with Phase 2's already-accepted mis-calibration finding for this imaging
+modality, not a new discrepancy. The hemisphere-resolution artifact previously flagged as a
+caveat on this metric (`deferred-items.md` former §D-1) is now resolved; these densities are the
+corrected, trustworthy bilateral figures for the full series to reference.
 
 ---
 
@@ -206,8 +233,9 @@ measurement of true bilateral density.
 
 **Target:** 50–150 µm².
 
-**Measured [measured]:** modal 10 µm² bin = **[40.0, 50.0) µm²** (count 45,716 of 213,106 valid
-cells — n_valid = n_total, no missing area values). Bin-independent cross-checks: median =
+**Measured [measured]** (unchanged from the original run — `nucleus_area_um2` was not affected
+by the region-labeling bug): modal 10 µm² bin = **[40.0, 50.0) µm²** (count 45,716 of 213,106
+valid cells — n_valid = n_total, no missing area values). Bin-independent cross-checks: median =
 **47.88 µm²**, IQR = [36.61, 65.41] (width 28.80), skew = **1.848** (strongly right-skewed —
 consistent with a long tail of larger, possibly partially-merged nuclei, per
 `04-RESEARCH.md`'s pitfall note on skewed area distributions).
@@ -245,19 +273,27 @@ no clean unstimulated or secondary-antibody-only negative-control region present
 Per `04-CONTEXT.md`'s Claude's-Discretion allowance, this absence is documented rather than
 worked around with a substitute region pretending to be a true control.
 
-**SSp corroboration anchor [measured]:** n = 9,324 SSp-labeled cells (region_label starting
-`SSp`, spanning `SSp-bfd`/`SSp-tr`/`SSp-un`/`SSp-ll`/`SSp-ul` layers), Fos+ (Fos+ and Double+
-combined) = 4,393, rate = **0.471** (47.1%) — flagged out of range vs. the 1–3% target, and
-notably more than double the whole-section Fos-expressing rate (20.1% — see below).
+**SSp corroboration anchor [measured, corrected]:** n = 24,370 SSp-labeled cells (region_label
+starting `SSp`, spanning `SSp-bfd`/`SSp-tr`/`SSp-un`/`SSp-ll`/`SSp-ul` layers), Fos+ (Fos+ and
+Double+ combined) = 11,574, rate = **0.475** (47.5%) — flagged out of range vs. the 1–3% target,
+and notably more than double the whole-section Fos-expressing rate (20.1% — see below). This n
+(24,370) is roughly 2.6× the original record's SSp count (9,324) — the same hemisphere-resolution
+bug affected SSp exactly as it affected the hippocampal subfields, and the corrected count now
+captures the full bilateral SSp population. The corrected rate (0.475) is close to the original
+record's uncorrected rate (0.471) — the region-labeling bug under-counted SSp roughly uniformly
+across positive and negative classes, so the *rate* barely moved even though the *count* did.
 
-**Fiber-tract soft anchor [measured]:** n = 3,200 cells in fiber-tract-labeled regions (`fiber
-tracts`, `cc`, `fx`, `or`, `ec`, `em`), Fos+ = 377, rate = **0.118** (11.8%) — also above the
-1–3% target, but well below both SSp (47.1%) and the whole-section average (20.1%), consistent
-with fiber tracts carrying largely non-neuronal, sparsely Fos-competent cells.
+**Fiber-tract soft anchor [measured, corrected]:** n = 3,405 cells in fiber-tract-labeled regions
+(`fiber tracts`, `cc`, `fx`, `or`, `ec`, `em`), Fos+ = 411, rate = **0.121** (12.1%) — also above
+the 1–3% target, but well below both SSp (47.5%) and the whole-section average (20.1%),
+consistent with fiber tracts carrying largely non-neuronal, sparsely Fos-competent cells. (n and
+rate both close to the original record's 3,200/0.118 — fiber-tract regions were less affected by
+the hemisphere-resolution bug than the hippocampal/SSp cortical regions.)
 
-**Whole-section reference [measured]:** total classified cells 213,106 — Negative 163,967, Fos+
-39,424, TdT+ 4,134, Double+ 3,457, Excluded (DG-sg/VS per Phase 2 lock) 2,124. Fos-expressing
-(Fos+ + Double+) = 42,881/213,106 = **20.1%**.
+**Whole-section reference [measured, unchanged]:** total classified cells 213,106 — Negative
+163,967, Fos+ 39,424, TdT+ 4,134, Double+ 3,457, Excluded (DG-sg/VS per Phase 2 lock) 2,124.
+Fos-expressing (Fos+ + Double+) = 42,881/213,106 = **20.1%**. (These whole-section class totals
+are unaffected by the region-labeling bug — only `region_label` attribution changed.)
 
 **Interpretation:** SSp is explicitly *not* a true negative control (it was never designated as
 such — it is somatosensory cortex, which can carry genuine Fos+ activity from ordinary sensory
@@ -271,44 +307,49 @@ robust-threshold (k=3) redesign was built specifically to remove that artifact, 
 no longer being flagged by a threshold its own uncorrected autofluorescence exceeds by
 construction.
 
-This session's direct re-measurement shows SSp's rate under the *corrected* pipeline is still
-elevated (47.1%) — well above the whole-section average (20.1%) and far above the 1–3% seed.
-Two non-exclusive candidates, consistent with the D-02 threshold-sensitivity discussion above:
-(a) **genuine regional sensory activation [inferred]** — SSp is real cortex that plausibly
-experienced real tactile/sensory input during the behavioral session, so an elevated (if not
-1–3%-range) rate is not on its face implausible for a region that was never meant to be a
-negative control; (b) **residual global-threshold sensitivity [candidate, not verified]** — the
-same region-agnostic k=3 robust cut discussed under metric #1 could still read SSp as
-elevated relative to a hypothetical region-specific baseline, even after the local-background
-subtraction removed the specific old autofluorescence artifact. Distinguishing these two
-candidates would require either a true unstimulated control section or a region-specific
-threshold comparison — both explicitly out of this plan's scope (D-01).
+This session's direct re-measurement (now on the corrected, full bilateral SSp population) shows
+SSp's rate under the *corrected* pipeline is still elevated (47.5%) — well above the
+whole-section average (20.1%) and far above the 1–3% seed. Two non-exclusive candidates,
+consistent with the D-02 threshold-sensitivity discussion above: (a) **genuine regional sensory
+activation [inferred]** — SSp is real cortex that plausibly experienced real tactile/sensory
+input during the behavioral session, so an elevated (if not 1–3%-range) rate is not on its face
+implausible for a region that was never meant to be a negative control; (b) **residual
+global-threshold sensitivity [candidate, not verified]** — the same region-agnostic k=3 robust
+cut discussed under metric #1 could still read SSp as elevated relative to a hypothetical
+region-specific baseline, even after the local-background subtraction removed the specific old
+autofluorescence artifact. Distinguishing these two candidates would require either a true
+unstimulated control section or a region-specific threshold comparison — both explicitly out of
+this plan's scope (D-01).
 
-The fiber-tract anchor (11.8%), while still above the 1–3% seed, is meaningfully closer to it and
+The fiber-tract anchor (12.1%), while still above the 1–3% seed, is meaningfully closer to it and
 well below both SSp and the whole-section average — a soft, partial corroboration that the
 classifier differentiates tissue types in the expected direction (sparse, largely non-neuronal
 tissue reading lower than gray matter), even though it does not reach the seed's absolute range.
 
 **Conclusion for this metric:** no true negative control exists in this section (documented, per
-VAL-01's explicit allowance). SSp corroboration reads 47.1% Fos+ — flagged out of range against
-the 1–3% seed and higher than this record's Task-1-checkpoint working assumption of "suppressed."
-This measured, real number is reported as-is rather than reconciled toward the qualitative prior
-attestation; the two are not in conflict once "suppressed" is read as "no longer driven by the
-specific pre-fix autofluorescence artifact" rather than "reads near baseline." The fiber-tract
-anchor (11.8%) offers softer, partial corroboration in the expected direction. Flagged as a note
-for the full series — a true negative-control tissue (if one becomes available) would resolve
-the ambiguity between the two candidate explanations above.
+VAL-01's explicit allowance). SSp corroboration reads 47.5% Fos+ on the corrected, full bilateral
+population — flagged out of range against the 1–3% seed. This is materially the same rate as the
+original (uncorrected) record's 47.1% — the region-labeling bug affected the SSp cell *count*
+more than the SSp Fos+ *rate*. The fiber-tract anchor (12.1%) offers softer, partial corroboration
+in the expected direction. Flagged as a note for the full series — a true negative-control tissue
+(if one becomes available) would resolve the ambiguity between the two candidate explanations
+above.
 
 ---
 
 ## Closing statement (D-01)
 
 Per D-01, Phase 4's VAL-01 validation is a findings record with interpretation, not a hard
-pass/fail gate. All four metrics above carry a measured value and a written interpretation; three
-of four are flagged out of range at the whole-section aggregate level (ratio, density, Fos+
-control), and the fourth (nucleus-area peak) is marginally below its band. **The phase completes
-with these findings recorded as written.** None of the out-of-range values are treated as a
-failure requiring rework: each is interpreted against n=1 sampling, prior Phase-2 findings, known
-methodology tradeoffs, or documented data-resolution caveats (see `deferred-items.md`), and
-becomes a flagged note carried forward to the full series (SERIES-01/02), not a blocker to this
-phase's completion.
+pass/fail gate. All four metrics above carry a measured value and a written interpretation, now
+computed from the CR-01-corrected region attribution: the ratio metric is flagged out of range at
+the whole-section aggregate level but three of five classified hippocampal subfields (CA1, CA3,
+DG-mo) individually land inside the 10–40% band; the density metric now reads out of range for
+all six hippocampal subfields (previously four of six misleadingly read in-range due to the
+region-labeling bug); the nucleus-area peak is marginally below its band, unchanged from the
+original measurement; and the Fos+ control metric reads a corrected SSp rate (47.5%) essentially
+unchanged from the original (47.1%), with a larger, now-correct denominator. **The phase completes
+with these corrected findings recorded as written.** None of the out-of-range values are treated
+as a failure requiring rework: each is interpreted against n=1 sampling, prior Phase-2 findings,
+known methodology tradeoffs, or the now-resolved data-resolution history documented above (see
+`deferred-items.md`), and becomes a flagged note carried forward to the full series
+(SERIES-01/02), not a blocker to this phase's completion.

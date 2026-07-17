@@ -9,7 +9,21 @@ in Phase 3's locked `scripts/02_detect_classify.groovy` and/or Plan 04-01's
 mandate (re-tuning/re-deriving detection or classification logic is explicitly
 excluded by D-01).
 
-## D-1: Per-cell region-label resolution appears hemisphere-asymmetric for at least one hemisphere
+## D-1: Per-cell region-label resolution appears hemisphere-asymmetric for at least one hemisphere (RESOLVED)
+
+**Status: RESOLVED 2026-07-17.** Root-caused and fixed by Phase-4 code review CR-01
+(`04-REVIEW.md`) — the `regionOf`/`is_leaf` closures used child-annotation topology to decide
+"leaf region," which disagreed across hemispheres for rollups like `grey`, causing first-match
+cell attribution to silently absorb 95,383 cells (44.8% of the section) into the `grey`
+catch-all instead of their true finest subregion. Fixed in `scripts/03_export_val01_metrics.groovy`
+(commit `29dbfdc`: `regionOf` now assigns each cell to the smallest-area containing region;
+`is_leaf` is now computed geometrically, hemisphere-symmetric by construction) and
+`scripts/val01_metrics.py` `compute_density()` (commit `1052bc6`: dropped the now-redundant/
+harmful `is_leaf` density filter). CA1's bilateral cell count went from 3,567 (right-hemisphere-
+only, the symptom described below) to 6,354 (true bilateral). See the "Post-review correction"
+section at the top of `04-VALIDATION-RECORD.md` for the corrected numbers and full writeup. The
+observation notes below are kept for historical/audit trail — they describe the bug accurately
+as it was found, before the fix.
 
 **Found during:** Plan 04-03 Task 2, while computing per-region DAPI density from
 the real `val01_percell_export.tsv` / `val01_region_area.tsv` pair.

@@ -129,3 +129,25 @@ None - no external service configuration required. Task 1's human-in-the-loop Qu
 ## Self-Check: PASSED
 
 All claimed files found on disk (`04-VALIDATION-RECORD.md`, `deferred-items.md`, `scripts/val01_metrics.py`); claimed commit hash `ef97e7a` found in `git log`; automated acceptance-check command (test -f + grep ratio/density/area/SSp/`[measured]` + no FAILED/must-fix) re-run and confirmed passing.
+
+## Post-review correction (Phase-4 CR-01)
+
+Phase-4 code review (`04-REVIEW.md`, CR-01, critical) found that the region-labeling defect
+flagged as deferred item D-1 above was a real bug, not just a caveat: `regionOf`'s
+child-annotation-topology "leaf" heuristic disagreed across hemispheres for the broad `grey`
+rollup, causing first-match cell attribution to silently absorb 95,383 cells (44.8% of the
+section) into `grey` instead of their true finest subregion. This corrupted this plan's
+per-region density and per-subfield ratio numbers as originally reported (e.g. `CA1` read
+3,567 cells, a right-hemisphere-only count, instead of the true bilateral 6,354).
+
+Fixed in `scripts/03_export_val01_metrics.groovy` (commit `29dbfdc`: `regionOf` now assigns
+each cell to the smallest-area containing region; `is_leaf` is now computed geometrically,
+hemisphere-symmetric by construction) and `scripts/val01_metrics.py` `compute_density()`
+(commit `1052bc6`: dropped the now-redundant/harmful `is_leaf` density filter). The operator
+re-ran the QuPath export against the corrected Groovy script, and `val01_metrics.py` was
+re-run against the corrected TSVs. `04-VALIDATION-RECORD.md` was regenerated from this
+corrected data — see its "Post-review correction" section for the full writeup and corrected
+numbers. `deferred-items.md`'s D-1 item is now marked RESOLVED. This SUMMARY's body text above
+(written before the review) still describes the original, now-superseded numbers and
+interpretation; it is left as-is for historical accuracy of what this plan produced at the
+time, with this note appended to point to the corrected record.
