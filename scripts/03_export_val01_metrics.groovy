@@ -50,6 +50,7 @@ if (cal != null && cal.hasPixelSizeMicrons()) {
     println "WARNING: image server has no pixel calibration -- falling back to hard-coded ${FALLBACK_PIXEL_SIZE_UM} µm/px (server.json PhysicalSizeX)"
 }
 def pxToMm2 = (pixelUm * 1e-3) ** 2
+def pxToUm2 = pixelUm * pixelUm   // px² → µm²; nucleus area computed from ROI geometry (below), not a stored shape measurement
 
 def dets = getDetectionObjects()
 if (dets.isEmpty()) {
@@ -80,7 +81,12 @@ def regionLabel = { region ->
 
 // ── measurement keys (CRITICAL: exact literals 02_detect_classify.groovy writes;
 //    RESEARCH Pitfall 4 — the Phase-3 all-Negative root cause was a key mismatch) ────────────
-def areaKey = "Nucleus: Area µm^2"
+// Nucleus area is NOT read from a stored shape measurement: BraiAnDetect detections carry the
+// intensity measurements written by 02_detect_classify.groovy (the bg-sub keys below) but no
+// "Nucleus: Area µm^2" shape measurement was ever computed, so that key returns null on every
+// cell (the all-null nucleus_area_um2 column caught at the 04-03 human-verify gate). Compute area
+// directly from the detection's nucleus ROI geometry instead — the same roi.getArea()×calibration
+// idiom used for per-region area below (line ~150).
 def fosKey  = "Nucleus: AF488-T3 mean (bg-sub)"
 def tdtKey  = "Cytoplasm: AF568-T2 mean (bg-sub)"
 
@@ -99,7 +105,8 @@ dets.each { d ->
     def cls = d.getPathClass()?.toString() ?: "Negative"
     def region = regionOf(d)
     def label = regionLabel(region)
-    def areaUm2 = numOrNaN(m, areaKey)
+    def nucleusRoi = (d.respondsTo('getNucleusROI') && d.getNucleusROI() != null) ? d.getNucleusROI() : d.getROI()
+    def areaUm2 = (nucleusRoi != null) ? nucleusRoi.getArea() * pxToUm2 : Double.NaN
     def r = d.getROI()
     double cx = r != null ? r.getCentroidX() : Double.NaN
     double cy = r != null ? r.getCentroidY() : Double.NaN
