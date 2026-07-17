@@ -128,7 +128,19 @@ def compute_double_tdt_ratio(percell: pd.DataFrame) -> dict:
 
 def compute_density(percell: pd.DataFrame, region_area: pd.DataFrame) -> dict:
     n_per_region = percell.groupby("region_label").size().rename("n_nuclei").reset_index()
-    merged = n_per_region.merge(region_area, on="region_label", how="inner")
+    # region_area's region_label carries a "Left: "/"Right: " hemisphere prefix (from the
+    # ABBA per-hemisphere annotation hierarchy), while per-cell region_label is the bare
+    # leaf acronym with no hemisphere split (regionOf/regionLabel resolve to acronym only).
+    # A direct region_label join therefore matches zero rows. Fix: aggregate leaf-region
+    # areas across hemispheres by acronym (bilateral sum) before joining on acronym, so
+    # density = total nuclei / total leaf-region area for that acronym, matching the
+    # per-cell data's grain. Restrict to is_leaf rows to avoid double-counting area from
+    # ancestor (non-leaf) regions that overlap their leaf children.
+    leaf_area = (region_area[region_area["is_leaf"]]
+                 .groupby("acronym")["area_mm2"].sum()
+                 .rename("area_mm2").reset_index()
+                 .rename(columns={"acronym": "region_label"}))
+    merged = n_per_region.merge(leaf_area, on="region_label", how="inner")
     merged["density_per_mm2"] = merged["n_nuclei"] / merged["area_mm2"]
     return {"table": merged.to_dict(orient="records")}
 
