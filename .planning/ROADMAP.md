@@ -139,7 +139,7 @@
 | 1. Atlas Registration and ROI Loading | 3/3 | Complete    | 2026-07-02 |
 | 2. Detection Parameter Lock | 2/2 | Complete   | 2026-07-09 |
 | 3. Detection Script and Single-Section End-to-End Test | 4/4 | Complete    | 2026-07-16 |
-| 4. Biological Plausibility Validation and Imaging Optimization Notes | 3/3 | Complete   | 2026-07-17 |
+| 4. Biological Plausibility Validation and Imaging Optimization Notes | 3/3 | Complete    | 2026-07-17 |
 
 ---
 
