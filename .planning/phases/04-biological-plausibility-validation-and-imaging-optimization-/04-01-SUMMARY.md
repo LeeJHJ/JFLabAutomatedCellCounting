@@ -121,3 +121,7 @@ None - no external service configuration required. The live QuPath "Run for proj
 ---
 *Phase: 04-biological-plausibility-validation-and-imaging-optimization-*
 *Completed: 2026-07-17*
+
+## Self-Check: PASSED
+
+All claimed files found on disk (`scripts/03_export_val01_metrics.groovy`, its QuPath-project hard-copy, `scripts/val01_metrics.py`, this SUMMARY.md); all claimed commit hashes (`dd77fbe`, `011ee1a`, `740d1e4`) found in `git log`.

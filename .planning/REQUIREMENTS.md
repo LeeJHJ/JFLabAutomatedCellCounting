@@ -78,7 +78,7 @@
 | SCRI-02 | Phase 2 | Complete |
 | CLASS-01 | Phase 2 | Complete |
 | SCRI-03 | Phase 3 | Complete |
-| VAL-01 | Phase 4 | Pending |
+| VAL-01 | Phase 4 | Pending (tooling authored Plan 04-01; findings record written Plan 04-03) |
 | OPT-01 | Phase 4 | Pending |
 | OPT-02 | Phase 4 | Pending |
 | OPT-03 | Phase 4 | Pending |

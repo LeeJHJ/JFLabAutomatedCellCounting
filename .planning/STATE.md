@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-stopped_at: Phase 4 context gathered
-last_updated: "2026-07-17T00:23:12.183Z"
+stopped_at: Completed 04-01-PLAN.md
+last_updated: "2026-07-17T00:40:13.351Z"
 progress:
   total_phases: 4
   completed_phases: 3
-  total_plans: 9
-  completed_plans: 9
+  total_plans: 12
+  completed_plans: 10
   percent: 75
 ---
 
@@ -24,14 +24,14 @@ progress:
 
 **Core value:** Biologically plausible TdT+/Fos+/Double+ counts per atlas region for M3 hippocampus, with locked detection parameters and imaging optimization notes ready for the full series.
 
-**Current focus:** Phase 04 — biological-plausibility-validation-and-imaging-optimization-notes (Phase 03 complete)
+**Current focus:** Phase 04 — biological-plausibility-validation-and-imaging-optimization-
 
 ---
 
 ## Current Position
 
-**Active phase:** Phase 4 — Biological Plausibility Validation and Imaging Optimization Notes — NOT STARTED
-**Active plan:** none yet (Phase 4 not planned)
+**Active phase:** Phase 4 — Biological Plausibility Validation and Imaging Optimization Notes — IN PROGRESS
+**Plan:** 2 of 3
 **Status:** Ready to execute
 
 **Progress bar:**
@@ -66,6 +66,7 @@ progress:
 | Phase 03 P01 | 10min | 2 tasks | 2 files |
 | Phase 03 P02 | 7min | 2 tasks | 2 files |
 | Phase 03 P03 | 7min | 2 tasks | 4 files |
+| Phase 04 P01 | 5min | 2 tasks | 3 files |
 
 ## Accumulated Context
 
@@ -132,9 +133,9 @@ None (Plan 02 is a human GUI step in Fiji; not a blocker, just a handoff).
 
 ## Session Continuity
 
-**Last session:** 2026-07-16T19:50:09.258Z
-**Stopped at:** Phase 4 context gathered
-**Resume file:** .planning/phases/04-biological-plausibility-validation-and-imaging-optimization-/04-CONTEXT.md
+**Last session:** 2026-07-17T00:40:13.344Z
+**Stopped at:** Completed 04-01-PLAN.md
+**Resume file:** None
 
 **To resume:** Plan 03-03 extended `scripts/02_detect_classify.groovy` (+ byte-identical project hard-copy) with the phase's crux capability: (1) a `localBackgroundSubtractedMean` closure building a peri-cellular annulus outside each marker's own compartment ROI (nucleus for Fos, expanded cell/cytoplasm for TdT) via `RoiTools.buffer`/`subtract`, excluding neighboring detections via `getAllObjectsForRegion` (not centroid-only), and sampling the mean via `ObjectMeasurements` on a throwaway detection object — writes `Nucleus: AF488-T3 mean (bg-sub)` / `Cytoplasm: AF568-T2 mean (bg-sub)` on every detection (D-04); (2) a `derivePeakThreshold` closure re-deriving Fos/TdT positive thresholds on the bg-sub measure via `qupath.ext.braian.ChannelHistogram.zeroPhaseFilter`/`findPeaks`, with a mandatory raw-measure self-check printed against the locked absolute cutoffs (13000.4538/16766.4671) before trusting the bg-sub derivation; new `Fos_Classifier_20x_bgsub.json`/`TdT_classifier_bgsub.json` authored as self-bootstrapping placeholders (old locked threshold + a `note` field) that the script itself overwrites with the live re-derived value on every run, then re-reads via the existing `readSpec` closure; the compound classification loop is now repointed to the bg-sub measure + re-derived thresholds (old absolute cutoffs retained as documented reference only, Pitfall 9 guard). Two Rule-1 bugs auto-fixed: a duplicate `imageData` declaration (compile error) and RESEARCH.md's broken `hasProperty('getNucleusROI')` idiom corrected to `respondsTo('getNucleusROI')`. All static/source verification (grep/cmp/`python3` JSON parse) passed; the plan's `<human-check>` QuPath run-through steps (A5 key-set println, non-negative TdT bg-sub check, raw-measure self-check landing near the locked thresholds, measurable SSp false-positive reduction) were explicitly NOT attempted per CLAUDE.md's GUI-human-only constraint and remain deferred to Plan 03-04. SCRI-03 requirement NOT yet marked complete (requires "tested on one section" per REQUIREMENTS.md, which only happens in Plan 03-04). Outcome: Plan 03-04 ran on M3 entry 1 (2026-07-16) and initially failed 100% Negative; root-caused via /gsd-debug to a D-04 annulus measurement-key mismatch + a buffered-write path, fixed, and the D-05 threshold redesigned to a robust median+k·1.4826·MAD (k=3) cut. On re-run the operator confirmed all four SC with plausible biology (Fos+ ~20%, TdT+ ~3.5%, Double+/TdT+ ~0.45, SSp suppressed). SCRI-03 complete; Phase 3 verified. Next: Phase 4 — Biological Plausibility Validation and Imaging Optimization Notes (not yet planned).
 
@@ -149,3 +150,6 @@ None (Plan 02 is a human GUI step in Fiji; not a blocker, just a handoff).
 
 - [Phase 03]: bgsub classifier JSONs are self-bootstrapping placeholders (old locked threshold, documented via a note field); script's own runtime ChannelHistogram re-derivation overwrites them each live QuPath run — No live QuPath run is available to this executor (GUI-human-only per CLAUDE.md); the plan allows deriving in-script while preferring the JSON path for D-05's runtime-editable shape
 - [Phase 03]: Threshold write-back to bgsub classifier JSON is guarded against NaN (insufficient data / no peak found); leaves the existing file unchanged rather than clobbering it — Preserves D-02's idempotent/safe re-run property
+- [Phase 04-01]: Double+/TdT+ ratio reported both as n(Double+)/n(TdT+) and as the co-expression fraction Double+/(Double++TdT+), per hippocampal subfield — Plan spec requires both forms; region_label is a per-cell column so subfield breakdown is free
+- [Phase 04-01]: DAPI density via pandas merge joining per-cell region counts to the D-04 per-region-area TSV; nucleus-area peak uses the RESEARCH-specified 10 um^2 histogram-mode function verbatim — Matches qc_detection_gates.groovy's Gate-1 binning for direct comparability
+- [Phase 04-01]: SSp Fos+ rate reported as a corroboration anchor (not a true negative control) — Hippocampus-only section has no clean negative control; CONTEXT.md permits documenting the absence and reporting SSp as a sanity anchor
