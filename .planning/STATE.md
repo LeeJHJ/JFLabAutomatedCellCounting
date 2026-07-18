@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v1.1
 milestone_name: First Full-Series Run — LA/BA Amygdala Engram
 current_phase: 5
-status: planning
-stopped_at: Phase 5 context gathered
-last_updated: "2026-07-18T17:00:49.808Z"
-last_activity: 2026-07-17
-last_activity_desc: v1.1 roadmap written (6 phases, 5-10)
+status: planned
+stopped_at: Phase 5 planned — 3 plans across 2 waves
+last_updated: "2026-07-18T17:30:00.000Z"
+last_activity: 2026-07-18
+last_activity_desc: Phase 5 planned — 3 plans (05-01, 05-02, 05-03) across 2 waves
 progress:
   total_phases: 6
   completed_phases: 0
-  total_plans: 0
+  total_plans: 3
   completed_plans: 0
   percent: 0
 ---
@@ -27,16 +27,16 @@ progress:
 
 **Core value:** Biologically plausible TdT+/Fos+/Double+ counts per atlas region across a registered section series, with locked detection parameters and imaging-optimization notes ready to scale brain-wide.
 
-**Current focus:** v1.1 roadmap created (2026-07-17) — Phases 5-10 defined, 15/15 requirements mapped. Ready to plan Phase 5.
+**Current focus:** Phase 5 planned (2026-07-18) — 3 plans across 2 waves (05-01 multi-scene MIP converter ∥ 05-02 EXP-02 export fix → 05-03 human-verify gate). Ready to execute Phase 5.
 
 ---
 
 ## Current Position
 
-Phase: 5 — Series Scaffolding — Multi-Scene MIP + Batch-Export Integrity (Not started)
-Plan: —
-Status: Roadmap created; ready to plan Phase 5
-Last activity: 2026-07-17 — v1.1 roadmap written (6 phases, 5-10)
+Phase: 5 — Series Scaffolding — Multi-Scene MIP + Batch-Export Integrity (Planned — 3 plans)
+Plan: 05-01, 05-02 (Wave 1, parallel) · 05-03 (Wave 2, human-verify gate)
+Status: Phase 5 planned; ready to execute
+Last activity: 2026-07-18 — Phase 5 planned (research + patterns + validation + 3 plans, checker PASSED)
 
 ## Performance Metrics
 
@@ -45,7 +45,7 @@ Last activity: 2026-07-17 — v1.1 roadmap written (6 phases, 5-10)
 | Phases total (v1.1) | 6 (Phases 5-10) |
 | Phases complete (v1.1) | 0 |
 | Requirements mapped | 15/15 |
-| Plans written | 0 |
+| Plans written | 3 (Phase 5) |
 | Plans complete | 0 |
 | Phases complete (v1.0, shipped) | 4/4 |
 
@@ -121,7 +121,8 @@ Items acknowledged and deferred at v1.0 milestone close on 2026-07-17:
 - [x] v1.1 requirements defined (15 requirements) — 2026-07-17
 - [x] v1.1 research synthesized (`research/SUMMARY.md`, MEDIUM confidence) — 2026-07-17
 - [x] v1.1 roadmap created (Phases 5-10, 15/15 mapped) — 2026-07-17
-- [ ] Plan Phase 5 — `/gsd-plan-phase 5`
+- [x] Plan Phase 5 — 3 plans, checker PASSED — 2026-07-18
+- [ ] Execute Phase 5 — `/gsd-execute-phase 5`
 
 ### Blockers
 
@@ -138,10 +139,10 @@ None. First v1.1 execution step (Phase 5) is scriptable (no GUI dependency); Pha
 ## Session Continuity
 
 **Last session:** 2026-07-18T17:00:49.801Z
-**Stopped at:** Phase 5 context gathered
-**Resume file:** .planning/phases/05-series-scaffolding-multi-scene-mip-batch-export-integrity/05-CONTEXT.md
+**Stopped at:** Phase 5 planned — 3 plans across 2 waves (checker PASSED)
+**Resume file:** .planning/phases/05-series-scaffolding-multi-scene-mip-batch-export-integrity/05-01-PLAN.md
 
-**To resume:** v1.0 (Single-Section Validation Run) shipped 2026-07-17 — the full ABBA → BraiAnDetect → VAL-01 pipeline runs end-to-end on M3 entry 1 with locked detection params, a bioplausibility findings record, and imaging notes. v1.1 (First Full-Series Run — LA/BA Amygdala Engram, wBA1-3) is now roadmapped into 6 phases (5-10), continuing phase numbering from v1.0. All 15 requirements are mapped 1:1. The dependency order follows the research SUMMARY: scaffolding (5 verified MIPs + fixed batch export) unblocks everything and the downstream aggregation; registration speedup + imaging re-validation precede classification; classification carries the amygdala-specific CR-01 re-audit; area-based readout and terminal aggregation/export are the downstream readouts. Registration + QuPath detection remain human-in-the-loop GUI steps (executor authors scripts; operator runs the GUI). Next: `/gsd-plan-phase 5`.
+**To resume:** v1.0 (Single-Section Validation Run) shipped 2026-07-17 — the full ABBA → BraiAnDetect → VAL-01 pipeline runs end-to-end on M3 entry 1 with locked detection params, a bioplausibility findings record, and imaging notes. v1.1 (First Full-Series Run — LA/BA Amygdala Engram, wBA1-3) is now roadmapped into 6 phases (5-10), continuing phase numbering from v1.0. All 15 requirements are mapped 1:1. The dependency order follows the research SUMMARY: scaffolding (5 verified MIPs + fixed batch export) unblocks everything and the downstream aggregation; registration speedup + imaging re-validation precede classification; classification carries the amygdala-specific CR-01 re-audit; area-based readout and terminal aggregation/export are the downstream readouts. Registration + QuPath detection remain human-in-the-loop GUI steps (executor authors scripts; operator runs the GUI). Phase 5 is now planned (3 plans: 05-01 multi-scene MIP converter ∥ 05-02 EXP-02 export fix in Wave 1 → 05-03 human-verify gate in Wave 2; research/patterns/validation all written, checker PASSED). Next: `/gsd-execute-phase 5`.
 
 **Side task:** TRACR registration for another lab in progress (rough, may need a per-section second pass) — see memory. (Retired notes archived in `.planning/archive/retired-memory-notes.md`.)
 
@@ -150,5 +151,5 @@ None. First v1.1 execution step (Phase 5) is scriptable (no GUI dependency); Pha
 
 ## Operator Next Steps
 
-- Review the v1.1 roadmap in `.planning/ROADMAP.md` (Phases 5-10).
-- Plan the first phase: `/gsd-plan-phase 5` (Series Scaffolding — Multi-Scene MIP + Batch-Export Integrity).
+- Review the Phase 5 plans in `.planning/phases/05-series-scaffolding-multi-scene-mip-batch-export-integrity/` (05-01, 05-02, 05-03).
+- Execute the first phase: `/gsd-execute-phase 5` (Series Scaffolding — Multi-Scene MIP + Batch-Export Integrity).
