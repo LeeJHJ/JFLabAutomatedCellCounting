@@ -35,6 +35,7 @@ from pathlib import Path
 import aicspylibczi
 import numpy as np
 import tifffile
+from PIL import Image
 
 
 DEFAULT_CHANNELS = ["AF568-T2", "AF488-T3", "DAPI-T4"]
@@ -100,6 +101,38 @@ def _preflight_scenes(czi: aicspylibczi.CziFile) -> dict:
     return bboxes
 
 
+def _dapi_index(names: list[str]) -> int:
+    """Physical channel index of the DAPI/nuclear channel (name containing 'DAPI'),
+    falling back to the last channel (physical read order puts DAPI last on this rig)."""
+    for i, n in enumerate(names):
+        if "DAPI" in n.upper():
+            return i
+    return len(names) - 1
+
+
+def _scene_identity_record(scene_idx: int, N: int, bbox, M: int, dims: tuple[int, int]) -> None:
+    """Print one identity line carrying BOTH the 0-based scene key and the 1-based
+    s{N} label (D-05 off-by-one guard), plus bbox, tile count M, and dims. Makes NO
+    anterior->posterior claim (D-03) -- raw scene identity only."""
+    h, w = dims
+    print(
+        f"scene_key={scene_idx} (0-based)  label=s{N} (1-based)  "
+        f"bbox=(x={bbox.x}, y={bbox.y}, w={bbox.w}, h={bbox.h})  "
+        f"M_tiles={M}  dims=({h}, {w})",
+        flush=True,
+    )
+
+
+def _save_identity_thumbnail(dapi_plane: np.ndarray, out_path: Path) -> None:
+    """Normalize the already-read DAPI plane (1/99.5 percentile clip -> uint8),
+    downsample ~8x by strided slicing, and save as a PNG. Reuses the in-hand
+    full-res array -- no fractional read_mosaic(scale_factor<1.0) (Pitfall 4)."""
+    lo, hi = np.percentile(dapi_plane, [1, 99.5])
+    norm = np.clip((dapi_plane.astype(np.float32) - lo) / (hi - lo + 1e-6), 0, 1)
+    thumb = (norm[::8, ::8] * 255).astype(np.uint8)
+    Image.fromarray(thumb).save(str(out_path))
+
+
 def _build_ome_xml(names: list[str], x: int, y: int, pixel_um: float, image_name: str) -> str:
     chans = "\n".join(
         f'      <Channel ID="Channel:0:{i}" Name="{n}" SamplesPerPixel="1"/>'
@@ -141,12 +174,14 @@ def main() -> None:
 
     n_scenes = len(bboxes)
     args.outdir.mkdir(parents=True, exist_ok=True)
+    dapi_idx = _dapi_index(args.channels)
+    dims_by_scene = czi.get_dims_shape()
 
     for scene_idx in sorted(bboxes):
         b = bboxes[scene_idx]
         N = scene_idx + 1
         region = (b.x, b.y, b.w, b.h)
-        print(f"Scene scene_key={scene_idx} (0-based) label=s{N} (1-based) "
+        print(f"Processing scene {scene_idx} -> s{N}  "
               f"bbox=(x={b.x}, y={b.y}, w={b.w}, h={b.h})")
 
         print(f"  Generating MIP for scene {scene_idx} (s{N})...")
@@ -168,6 +203,14 @@ def main() -> None:
             f"Scene {scene_idx}: MIP shape (Y,X)=({Y},{X}) != scene bbox (h,w)=({b.h},{b.w})"
         )
         print(f"  Scene {scene_idx} (s{N}) MIP shape: {mip.shape}  dtype: {mip.dtype}")
+
+        # ── Scene-identity artifact (CONV-02, D-01/D-02/D-05) ────────────────
+        # Reuse the DAPI channel's already-computed MIP plane -- no extra CZI read.
+        M = dims_by_scene[scene_idx]["M"][1]
+        _scene_identity_record(scene_idx, N, b, M, (b.h, b.w))
+        thumb_path = args.outdir / f"{args.animal_prefix}_s{N}_identity.png"
+        _save_identity_thumbnail(mip_channels[dapi_idx], thumb_path)
+        print(f"  Identity thumbnail: {thumb_path}")
 
         image_name = f"{args.animal_prefix}_s{N}"
         ome_xml = _build_ome_xml(args.channels, X, Y, args.pixel_um, image_name)
