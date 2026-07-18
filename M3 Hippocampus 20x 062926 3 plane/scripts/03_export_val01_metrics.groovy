@@ -11,20 +11,27 @@
  * NaN bg-sub columns (RESEARCH Pitfall 4 — the exact Phase-3 D-04/D-05
  * all-Negative symptom).
  *
- * Emits TWO tab-delimited outputs into THIS QuPath project's results/ dir
- * (a single-run Phase-4 snapshot — overwritten/truncated fresh each run,
- * unlike the growing cross-image reference/dapi_region_reference.csv):
- *   1. results/val01_percell_export.tsv — one row per detection:
+ * Emits TWO tab-delimited outputs into THIS QuPath project's results/ dir,
+ * one pair PER PROJECT ENTRY (EXP-02, D-06/D-07 — fixed 2026-07-18: the prior
+ * hardcoded filenames truncated to only the last-processed entry on "Run for
+ * project"; output paths are now a function of the sanitized running entry
+ * name, evaluated per-entry via getProjectEntry(), so N entries produce 2*N
+ * distinct files with no cross-entry clobbering):
+ *   1. results/<stem>__val01_percell_export.tsv — one row per detection:
  *      class, region_label, nucleus_area_um2, centroid_x, centroid_y,
  *      fos_bgsub, tdt_bgsub
- *   2. results/val01_region_area.tsv — one row per leaf atlas-region
+ *   2. results/<stem>__val01_region_area.tsv — one row per leaf atlas-region
  *      annotation (D-04): region_label, hemisphere, acronym, is_leaf,
  *      area_mm2
+ * Each individual entry's pair is still a single-run snapshot (truncated
+ * fresh each run for that entry), unlike the growing cross-image
+ * reference/dapi_region_reference.csv.
  *
  * Downstream: scripts/val01_metrics.py (braian env) reads both TSVs and
  * computes the four VAL-01 bioplausibility metrics. Column names here are
  * the exact contract that script parses against — do not rename without
- * updating both sides.
+ * updating both sides. Use scripts/verify_export_integrity.py to check the
+ * multi-entry non-clobbering property against a results/ directory.
  *
  * Deploy: author in canonical scripts/, hard-copy byte-identically into
  * <QuPath project>/scripts/ (dual-location deploy, established convention).
@@ -142,10 +149,22 @@ dets.each { d ->
     if (nProcessed % 5000 == 0) println "  ...exported ${nProcessed}/${dets.size()} detections"
 }
 
-def resultsDir = new File(getProject().getBaseDirectory(), "results")
-resultsDir.mkdirs()
+// ── per-entry output path (EXP-02 fix, D-06/D-07) ───────────────────────────────────────────
+// Output filenames MUST be a function of the running project entry, evaluated per-entry INSIDE
+// "Run for project" — a fixed filename here means every entry after the first truncates/overwrites
+// the previous one's export (RESEARCH Pitfall 5). Sanitization idiom reused verbatim from
+// run_braian_detection.groovy lines 79-81 (invalidChars) with the defensive null-fallback from
+// export_region_dapi_reference.groovy lines 41-42.
+def invalidChars = (['<', '>', ':', '"', '/', '\\', '|', '?', '*'] as Set)
+    .collect { java.util.regex.Pattern.quote(it) }.join('|')
+def entry = getProjectEntry()
+def stem = (entry != null ? entry.getImageName() : getCurrentImageData().getServer().getMetadata().getName())
+    .replaceAll(invalidChars, '')
+if (stem == null || stem.trim().isEmpty()) {
+    throw new RuntimeException("EXP-02: sanitized entry-name stem is empty -- refusing to write an unnamed export file (T-05-02-02). Check getProjectEntry().getImageName() for this entry.")
+}
 
-def percellFile = new File(resultsDir, "val01_percell_export.tsv")
+def percellFile = new File(buildPathInProject("results", "${stem}__val01_percell_export.tsv"))
 // centroid_*_px are IMAGE-space pixel coordinates (not CCFv3 atlas microns) — the _px suffix keeps
 // that explicit per CLAUDE.md's micron-export rule; they are diagnostic only, unused downstream.
 def percellHeader = ["class", "region_label", "nucleus_area_um2", "centroid_x_px", "centroid_y_px", "fos_bgsub", "tdt_bgsub"].join("\t")
@@ -181,7 +200,7 @@ regionAnnotations.each { ann ->
     regionRows << [label, hemisphere, acronym, isLeaf, areaMm2]
 }
 
-def regionFile = new File(resultsDir, "val01_region_area.tsv")
+def regionFile = new File(buildPathInProject("results", "${stem}__val01_region_area.tsv"))
 def regionHeader = ["region_label", "hemisphere", "acronym", "is_leaf", "area_mm2"].join("\t")
 def regionSb = new StringBuilder()
 regionSb.append(regionHeader).append("\n")
