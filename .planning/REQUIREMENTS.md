@@ -71,31 +71,31 @@ Deferred to a future milestone.
 
 ## Traceability
 
-Populated during roadmap creation (each requirement maps to exactly one phase).
+Each requirement maps to exactly one phase. Phases continue from v1.0 (Phases 1-4); v1.1 spans Phases 5-10.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| CONV-01 | TBD | Pending |
-| CONV-02 | TBD | Pending |
-| IMG-01 | TBD | Pending |
-| IMG-02 | TBD | Pending |
-| REG-03 | TBD | Pending |
-| REG-04 | TBD | Pending |
-| REG-05 | TBD | Pending |
-| CLASS-02 | TBD | Pending |
-| LABEL-01 | TBD | Pending |
-| AREA-01 | TBD | Pending |
-| AREA-02 | TBD | Pending |
-| AGG-01 | TBD | Pending |
-| EXP-02 | TBD | Pending |
-| EXP-03 | TBD | Pending |
-| EXP-04 | TBD | Pending |
+| CONV-01 | Phase 5 | Pending |
+| CONV-02 | Phase 5 | Pending |
+| EXP-02 | Phase 5 | Pending |
+| REG-03 | Phase 6 | Pending |
+| REG-04 | Phase 6 | Pending |
+| REG-05 | Phase 6 | Pending |
+| IMG-01 | Phase 7 | Pending |
+| IMG-02 | Phase 7 | Pending |
+| CLASS-02 | Phase 8 | Pending |
+| LABEL-01 | Phase 8 | Pending |
+| AREA-01 | Phase 9 | Pending |
+| AREA-02 | Phase 9 | Pending |
+| AGG-01 | Phase 10 | Pending |
+| EXP-03 | Phase 10 | Pending |
+| EXP-04 | Phase 10 | Pending |
 
 **Coverage:**
 - v1.1 requirements: 15 total
-- Mapped to phases: 0 (roadmap pending)
-- Unmapped: 15 ⚠️
+- Mapped to phases: 15 ✓
+- Unmapped: 0 ✓
 
 ---
 *Requirements defined: 2026-07-17*
-*Last updated: 2026-07-17 after initial definition*
+*Last updated: 2026-07-17 after roadmap creation (Phases 5-10 mapped, 15/15 coverage)*

@@ -3,65 +3,74 @@ gsd_state_version: 1.0
 milestone: v1.1
 milestone_name: First Full-Series Run — LA/BA Amygdala Engram
 status: planning
-last_updated: "2026-07-17T19:29:49.516Z"
+last_updated: "2026-07-17T20:15:00.000Z"
 last_activity: 2026-07-17
 progress:
-  total_phases: 0
+  total_phases: 6
   completed_phases: 0
   total_plans: 0
   completed_plans: 0
   percent: 0
 ---
 
-# Project State: M3 Hippocampus Section Pipeline — First Run
+# Project State: M3 Section Pipeline — TRAP2 / Airyscan
 
-**Last updated:** 2026-07-16
-**Milestone:** 1 — Single-Section Validation Run
+**Last updated:** 2026-07-17
+**Milestone:** v1.1 — First Full-Series Run — LA/BA Amygdala Engram (wBA1-3)
 
 ---
 
 ## Project Reference
 
-**Core value:** Biologically plausible TdT+/Fos+/Double+ counts per atlas region for M3 hippocampus, with locked detection parameters and imaging optimization notes ready for the full series.
+**Core value:** Biologically plausible TdT+/Fos+/Double+ counts per atlas region across a registered section series, with locked detection parameters and imaging-optimization notes ready to scale brain-wide.
 
-**Current focus:** Planning next milestone — full-series run (v1.0 shipped 2026-07-17)
+**Current focus:** v1.1 roadmap created (2026-07-17) — Phases 5-10 defined, 15/15 requirements mapped. Ready to plan Phase 5.
 
 ---
 
 ## Current Position
 
-Phase: Not started (defining requirements)
+Phase: 5 — Series Scaffolding — Multi-Scene MIP + Batch-Export Integrity (Not started)
 Plan: —
-Status: Defining requirements
-Last activity: 2026-07-17 — Milestone v1.1 started
+Status: Roadmap created; ready to plan Phase 5
+Last activity: 2026-07-17 — v1.1 roadmap written (6 phases, 5-10)
 
 ## Performance Metrics
 
 | Metric | Value |
 |--------|-------|
-| Phases total | 4 |
-| Phases complete | 3 |
-| Requirements mapped | 10/10 |
-| Plans written | 9 |
-| Plans complete | 9 |
+| Phases total (v1.1) | 6 (Phases 5-10) |
+| Phases complete (v1.1) | 0 |
+| Requirements mapped | 15/15 |
+| Plans written | 0 |
+| Plans complete | 0 |
+| Phases complete (v1.0, shipped) | 4/4 |
 
 ---
-| Phase 02 P01 | 12min | 3 tasks | 6 files |
-| Phase 03 P01 | 10min | 2 tasks | 2 files |
-| Phase 03 P02 | 7min | 2 tasks | 2 files |
-| Phase 03 P03 | 7min | 2 tasks | 4 files |
-| Phase 04 P01 | 5min | 2 tasks | 3 files |
-| Phase 04 P02 | 5min | 2 tasks | 2 files |
-| Phase 04 P03 | 20min | 1 tasks | 3 files |
+
+## v1.1 Roadmap Snapshot (created 2026-07-17)
+
+| Phase | Goal (short) | Requirements |
+|-------|--------------|--------------|
+| 5. Series Scaffolding — Multi-Scene MIP + Batch-Export Integrity | 5 identity-verified section MIPs + fixed multi-entry export | CONV-01, CONV-02, EXP-02 |
+| 6. Registration Speedup | DeepSlice batch + reduced-landmark BigWarp; masked-elastix prototype trial | REG-03, REG-04, REG-05 |
+| 7. Imaging Re-Validation (4-plane / lower-laser) | Re-run D-05 gates; re-lock k only on drift; under-projection check | IMG-01, IMG-02 |
+| 8. LA/BA Classification + Brain-Wide Region-Labeling Validation | Nucleus-anchored TdT+/Fos+/Double+ across 5 sections + CR-01 re-audit on amygdala | CLASS-02, LABEL-01 |
+| 9. Generalizable Area-Based Density Readout | Region-parameterized %-area-above-threshold; DG test case; additive/parallel | AREA-01, AREA-02 |
+| 10. Animal-Level Aggregation + Atlas-Space Export & Point Cloud | Animal-level table + persisted CCFv3 µm coords + brainrender point cloud | AGG-01, EXP-03, EXP-04 |
+
+**Ordering:** 5 → 6 → 7 → 8 → 9 → 10 (Phase 7 may run parallel with Phase 6). EXP-02 is sequenced early in Phase 5 because it blocks AGG-01 in Phase 10.
+
+---
 
 ## Deferred Items
 
-Items acknowledged and deferred at milestone close on 2026-07-17:
+Items acknowledged and deferred at v1.0 milestone close on 2026-07-17:
 
 | Category | Item | Status |
 |----------|------|--------|
 | verification | Phase 2 (Detection Parameter Lock) has no `02-VERIFICATION.md` | Deferred — override close-out; params validated downstream by Phase 3 (end-to-end) + Phase 4 (bioplausibility) |
-| imaging | IN-02: `opt01_zplane_audit.py` default paths span three project date-stamps (062026 CZI / 062226 MIP / 062926 region-TSVs) | Open — confirm same acquisition before the full-series raw:MIP ratio |
+| imaging | IN-02: `opt01_zplane_audit.py` default paths span three project date-stamps (062026 CZI / 062226 MIP / 062926 region-TSVs) | Open — confirm same acquisition before the full-series raw:MIP ratio (carried into v1.1 imaging work) |
 
 ## Accumulated Context
 
@@ -69,30 +78,29 @@ Items acknowledged and deferred at milestone close on 2026-07-17:
 
 | Decision | Rationale | Status |
 |----------|-----------|--------|
-| No Affine+Spline in ABBA | Elastix degrades without tissue mask; confirmed 2026-06-23 | Locked |
+| No Affine+Spline in ABBA | Elastix degrades without tissue mask; confirmed 2026-06-23 | Locked (REG-05 trials a masked prototype outside ABBA's GUI as the only exception) |
 | Channel order override in czi_mip.py | aicspylibczi reads in wrong order vs metadata; always pass `--channels "TdTomato-AF568" "Fos-AF488" "DAPI"` | Locked |
-| Cytoplasmic expansion ring for TdTomato | TdTomato is cytosolic; measure in cytoplasmic compartment to avoid mis-counting | Pending validation (Phase 2) |
+| Cytoplasmic expansion ring for TdTomato | TdTomato is cytosolic; measure in cytoplasmic compartment to avoid mis-counting | Locked (validated Phase 3 — bg-sub AF568-T2 cytoplasmic measure) |
 | DeepSlice → manual angle → export only | Minimal steps producing correct overlay | Locked |
 | Nucleus-anchored colocalization only | No proximity/overlap heuristics | Locked |
 | Export in microns not pixels | CCFv3 is in microns; pixel export produces wrong atlas positions | Locked |
 | 4-argument loadWarpedAtlasAnnotations form | Verified from installed JAR bytecode; internal AtlasOntology overload not for Groovy scripts | Locked (Plan 01-01) |
-| resolveHierarchy() after load | Claude discretion per CONTEXT.md; required for BraiAnDetect parent-child region assignment | Locked (Plan 01-01) |
+| resolveHierarchy() after load | Required for BraiAnDetect parent-child region assignment | Locked (Plan 01-01) |
 | Single DAPI-T4-anchored channelDetections entry (not per-marker + OverlappingDetections) | Nucleus-anchored colocalization per CLAUDE.md; merged SingleClassifier application on the same DAPI-derived object set produces Double+ without geometric overlap | Locked (Plan 02-01) |
 | histogramThreshold (not absolute threshold) in BraiAn.yml | D-01: series-scalable, avoids brightness-drift false negatives/positives across sections | Locked (Plan 02-01) |
-| TdT classifier reads Cytoplasm: AF568-T2 mean (was Nucleus) | TdTomato is cytosolic; prior TRAP2TdT_Classifier_20x.json analog had the wrong compartment (real mis-count bug) | Locked (Plan 02-01) |
-| All BraiAn.yml sigma/area/threshold values are [ASSUMED] TRAP2-paper seeds | Primary paper source returned HTTP 403 during research; not load-bearing, D-05 empirical gates will catch a bad seed | Pending tuning (Plan 02-02) |
-| Detection stays separate from classify script (D-01) | run_braian_detection.groovy remains the standalone heavy BraiAnDetect pass; 02_detect_classify.groovy only classifies/labels/reports, letting fast threshold-iteration re-run without re-detecting | Locked (Plan 03-01) |
-| Zero-detection guard + idempotent re-classify (D-02) | Entry with no detections aborts with a clear message; setPathClass overwrites so re-running just refreshes classes -- safe during threshold tuning | Locked (Plan 03-01) |
-| Atlas region label computed ephemerally via centroid-in-ROI (not stored as per-cell metadata) | QuPath 0.6.0 javadoc warns metadata storage on plentiful detection objects is memory-inefficient; MeasurementList is numeric-only by design so a region acronym cannot be persisted there anyway | Locked (Plan 03-01) |
-| Count rollup (SC4) reuses centroid-in-ROI, not the stale results/<image>_regions.tsv | That file reflects BraiAnDetect's incompatible classifier application (Deviation #1) and predates this script's classification ground truth | Locked (Plan 03-02) |
-| Atlas_X sanity print stays a <=5-cell console check, no hard-coded unit conversion | Full per-cell export column is v2 scope (EXP-01/EXP-03); SC3 itself is the empirical print-and-check gate for microns-vs-voxel-index | Locked (Plan 03-02) |
+| TdT classifier reads Cytoplasm: AF568-T2 mean (was Nucleus) | TdTomato is cytosolic; prior analog had the wrong compartment (real mis-count bug) | Locked (Plan 02-01) |
+| Robust median + k·1.4826·MAD (k=3) positive threshold on bg-sub measure | Self-calibrating cut replacing absolute cutoffs; series-ready | Locked (Phase 3, 03-04) — re-validated at new imaging params in Phase 7 (IMG-01) |
+| Per-cell atlas label = smallest-area containing region, is_leaf computed geometrically | ABBA/QuPath annotations aren't reliably nested; child-emptiness + first-match leaked ~95k cells into `grey` (CR-01) | Locked (fixed 2026-07-17) — re-audited on non-laminar amygdala in Phase 8 (LABEL-01) |
+| Area-based density readout is a documented, generalizable exception to nucleus-anchored colocalization | Compact-nuclei regions (DG-granule, etc.) defeat per-nucleus segmentation; area-over-DAPI is additive/parallel, never replacing primary counts | Pending build (v1.1 Phase 9) |
 
-### Critical Risks (to monitor)
+### Critical Risks (to monitor in v1.1)
 
-- TdTomato classified from nuclear compartment instead of cytoplasmic ring — FIXED in Plan 02-01 (TdT_classifier.json now reads Cytoplasm: AF568-T2 mean); still needs a live detection run + visual DG bleed-check in Plan 02-02 to confirm no over/under-count in practice
-- Channel name mismatch between OME-TIFF and BraiAn.yml/classifiers — silent failure (zero cells detected per channel); BraiAn.yml + both classifiers verified to use exact server.json channel names (AF568-T2, AF488-T3, DAPI-T4) in Plan 02-01, but not yet exercised against a live detection run
-- Duplicate ABBA ROI loads double-count regions — `clearAllObjects()` guard in SCRI-01 (mitigated in Plan 01-01)
-- Atlas coordinate unit mismatch (mm vs µm) — sanity-print block authored in Plan 03-02 (grep/cmp verified); live µm-range confirmation still deferred to Plan 03-04's human-in-the-loop QuPath run
+- **CR-01 fix may fail differently on amygdala** — smallest-area-leaf heuristic validated only on laminar hippocampus; LA/BA are adjacent, comparable-size, non-nested nuclei. Re-audited in Phase 8 (LABEL-01) before trusting the series.
+- **k=3 threshold seed may drift at new laser power / Z-count** — lower laser changes photon statistics, not just brightness. Re-run D-05 gates AND compare bg-sub histogram shape vs v1.0 reference in Phase 7 (IMG-01); re-sweep k (3-5) on drift.
+- **Under-projection at 4 Z-planes** — narrower range risks dimming nuclei / reintroducing DAPI blobs. OPT-01-style plateau + visual DAPI check in Phase 7 (IMG-02).
+- **Multi-scene CZI scene→section mapping untested** — off-by-one/shuffle silently mislabels physical sections (project already hit this with the 32 GB merged file). Verify each scene bbox/morphology in Phase 5 (CONV-02); name files with scene index verbatim.
+- **Tissue damage in the 5-section series undetected** — ABBA/BraiAnDetect produce locally plausible wrong counts on folds/tears. Per-section visual tissue-QC before registration; any exclusion a priori + principled.
+- **Multi-entry export truncation (EXP-02)** — `03_export_val01_metrics.groovy` "Run for project" truncates to only the last entry. Blocking prerequisite for AGG-01; fixed early in Phase 5.
 
 ### Environment
 
@@ -101,57 +109,43 @@ Items acknowledged and deferred at milestone close on 2026-07-17:
 - Fiji: `$HOME/section-pipeline/tools/Fiji.app/fiji-linux-x64`
 - elastix: 5.2.0 at `$HOME/section-pipeline/tools/elastix/bin/`; LD_LIBRARY_PATH set
 - Channel names: `AF568-T2` (TdTomato cytosolic), `AF488-T3` (Fos nuclear), `DAPI-T4`
-- Git: installed (v2.53.0) and repo INITIALIZED 2026-07-07 (branch `main`, no remote). `.gitignore` excludes all microscopy data (*.tif/*.tiff/*.czi/*.lif), *.qpdata, *.bfmemo (~23 GB). GSD executors now commit atomically; worktrees auto-degrade to sequential-on-main (no origin/HEAD, #683).
+- v1.1 data: `Automated Cell Counting/wBA Sungmo/-001-07_processed.czi` (16 GB, 5 scenes, Z=4, C=3, 0.69 µm/px). The merged 32 GB OME-TIFF is unusable (scenes fused, Z not projected) — do not use it.
+- Git: installed (v2.53.0), repo INITIALIZED 2026-07-07 (branch `main`, no remote). `.gitignore` excludes microscopy data. GSD executors commit atomically; worktrees auto-degrade to sequential-on-main.
 
 ### Todos
 
-- [x] Phase 1 complete — script authored, ABBA registration (BigWarp) done, QC approved (2026-07-02)
-- [x] Phase 2 context gathered (2026-07-07) — threshold + tuning decisions locked in CONTEXT.md
-- [x] Plan 02-01 executed (2026-07-07) — BraiAn.yml, Fos/TdT classifiers, and qc_detection_gates.groovy authored
-- [x] Plan 02-02: run BraiAnDetect in QuPath on M3 062926 3 plane entry 1, run qc_detection_gates.groovy, tune sigma/area/threshold against D-05 gates (DG + CA1), write 02-LOCK-RECORD.md (2026-07-09)
-- [x] Plan 03-01 executed (2026-07-10) — 02_detect_classify.groovy authored (canonical + project hard-copy): D-01/D-02 guard, nucleus-anchored compound classification, atlas region label (regionOf/regionLabel)
-- [x] Plan 03-02 executed (2026-07-10) — per-region count rollup (SC4, MeasurementList.put("Count: ...") onto CA1/CA2/CA3/DG-* leaf annotations) + Atlas_X micron sanity print (SC3) via AtlasTools; both grep/cmp-verified, human QuPath run deferred to Plan 03-04
-- [x] Plan 03-03 executed (2026-07-10) — compartment-agnostic local-background-subtracted Fos/TdT measure (D-04) + ChannelHistogram-based threshold re-derivation (D-05); classification repointed to bg-sub measure + re-derived thresholds; Fos_Classifier_20x_bgsub.json/TdT_classifier_bgsub.json authored (self-bootstrapping placeholders, overwritten on live run); grep/cmp/JSON-parse verified, human QuPath run deferred to Plan 03-04
-- [x] Plan 03-04: human-in-the-loop run PASSED (2026-07-16) — all four SC confirmed on M3 entry 1 with the final bg-sub script (Fos+ ~20%, TdT+ ~3.5%, Double+/TdT+ ~0.45, SSp suppressed); D-04/D-05 all-Negative bug resolved; SCRI-03 marked complete; Phase 3 verified (03-VERIFICATION.md 7/7)
+- [x] v1.0 shipped 2026-07-17 (4 phases, 12 plans) — single-section validation on M3 entry 1
+- [x] v1.1 requirements defined (15 requirements) — 2026-07-17
+- [x] v1.1 research synthesized (`research/SUMMARY.md`, MEDIUM confidence) — 2026-07-17
+- [x] v1.1 roadmap created (Phases 5-10, 15/15 mapped) — 2026-07-17
+- [ ] Plan Phase 5 — `/gsd-plan-phase 5`
 
 ### Blockers
 
-None (Plan 02 is a human GUI step in Fiji; not a blocker, just a handoff).
+None. First v1.1 execution step (Phase 5) is scriptable (no GUI dependency); Phases 6-8 include human-in-the-loop QuPath/ABBA GUI handoffs.
 
 ### Quick Tasks Completed
 
 | # | Description | Date | Commit | Directory |
 |---|-------------|------|--------|-----------|
-| 260706-kfm | DAPI tissue-mask auto-crop CLI (crop_to_tissue.py) for ABBA elastix scaling | 2026-07-06 | n/a (no git) | [260706-kfm-dapi-tissue-mask-auto-crop-cli-crop-to-t](./quick/260706-kfm-dapi-tissue-mask-auto-crop-cli-crop-to-t/) |
+| 260706-kfm | DAPI tissue-mask auto-crop CLI (crop_to_tissue.py) for ABBA elastix scaling | 2026-07-06 | n/a | [260706-kfm-dapi-tissue-mask-auto-crop-cli-crop-to-t](./quick/260706-kfm-dapi-tissue-mask-auto-crop-cli-crop-to-t/) |
 
 ---
 
 ## Session Continuity
 
-**Last session:** 2026-07-17T15:06:50.620Z
-**Stopped at:** Completed 04-01-PLAN.md
+**Last session:** 2026-07-17
+**Stopped at:** v1.1 roadmap created (Phases 5-10)
 **Resume file:** None
 
-**To resume:** Plan 03-03 extended `scripts/02_detect_classify.groovy` (+ byte-identical project hard-copy) with the phase's crux capability: (1) a `localBackgroundSubtractedMean` closure building a peri-cellular annulus outside each marker's own compartment ROI (nucleus for Fos, expanded cell/cytoplasm for TdT) via `RoiTools.buffer`/`subtract`, excluding neighboring detections via `getAllObjectsForRegion` (not centroid-only), and sampling the mean via `ObjectMeasurements` on a throwaway detection object — writes `Nucleus: AF488-T3 mean (bg-sub)` / `Cytoplasm: AF568-T2 mean (bg-sub)` on every detection (D-04); (2) a `derivePeakThreshold` closure re-deriving Fos/TdT positive thresholds on the bg-sub measure via `qupath.ext.braian.ChannelHistogram.zeroPhaseFilter`/`findPeaks`, with a mandatory raw-measure self-check printed against the locked absolute cutoffs (13000.4538/16766.4671) before trusting the bg-sub derivation; new `Fos_Classifier_20x_bgsub.json`/`TdT_classifier_bgsub.json` authored as self-bootstrapping placeholders (old locked threshold + a `note` field) that the script itself overwrites with the live re-derived value on every run, then re-reads via the existing `readSpec` closure; the compound classification loop is now repointed to the bg-sub measure + re-derived thresholds (old absolute cutoffs retained as documented reference only, Pitfall 9 guard). Two Rule-1 bugs auto-fixed: a duplicate `imageData` declaration (compile error) and RESEARCH.md's broken `hasProperty('getNucleusROI')` idiom corrected to `respondsTo('getNucleusROI')`. All static/source verification (grep/cmp/`python3` JSON parse) passed; the plan's `<human-check>` QuPath run-through steps (A5 key-set println, non-negative TdT bg-sub check, raw-measure self-check landing near the locked thresholds, measurable SSp false-positive reduction) were explicitly NOT attempted per CLAUDE.md's GUI-human-only constraint and remain deferred to Plan 03-04. SCRI-03 requirement NOT yet marked complete (requires "tested on one section" per REQUIREMENTS.md, which only happens in Plan 03-04). Outcome: Plan 03-04 ran on M3 entry 1 (2026-07-16) and initially failed 100% Negative; root-caused via /gsd-debug to a D-04 annulus measurement-key mismatch + a buffered-write path, fixed, and the D-05 threshold redesigned to a robust median+k·1.4826·MAD (k=3) cut. On re-run the operator confirmed all four SC with plausible biology (Fos+ ~20%, TdT+ ~3.5%, Double+/TdT+ ~0.45, SSp suppressed). SCRI-03 complete; Phase 3 verified. Next: Phase 4 — Biological Plausibility Validation and Imaging Optimization Notes (not yet planned).
+**To resume:** v1.0 (Single-Section Validation Run) shipped 2026-07-17 — the full ABBA → BraiAnDetect → VAL-01 pipeline runs end-to-end on M3 entry 1 with locked detection params, a bioplausibility findings record, and imaging notes. v1.1 (First Full-Series Run — LA/BA Amygdala Engram, wBA1-3) is now roadmapped into 6 phases (5-10), continuing phase numbering from v1.0. All 15 requirements are mapped 1:1. The dependency order follows the research SUMMARY: scaffolding (5 verified MIPs + fixed batch export) unblocks everything and the downstream aggregation; registration speedup + imaging re-validation precede classification; classification carries the amygdala-specific CR-01 re-audit; area-based readout and terminal aggregation/export are the downstream readouts. Registration + QuPath detection remain human-in-the-loop GUI steps (executor authors scripts; operator runs the GUI). Next: `/gsd-plan-phase 5`.
 
-**Phase 2 locked decisions (see 02-CONTEXT.md):** histogram-relative detection threshold + relative classifier cutoffs + one global BraiAn.yml (drift-monitored via SERIES-02); hard lock gates = nucleus-area peak 50–150µm² AND DAPI density 500–2000/mm²; Double+ ratio advisory only; Fos+ negative-control gate deferred. Reuse `Fos_Classifier_20x.json` (correct nuclear compartment), rebuild TdT classifier to read Cytoplasm — both done in Plan 02-01.
-
-**Side task:** TRACR registration for another lab in progress (rough, may need a per-section second pass) — see memory.
+**Side task:** TRACR registration for another lab in progress (rough, may need a per-section second pass) — see memory. (Retired notes archived in `.planning/archive/retired-memory-notes.md`.)
 
 ---
-*State initialized: 2026-07-01 | Last updated: 2026-07-16 (Phase 3 complete — 03-04 gate passed, verified)*
-
-## Decisions
-
-- [Phase 03]: bgsub classifier JSONs are self-bootstrapping placeholders (old locked threshold, documented via a note field); script's own runtime ChannelHistogram re-derivation overwrites them each live QuPath run — No live QuPath run is available to this executor (GUI-human-only per CLAUDE.md); the plan allows deriving in-script while preferring the JSON path for D-05's runtime-editable shape
-- [Phase 03]: Threshold write-back to bgsub classifier JSON is guarded against NaN (insufficient data / no peak found); leaves the existing file unchanged rather than clobbering it — Preserves D-02's idempotent/safe re-run property
-- [Phase 04-01]: Double+/TdT+ ratio reported both as n(Double+)/n(TdT+) and as the co-expression fraction Double+/(Double++TdT+), per hippocampal subfield — Plan spec requires both forms; region_label is a per-cell column so subfield breakdown is free
-- [Phase 04-01]: DAPI density via pandas merge joining per-cell region counts to the D-04 per-region-area TSV; nucleus-area peak uses the RESEARCH-specified 10 um^2 histogram-mode function verbatim — Matches qc_detection_gates.groovy's Gate-1 binning for direct comparability
-- [Phase 04-01]: SSp Fos+ rate reported as a corroboration anchor (not a true negative control) — Hippocampus-only section has no clean negative control; CONTEXT.md permits documenting the absence and reporting SSp as a sanity anchor
-- [Phase 04-02]: OPT-01 plateau argument scoped explicitly to 2-of-3 (single-plane variant never detection-run); recommended plane count framed as provisional pending that deferred confirmation
-- [Phase 04-02]: OPT-03 per-subfield resolution table anchored on Phase 2's measured CA1-separable/DG-sg-not-separable finding rather than re-deriving a fresh optical argument
-- [Phase 04-03]: Fixed compute_density() region-area join bug (hemisphere-prefix mismatch); reported per-subfield Double+/TdT+ ratio breakdown showing CA1/DG-mo individually in-band despite whole-section aggregate reading out of range; logged hemisphere-resolution finding to deferred-items.md rather than fixing out-of-scope Groovy code — Scope boundary: root cause is in locked Phase-3/Plan-04-01 Groovy region-labeling closures, out of Task 2's file scope and Phase 4's D-01 mandate
+*State initialized: 2026-07-01 | Last updated: 2026-07-17 (v1.1 roadmap created — Phases 5-10, 15/15 requirements mapped)*
 
 ## Operator Next Steps
 
-- Start the next milestone with /gsd-new-milestone
+- Review the v1.1 roadmap in `.planning/ROADMAP.md` (Phases 5-10).
+- Plan the first phase: `/gsd-plan-phase 5` (Series Scaffolding — Multi-Scene MIP + Batch-Export Integrity).
