@@ -53,7 +53,11 @@ Full phase details (goals, success criteria, plans) archived in [milestones/v1.0
   2. Each output MIP is confirmed to its correct physical section and AP order via a printed scene bounding-box / morphology check the operator can visually verify (scene index written verbatim into the filename).
   3. Running `03_export_val01_metrics.groovy` "for project" across all 5 QuPath entries produces 5 distinct per-entry output files with no cross-section TSV truncation — each file contains only its own section's rows.
   4. The multi-scene scene API (`get_all_mosaic_scene_bounding_boxes` + `read_mosaic(region=bbox)`) is smoke-tested on the real CZI before the conversion loop is trusted (verification spike, ~5-10 min).
-**Plans**: TBD
+**Plans**: 3 plans
+Plans:
+- [ ] 05-01-PLAN.md — Wave 1: multi-scene MIP converter (czi_mip.py CLI + per-scene region= loop + pre-flight bbox assertion + scene-identity artifact) (CONV-01, CONV-02)
+- [ ] 05-02-PLAN.md — Wave 1: per-entry export fix (03_export_val01_metrics.groovy stem from entry name, dual-copy + verify_export_integrity.py) (EXP-02)
+- [ ] 05-03-PLAN.md — Wave 2: blocking human-verify of scene identity + TdT/Fos channel identity before the series is trusted (CONV-01, CONV-02)
 **Notes**: EXP-02 is sequenced here (not at aggregation time) because it is a blocking prerequisite for AGG-01 in Phase 10. All work is scriptable — no GUI dependency.
 
 ### Phase 6: Registration Speedup
@@ -126,7 +130,7 @@ Full phase details (goals, success criteria, plans) archived in [milestones/v1.0
 | 2. Detection Parameter Lock | v1.0 | 2/2 | Complete | 2026-07-09 |
 | 3. Detection Script and Single-Section End-to-End Test | v1.0 | 4/4 | Complete | 2026-07-16 |
 | 4. Biological Plausibility Validation and Imaging Optimization Notes | v1.0 | 3/3 | Complete | 2026-07-17 |
-| 5. Series Scaffolding — Multi-Scene MIP + Batch-Export Integrity | v1.1 | 0/TBD | Not started | - |
+| 5. Series Scaffolding — Multi-Scene MIP + Batch-Export Integrity | v1.1 | 0/3 | Not started | - |
 | 6. Registration Speedup | v1.1 | 0/TBD | Not started | - |
 | 7. Imaging Re-Validation (New 4-Plane / Lower-Laser Params) | v1.1 | 0/TBD | Not started | - |
 | 8. LA/BA Classification + Brain-Wide Region-Labeling Validation | v1.1 | 0/TBD | Not started | - |
