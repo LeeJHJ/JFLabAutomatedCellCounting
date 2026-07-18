@@ -1,86 +1,201 @@
 """
-CZI mosaic → MIP OME-TIFF
-Reads a tiled Zeiss CZI (mosaic), stitches tiles, max-projects over Z,
-and writes a single CYX OME-TIFF with correct pixel size metadata.
+CZI multi-scene mosaic -> per-scene MIP OME-TIFF
+
+Reads a tiled Zeiss CZI mosaic that contains multiple scenes (e.g. one CZI
+holding all sections of a series), isolates each scene via its bounding box
+(NOT the S= dimension -- mosaic files reject S=, see Common Pitfalls below),
+stitches tiles, max-projects over Z per channel, and writes one CYX OME-TIFF
+per scene with correct pixel-size metadata embedded.
+
+Scene isolation: `get_all_mosaic_scene_bounding_boxes()` returns a
+dict[int, BBox] keyed by 0-based scene index, each BBox carrying (x, y, w, h)
+in GLOBAL mosaic pixel coordinates. Each scene's bbox is passed verbatim as
+`region=` to `read_mosaic()` -- never pass S= alongside region= for a mosaic
+file, it raises PylibCZI_CDimCoordinatesOverspecifiedException.
+
+Output filenames are 1-based (`s1..sN`) while the Python scene loop is
+0-based (`0..N-1`): label N = scene_idx + 1. No claim is made about
+anterior->posterior order -- this script only proves scene->file identity;
+AP ordering is handled downstream (DeepSlice, Phase 6).
 
 Usage:
-  conda run -n braian python3 /home/jflab/Analysis/czi_mip.py
+  conda run -n braian python3 czi_mip.py --check-scenes \
+      --czi "in.czi"
+  conda run -n braian python3 czi_mip.py \
+      --czi "in.czi" --outdir "out_dir" \
+      --channels "AF568-T2" "AF488-T3" "DAPI-T4" --pixel-um 0.6905355 \
+      --animal-prefix wBA1-3
 """
+
+from __future__ import annotations
+
+import argparse
+from pathlib import Path
 
 import aicspylibczi
 import numpy as np
 import tifffile
-import xml.etree.ElementTree as ET
 
-F_IN  = "/home/jflab/Analysis/Automated Cell Counting/M3 Hippocampus 20x 062026.czi"
-F_OUT = "/home/jflab/Analysis/Automated Cell Counting/M3_20x_MIP.ome.tiff"
-PIXEL_SIZE_UM = 0.69   # µm/px at 20x/0.8, zoom 0.6
 
-# ── 1. Open and inspect ──────────────────────────────────────────────────────
-print("Opening CZI...")
-czi = aicspylibczi.CziFile(F_IN)
-dims = czi.get_dims_shape()
-print(f"  Dims shape : {dims}")
-print(f"  Is mosaic  : {czi.is_mosaic()}")
+DEFAULT_CHANNELS = ["AF568-T2", "AF488-T3", "DAPI-T4"]
+DEFAULT_PIXEL_UM = 0.6905355   # server.json PhysicalSizeX of the registered production MIP
+DEFAULT_ANIMAL_PREFIX = "wBA1-3"
 
-# Pull C and Z counts from dims dict (list of dicts for multi-scene)
-dim0 = dims[0] if isinstance(dims, list) else dims
-n_c = dim0.get('C', (0, 1))[1]
-n_z = dim0.get('Z', (0, 1))[1]
-n_s = dim0.get('S', (0, 1))[1]
-print(f"  Scenes={n_s}  Channels={n_c}  Z-planes={n_z}")
 
-# ── 2. Read mosaic per channel, max-project over Z ───────────────────────────
-# read_mosaic stitches all tiles for a given C/Z/S and returns (1, Y, X)
-# Process one Z-plane at a time to keep memory low
+def parse_args() -> argparse.Namespace:
+    p = argparse.ArgumentParser(
+        formatter_class=argparse.RawDescriptionHelpFormatter, epilog=__doc__
+    )
+    p.add_argument("--czi", type=Path, required=True, help="input multi-scene CZI mosaic")
+    p.add_argument("--outdir", type=Path, required=False, default=None,
+                   help="output directory for the per-scene MIP OME-TIFFs (required unless --check-scenes)")
+    p.add_argument("--channels", nargs="+", default=DEFAULT_CHANNELS,
+                   help=f"channel names in physical read order (default {DEFAULT_CHANNELS})")
+    p.add_argument("--pixel-um", type=float, default=DEFAULT_PIXEL_UM,
+                   help=f"pixel size um/px (default {DEFAULT_PIXEL_UM})")
+    p.add_argument("--animal-prefix", default=DEFAULT_ANIMAL_PREFIX,
+                   help=f"filename prefix, output pattern <prefix>_s{{N}}_MIP.ome.tiff (default {DEFAULT_ANIMAL_PREFIX})")
+    p.add_argument("--check-scenes", action="store_true",
+                   help="run only the pre-flight scene-bbox assertion, then exit (no heavy read)")
+    args = p.parse_args()
+    if not args.check_scenes and args.outdir is None:
+        p.error("--outdir is required unless --check-scenes is set")
+    return args
 
-print("Generating MIP (this will take a few minutes for a full-section mosaic)...")
-mip_channels = []
 
-for c in range(n_c):
-    print(f"  Channel {c}/{n_c-1}: reading {n_z} z-planes...", flush=True)
-    stack = []
-    for z in range(n_z):
-        plane = czi.read_mosaic(C=c, Z=z, scale_factor=1.0)
-        stack.append(plane.squeeze())   # remove all size-1 dims → (Y, X)
-        print(f"    z={z} shape={plane.shape} dtype={plane.dtype}", flush=True)
-    mip_c = np.max(stack, axis=0)   # (Y, X)
-    mip_channels.append(mip_c)
-    print(f"  Channel {c} MIP done. Shape: {mip_c.shape}", flush=True)
+def _bboxes_overlap(a, b) -> bool:
+    """True if two (x, y, w, h)-style bbox objects overlap in global mosaic coords."""
+    return not (
+        a.x + a.w <= b.x or b.x + b.w <= a.x or
+        a.y + a.h <= b.y or b.y + b.h <= a.y
+    )
 
-mip = np.stack(mip_channels, axis=0)   # (C, Y, X)
-print(f"Final MIP shape: {mip.shape}  dtype: {mip.dtype}")
 
-# ── 3. Build minimal OME-XML with pixel size ─────────────────────────────────
-C, Y, X = mip.shape
-ome_xml = f"""<?xml version="1.0" encoding="UTF-8"?>
+def _preflight_scenes(czi: aicspylibczi.CziFile) -> dict:
+    """Retrieve per-scene bounding boxes, print identity, assert pairwise non-overlap.
+
+    Returns the bboxes dict (0-based scene index -> BBox), keyed exactly as
+    returned by aicspylibczi -- do NOT derive scene count from
+    get_dims_shape()[0]['S'] (silently wrong / returns 1 on multi-scene files
+    with inconsistent per-scene shape -- Pitfall 2).
+    """
+    bboxes = czi.get_all_mosaic_scene_bounding_boxes()
+    n_scenes = len(bboxes)
+    print(f"Pre-flight: {n_scenes} scenes found (get_all_mosaic_scene_bounding_boxes)")
+    for scene_idx in sorted(bboxes):
+        b = bboxes[scene_idx]
+        print(f"  scene_key={scene_idx} (0-based)  bbox=(x={b.x}, y={b.y}, w={b.w}, h={b.h})")
+
+    scene_ids = sorted(bboxes)
+    for i in range(len(scene_ids)):
+        for j in range(i + 1, len(scene_ids)):
+            a, b = bboxes[scene_ids[i]], bboxes[scene_ids[j]]
+            if _bboxes_overlap(a, b):
+                raise SystemExit(
+                    f"FATAL: scene {scene_ids[i]} and scene {scene_ids[j]} bounding boxes "
+                    f"overlap -- region-based scene isolation is unsafe on this file"
+                )
+    assert n_scenes >= 2, f"Expected a multi-scene CZI (>=2 scenes), found {n_scenes}"
+    print(f"  All {n_scenes} scene bboxes pairwise non-overlapping -- PASS")
+    return bboxes
+
+
+def _build_ome_xml(names: list[str], x: int, y: int, pixel_um: float, image_name: str) -> str:
+    chans = "\n".join(
+        f'      <Channel ID="Channel:0:{i}" Name="{n}" SamplesPerPixel="1"/>'
+        for i, n in enumerate(names)
+    )
+    return f"""<?xml version="1.0" encoding="UTF-8"?>
 <OME xmlns="http://www.openmicroscopy.org/Schemas/OME/2016-06"
      xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-     xsi:schemaLocation="http://www.openmicroscopy.org/Schemas/OME/2016-06
-       http://www.openmicroscopy.org/Schemas/OME/2016-06/ome.xsd">
-  <Image ID="Image:0" Name="M3_20x_MIP">
-    <Pixels ID="Pixels:0"
-            Type="uint16"
-            DimensionOrder="XYZCT"
-            SizeX="{X}" SizeY="{Y}" SizeZ="1" SizeC="{C}" SizeT="1"
-            PhysicalSizeX="{PIXEL_SIZE_UM}" PhysicalSizeXUnit="µm"
-            PhysicalSizeY="{PIXEL_SIZE_UM}" PhysicalSizeYUnit="µm">
-      <Channel ID="Channel:0:0" Name="DAPI"     SamplesPerPixel="1"/>
-      <Channel ID="Channel:0:1" Name="Fos-EGFP" SamplesPerPixel="1"/>
-      <Channel ID="Channel:0:2" Name="TdTom-Cy3" SamplesPerPixel="1"/>
+     xsi:schemaLocation="http://www.openmicroscopy.org/Schemas/OME/2016-06 http://www.openmicroscopy.org/Schemas/OME/2016-06/ome.xsd">
+  <Image ID="Image:0" Name="{image_name}">
+    <Pixels ID="Pixels:0" Type="uint16" DimensionOrder="XYZCT"
+            SizeX="{x}" SizeY="{y}" SizeZ="1" SizeC="{len(names)}" SizeT="1"
+            PhysicalSizeX="{pixel_um}" PhysicalSizeXUnit="µm"
+            PhysicalSizeY="{pixel_um}" PhysicalSizeYUnit="µm">
+{chans}
       <TiffData/>
     </Pixels>
   </Image>
 </OME>"""
 
-# ── 4. Write OME-TIFF ─────────────────────────────────────────────────────────
-print(f"Writing {F_OUT} ...")
-tifffile.imwrite(
-    F_OUT,
-    mip,
-    photometric="minisblack",
-    metadata=None,
-    description=ome_xml.encode(),
-)
-print("Done.")
-print(f"Output: {F_OUT}")
+
+def main() -> None:
+    args = parse_args()
+
+    print(f"Opening CZI: {args.czi}")
+    czi = aicspylibczi.CziFile(str(args.czi))
+    dims = czi.get_dims_shape()
+    dim0 = dims[0] if isinstance(dims, list) else dims
+    n_c = dim0.get("C", (0, 1))[1]
+    n_z = dim0.get("Z", (0, 1))[1]
+    print(f"  Channels={n_c}  Z-planes={n_z}")
+
+    bboxes = _preflight_scenes(czi)
+    if args.check_scenes:
+        return
+
+    if len(args.channels) != n_c:
+        raise SystemExit(f"--channels has {len(args.channels)} names but CZI has {n_c} channels")
+
+    n_scenes = len(bboxes)
+    args.outdir.mkdir(parents=True, exist_ok=True)
+
+    for scene_idx in sorted(bboxes):
+        b = bboxes[scene_idx]
+        N = scene_idx + 1
+        region = (b.x, b.y, b.w, b.h)
+        print(f"Scene scene_key={scene_idx} (0-based) label=s{N} (1-based) "
+              f"bbox=(x={b.x}, y={b.y}, w={b.w}, h={b.h})")
+
+        print(f"  Generating MIP for scene {scene_idx} (s{N})...")
+        mip_channels = []
+        for c in range(n_c):
+            print(f"    Channel {c}/{n_c - 1}: reading {n_z} z-planes...", flush=True)
+            stack = []
+            for z in range(n_z):
+                plane = czi.read_mosaic(region=region, C=c, Z=z, scale_factor=1.0)
+                stack.append(plane.squeeze())   # remove all size-1 dims -> (Y, X)
+                print(f"      z={z} shape={plane.shape} dtype={plane.dtype}", flush=True)
+            mip_c = np.max(stack, axis=0)   # (Y, X)
+            mip_channels.append(mip_c)
+            print(f"    Channel {c} MIP done. Shape: {mip_c.shape}", flush=True)
+
+        mip = np.stack(mip_channels, axis=0)   # (C, Y, X)
+        C, Y, X = mip.shape
+        assert (Y, X) == (b.h, b.w), (
+            f"Scene {scene_idx}: MIP shape (Y,X)=({Y},{X}) != scene bbox (h,w)=({b.h},{b.w})"
+        )
+        print(f"  Scene {scene_idx} (s{N}) MIP shape: {mip.shape}  dtype: {mip.dtype}")
+
+        image_name = f"{args.animal_prefix}_s{N}"
+        ome_xml = _build_ome_xml(args.channels, X, Y, args.pixel_um, image_name)
+        out_path = args.outdir / f"{args.animal_prefix}_s{N}_MIP.ome.tiff"
+        print(f"  Writing {out_path} ...")
+        tifffile.imwrite(
+            str(out_path),
+            mip,
+            photometric="minisblack",
+            metadata=None,
+            description=ome_xml.encode(),
+        )
+
+        with tifffile.TiffFile(str(out_path)) as tf:
+            ome_meta = tf.ome_metadata
+        expected_tag = f'PhysicalSizeX="{args.pixel_um}"'
+        assert expected_tag in ome_meta, (
+            f"Scene {scene_idx}: written OME-XML missing {expected_tag!r} -- pixel size did not round-trip"
+        )
+        print(f"  Done: {out_path}")
+
+    written = sorted(args.outdir.glob(f"{args.animal_prefix}_s*_MIP.ome.tiff"))
+    assert len(written) == n_scenes, (
+        f"FATAL: expected {n_scenes} output MIPs, found {len(written)} in {args.outdir} "
+        f"-- silent scene truncation (see Common Pitfalls)"
+    )
+    print(f"All {n_scenes} scenes converted -> {len(written)} MIP OME-TIFFs written to {args.outdir}")
+
+
+if __name__ == "__main__":
+    main()
