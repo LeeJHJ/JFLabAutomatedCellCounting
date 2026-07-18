@@ -2,17 +2,18 @@
 gsd_state_version: 1.0
 milestone: v1.1
 milestone_name: First Full-Series Run — LA/BA Amygdala Engram
-current_phase: 5
-status: planned
+current_phase: 05
+current_phase_name: series-scaffolding-multi-scene-mip-batch-export-integrity
+status: executing
 stopped_at: Phase 5 planned — 3 plans across 2 waves
-last_updated: "2026-07-18T17:30:00.000Z"
+last_updated: "2026-07-18T22:50:18.744Z"
 last_activity: 2026-07-18
-last_activity_desc: Phase 5 planned — 3 plans (05-01, 05-02, 05-03) across 2 waves
+last_activity_desc: Phase 05 execution started
 progress:
   total_phases: 6
   completed_phases: 0
   total_plans: 3
-  completed_plans: 0
+  completed_plans: 1
   percent: 0
 ---
 
@@ -27,16 +28,16 @@ progress:
 
 **Core value:** Biologically plausible TdT+/Fos+/Double+ counts per atlas region across a registered section series, with locked detection parameters and imaging-optimization notes ready to scale brain-wide.
 
-**Current focus:** Phase 5 planned (2026-07-18) — 3 plans across 2 waves (05-01 multi-scene MIP converter ∥ 05-02 EXP-02 export fix → 05-03 human-verify gate). Ready to execute Phase 5.
+**Current focus:** Phase 05 — series-scaffolding-multi-scene-mip-batch-export-integrity
 
 ---
 
 ## Current Position
 
-Phase: 5 — Series Scaffolding — Multi-Scene MIP + Batch-Export Integrity (Planned — 3 plans)
-Plan: 05-01, 05-02 (Wave 1, parallel) · 05-03 (Wave 2, human-verify gate)
-Status: Phase 5 planned; ready to execute
-Last activity: 2026-07-18 — Phase 5 planned (research + patterns + validation + 3 plans, checker PASSED)
+Phase: 05 (series-scaffolding-multi-scene-mip-batch-export-integrity) — EXECUTING
+Plan: 2 of 3
+Status: Ready to execute
+Last activity: 2026-07-18 — Phase 05 execution started
 
 ## Performance Metrics
 
@@ -50,6 +51,7 @@ Last activity: 2026-07-18 — Phase 5 planned (research + patterns + validation 
 | Phases complete (v1.0, shipped) | 4/4 |
 
 ---
+| Phase 05 P01 | 7min | 2 tasks | 1 files |
 
 ## v1.1 Roadmap Snapshot (created 2026-07-17)
 
@@ -138,7 +140,7 @@ None. First v1.1 execution step (Phase 5) is scriptable (no GUI dependency); Pha
 
 ## Session Continuity
 
-**Last session:** 2026-07-18T17:00:49.801Z
+**Last session:** 2026-07-18T22:50:05.404Z
 **Stopped at:** Phase 5 planned — 3 plans across 2 waves (checker PASSED)
 **Resume file:** .planning/phases/05-series-scaffolding-multi-scene-mip-batch-export-integrity/05-01-PLAN.md
 
@@ -153,3 +155,8 @@ None. First v1.1 execution step (Phase 5) is scriptable (no GUI dependency); Pha
 
 - Review the Phase 5 plans in `.planning/phases/05-series-scaffolding-multi-scene-mip-batch-export-integrity/` (05-01, 05-02, 05-03).
 - Execute the first phase: `/gsd-execute-phase 5` (Series Scaffolding — Multi-Scene MIP + Batch-Export Integrity).
+
+## Decisions
+
+- [Phase ?]: 05-01: Multi-scene CZI isolation uses region=bbox only (get_all_mosaic_scene_bounding_boxes); S= on a mosaic read raises — scene count never from get_dims_shape()['S']
+- [Phase ?]: 05-01: czi_mip.py generalized by grafting czi_hybrid_mip.py CLI + names-driven _build_ome_xml onto the canonical file; identity thumbnail downsamples the in-hand DAPI MIP (no fractional scale_factor)

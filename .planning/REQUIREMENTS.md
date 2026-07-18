@@ -9,8 +9,8 @@ Requirements for milestone v1.1. Each maps to a roadmap phase. Data: `-001-07_pr
 
 ### Conversion (multi-scene MIP)
 
-- [ ] **CONV-01**: `czi_mip.py` emits one MIP OME-TIFF per scene from the multi-scene processed CZI (5 section files), using `get_all_mosaic_scene_bounding_boxes()` + per-scene `read_mosaic(region=bbox)` so scenes are not fused
-- [ ] **CONV-02**: Each scene's output OME-TIFF is verified to the correct physical section (scene-identity / AP-order check via bounding box + morphology) before it enters registration
+- [x] **CONV-01**: `czi_mip.py` emits one MIP OME-TIFF per scene from the multi-scene processed CZI (5 section files), using `get_all_mosaic_scene_bounding_boxes()` + per-scene `read_mosaic(region=bbox)` so scenes are not fused
+- [x] **CONV-02**: Each scene's output OME-TIFF is verified to the correct physical section (scene-identity / AP-order check via bounding box + morphology) before it enters registration
 
 ### Imaging Re-Validation (new 4-plane / lower-laser params)
 
@@ -75,8 +75,8 @@ Each requirement maps to exactly one phase. Phases continue from v1.0 (Phases 1-
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| CONV-01 | Phase 5 | Pending |
-| CONV-02 | Phase 5 | Pending |
+| CONV-01 | Phase 5 | Complete |
+| CONV-02 | Phase 5 | Complete |
 | EXP-02 | Phase 5 | Pending |
 | REG-03 | Phase 6 | Pending |
 | REG-04 | Phase 6 | Pending |
@@ -92,6 +92,7 @@ Each requirement maps to exactly one phase. Phases continue from v1.0 (Phases 1-
 | EXP-04 | Phase 10 | Pending |
 
 **Coverage:**
+
 - v1.1 requirements: 15 total
 - Mapped to phases: 15 ✓
 - Unmapped: 0 ✓
