@@ -56,12 +56,12 @@ Full phase details (goals, success criteria, plans) archived in [milestones/v1.0
   3. Running `03_export_val01_metrics.groovy` "for project" across all 5 QuPath entries produces 5 distinct per-entry output files with no cross-section TSV truncation — each file contains only its own section's rows.
   4. The multi-scene scene API (`get_all_mosaic_scene_bounding_boxes` + `read_mosaic(region=bbox)`) is smoke-tested on the real CZI before the conversion loop is trusted (verification spike, ~5-10 min).
 
-**Plans**: 1/3 plans executed
+**Plans**: 2/3 plans executed
 Plans:
 **Wave 1**
 
 - [x] 05-01-PLAN.md — Wave 1: multi-scene MIP converter (czi_mip.py CLI + per-scene region= loop + pre-flight bbox assertion + scene-identity artifact) (CONV-01, CONV-02)
-- [ ] 05-02-PLAN.md — Wave 1: per-entry export fix (03_export_val01_metrics.groovy stem from entry name, dual-copy + verify_export_integrity.py) (EXP-02)
+- [x] 05-02-PLAN.md — Wave 1: per-entry export fix (03_export_val01_metrics.groovy stem from entry name, dual-copy + verify_export_integrity.py) (EXP-02)
 
 **Wave 2** *(blocked on Wave 1 completion)*
 
@@ -154,7 +154,7 @@ Plans:
 | 2. Detection Parameter Lock | v1.0 | 2/2 | Complete | 2026-07-09 |
 | 3. Detection Script and Single-Section End-to-End Test | v1.0 | 4/4 | Complete | 2026-07-16 |
 | 4. Biological Plausibility Validation and Imaging Optimization Notes | v1.0 | 3/3 | Complete | 2026-07-17 |
-| 5. Series Scaffolding — Multi-Scene MIP + Batch-Export Integrity | v1.1 | 1/3 | In Progress|  |
+| 5. Series Scaffolding — Multi-Scene MIP + Batch-Export Integrity | v1.1 | 2/3 | In Progress|  |
 | 6. Registration Speedup | v1.1 | 0/TBD | Not started | - |
 | 7. Imaging Re-Validation (New 4-Plane / Lower-Laser Params) | v1.1 | 0/TBD | Not started | - |
 | 8. LA/BA Classification + Brain-Wide Region-Labeling Validation | v1.1 | 0/TBD | Not started | - |

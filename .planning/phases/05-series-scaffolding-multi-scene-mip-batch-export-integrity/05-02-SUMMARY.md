@@ -141,3 +141,14 @@ None - no external service configuration required.
 ---
 *Phase: 05-series-scaffolding-multi-scene-mip-batch-export-integrity*
 *Completed: 2026-07-18*
+
+## Self-Check: PASSED
+
+All created/modified files and commit hashes verified present:
+- `scripts/03_export_val01_metrics.groovy` — FOUND
+- `M3 Hippocampus 20x 062926 3 plane/scripts/03_export_val01_metrics.groovy` — FOUND
+- `scripts/verify_export_integrity.py` — FOUND
+- `.planning/phases/05-series-scaffolding-multi-scene-mip-batch-export-integrity/05-02-SUMMARY.md` — FOUND
+- Commit `eb53e05` (Task 1) — FOUND
+- Commit `24aba76` (Task 2) — FOUND
+- Commit `bfd95f2` (SUMMARY) — FOUND

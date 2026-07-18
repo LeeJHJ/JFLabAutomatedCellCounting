@@ -42,7 +42,7 @@ Requirements for milestone v1.1. Each maps to a roadmap phase. Data: `-001-07_pr
 
 ### Export & Visualization (continues from v1.0 export work)
 
-- [ ] **EXP-02**: `03_export_val01_metrics.groovy` is fixed for multi-entry batch execution — per-entry output filenames, no TSV truncation across the 5 sections (blocking prerequisite for AGG-01)
+- [x] **EXP-02**: `03_export_val01_metrics.groovy` is fixed for multi-entry batch execution — per-entry output filenames, no TSV truncation across the 5 sections (blocking prerequisite for AGG-01)
 - [ ] **EXP-03**: Per-cell atlas coordinates are persisted as Atlas_X/Y/Z columns in microns (CCFv3) via the proven `AtlasTools.getAtlasToPixelTransform` path with the mm→µm ×1000 conversion applied
 - [ ] **EXP-04**: A brainrender 3D point-cloud figure renders wBA1-3's classified cells (colored by TdT+/Fos+/Double+) in CCFv3 micron space, confirming the exported coordinates land in the right anatomical location
 
@@ -77,7 +77,7 @@ Each requirement maps to exactly one phase. Phases continue from v1.0 (Phases 1-
 |-------------|-------|--------|
 | CONV-01 | Phase 5 | Complete |
 | CONV-02 | Phase 5 | Complete |
-| EXP-02 | Phase 5 | Pending |
+| EXP-02 | Phase 5 | Complete |
 | REG-03 | Phase 6 | Pending |
 | REG-04 | Phase 6 | Pending |
 | REG-05 | Phase 6 | Pending |
