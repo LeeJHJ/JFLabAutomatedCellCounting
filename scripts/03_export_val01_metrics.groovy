@@ -158,10 +158,23 @@ dets.each { d ->
 def invalidChars = (['<', '>', ':', '"', '/', '\\', '|', '?', '*'] as Set)
     .collect { java.util.regex.Pattern.quote(it) }.join('|')
 def entry = getProjectEntry()
-def stem = (entry != null ? entry.getImageName() : getCurrentImageData().getServer().getMetadata().getName())
-    .replaceAll(invalidChars, '')
+def rawName = (entry != null ? entry.getImageName() : getCurrentImageData().getServer().getMetadata().getName())
+def safeName = (rawName != null ? rawName : "").replaceAll(invalidChars, '')
+// EXP-02 / WR-03 collision guard: sanitizing the display name can collapse two
+// DISTINCT entries onto one stem (e.g. "s1:A" and "s1/A" both -> "s1A"), so the
+// second entry's TSV overwrites the first -- exactly the "Run for project"
+// clobbering D-06/D-07 was rewritten to eliminate, just re-triggered by a
+// sanitization collision instead of a fixed filename. "Run for project" executes
+// this script once per entry in SEPARATE runs, so there is no shared in-memory
+// set to dedup against, and a filesystem "already exists" check would
+// false-positive on a legitimate whole-project re-run. Anchor the stem on the
+// project entry's STABLE, UNIQUE id so distinct entries can never share a
+// filename; keep the sanitized display name only as a human-readable prefix. The
+// id is stable across runs, so each entry still truncates its OWN pair fresh.
+def entryId = (entry != null ? entry.getID() : "").replaceAll(invalidChars, '')
+def stem = (entryId != null && !entryId.trim().isEmpty()) ? "${safeName}__id${entryId}" : safeName
 if (stem == null || stem.trim().isEmpty()) {
-    throw new RuntimeException("EXP-02: sanitized entry-name stem is empty -- refusing to write an unnamed export file (T-05-02-02). Check getProjectEntry().getImageName() for this entry.")
+    throw new RuntimeException("EXP-02: sanitized entry stem is empty -- refusing to write an unnamed export file (T-05-02-02). Check getProjectEntry().getID()/getImageName() for this entry.")
 }
 
 def percellFile = new File(buildPathInProject("results", "${stem}__val01_percell_export.tsv"))
