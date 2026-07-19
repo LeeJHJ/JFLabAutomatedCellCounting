@@ -40,12 +40,12 @@ Biologically plausible TdT+/Fos+/Double+ counts per atlas region across a regist
 - ✓ `02_detect_classify.groovy` runs end-to-end on one section → classified TdT+/Fos+/Double+/Negative cells with atlas region labels + per-region counts (SCRI-03) — Phase 3, 03-VERIFICATION.md 7/7; robust threshold seed k=3 locked series-ready
 - ✓ VAL-01 bioplausibility findings record on M3 entry 1 (213,106 cells) — `04-VALIDATION-RECORD.md`; per-subfield hippocampal coexpression lands in-band (CA1 0.35, CA3 0.14, DG-mo 0.13), densities cluster ~3,000/mm² (Phase-2 calibration), nucleus-area peak 40–50 µm² — v1.0 (Phase 4)
 - ✓ Imaging-optimization notes for the full series (Z-plane audit, raw:MIP file-size tradeoff, per-subfield Airyscan-need assessment) — `04-IMAGING-NOTES.md` (OPT-01/OPT-02/OPT-03) — v1.0 (Phase 4)
+- ✓ Multi-scene MIP conversion + batch-export integrity — `czi_mip.py` emits 5 identity-verified section MIP OME-TIFFs from the 16 GB processed CZI (per-scene `region=` loop, no fusion, pixel size in OME-XML) with per-scene identity records + thumbnails; operator-confirmed scene identity and channel identity (index 0=TdTomato / 1=Fos / 2=DAPI); multi-entry export truncation fixed (`03_export_val01_metrics.groovy` collision-safe per-entry stems + `verify_export_integrity.py`) — Phase 5 (CONV-01/CONV-02/EXP-02), 05-VERIFICATION.md 7/7
 
 ### Active
 
 Milestone v1.1 (LA/BA Amygdala Engram, wBA1-3) — see `## Current Milestone` above; detailed REQ-IDs in `REQUIREMENTS.md`:
 
-- [ ] Per-scene MIP conversion of the processed CZI (5 section OME-TIFFs)
 - [ ] Imaging re-validation on the new 4-plane / lower-laser params (re-lock detection only on D-05 drift)
 - [ ] Registration speedup for BigWarp (research-driven; tissue-mask elastix a candidate)
 - [ ] LA/BA nucleus-anchored TdT+/Fos+/Double+ classification across the amygdala ROI
@@ -112,4 +112,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-07-17 after starting milestone v1.1 (First Full-Series Run — LA/BA Amygdala Engram, wBA1-3)*
+*Last updated: 2026-07-19 after Phase 5 complete (Series Scaffolding — 5 identity-verified section MIPs + fixed batch export; CONV-01/CONV-02/EXP-02 validated)*
