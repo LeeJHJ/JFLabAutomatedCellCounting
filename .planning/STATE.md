@@ -6,15 +6,15 @@ current_phase: 05
 current_phase_name: series-scaffolding-multi-scene-mip-batch-export-integrity
 status: verifying
 stopped_at: Completed 05-02-PLAN.md (EXP-02 export-integrity fix)
-last_updated: "2026-07-18T22:56:27.469Z"
+last_updated: "2026-07-19T02:44:42.601Z"
 last_activity: 2026-07-18
 last_activity_desc: Phase 05 execution started
 progress:
   total_phases: 6
-  completed_phases: 0
+  completed_phases: 1
   total_plans: 3
-  completed_plans: 2
-  percent: 0
+  completed_plans: 3
+  percent: 17
 ---
 
 # Project State: M3 Section Pipeline — TRAP2 / Airyscan
@@ -53,6 +53,7 @@ Last activity: 2026-07-18 — Phase 05 execution started
 ---
 | Phase 05 P01 | 7min | 2 tasks | 1 files |
 | Phase 05 P02 | 15min | 2 tasks | 3 files |
+| Phase 05 P03 | 8min | 1 tasks | 0 files |
 
 ## v1.1 Roadmap Snapshot (created 2026-07-17)
 
@@ -141,11 +142,11 @@ None. First v1.1 execution step (Phase 5) is scriptable (no GUI dependency); Pha
 
 ## Session Continuity
 
-**Last session:** 2026-07-18T22:56:27.463Z
+**Last session:** 2026-07-19T02:44:16.687Z
 **Stopped at:** Completed 05-02-PLAN.md (EXP-02 export-integrity fix)
 **Resume file:** 
 
-**To resume:** v1.0 (Single-Section Validation Run) shipped 2026-07-17 — the full ABBA → BraiAnDetect → VAL-01 pipeline runs end-to-end on M3 entry 1 with locked detection params, a bioplausibility findings record, and imaging notes. v1.1 (First Full-Series Run — LA/BA Amygdala Engram, wBA1-3) is now roadmapped into 6 phases (5-10), continuing phase numbering from v1.0. All 15 requirements are mapped 1:1. The dependency order follows the research SUMMARY: scaffolding (5 verified MIPs + fixed batch export) unblocks everything and the downstream aggregation; registration speedup + imaging re-validation precede classification; classification carries the amygdala-specific CR-01 re-audit; area-based readout and terminal aggregation/export are the downstream readouts. Registration + QuPath detection remain human-in-the-loop GUI steps (executor authors scripts; operator runs the GUI). Phase 5 is now planned (3 plans: 05-01 multi-scene MIP converter ∥ 05-02 EXP-02 export fix in Wave 1 → 05-03 human-verify gate in Wave 2; research/patterns/validation all written, checker PASSED). Next: `/gsd-execute-phase 5`.
+None
 
 **Side task:** TRACR registration for another lab in progress (rough, may need a per-section second pass) — see memory. (Retired notes archived in `.planning/archive/retired-memory-notes.md`.)
 
@@ -163,3 +164,5 @@ None. First v1.1 execution step (Phase 5) is scriptable (no GUI dependency); Pha
 - [Phase ?]: 05-01: czi_mip.py generalized by grafting czi_hybrid_mip.py CLI + names-driven _build_ome_xml onto the canonical file; identity thumbnail downsamples the in-hand DAPI MIP (no fractional scale_factor)
 - [Phase ?]: 05-02: 03_export_val01_metrics.groovy output paths derive from getProjectEntry().getImageName() + invalidChars sanitization + buildPathInProject (reused from run_braian_detection.groovy), eliminating cross-entry TSV clobbering on Run for project (EXP-02)
 - [Phase ?]: 05-02: verify_export_integrity.py skips the multi-entry non-clobbering assertion when fewer than 2 stems exist, so the checker is runnable now (single-entry M3) and again on the 5-entry wBA1-3 series in Phase 8/10
+- [Phase ?]: 05-03: Operator confirmed OME-TIFF channel index order (0=TdTomato, 1=Fos, 2=DAPI) on the wBA1-3 series -- the A1 sign-off Phase 8 classification depends on
+- [Phase ?]: 05-03: Operator confirmed 5-scene identity (distinct, intact sections, consistent scene_key<->s{N} mapping) -- CONV-02 satisfied

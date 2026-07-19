@@ -35,7 +35,7 @@ Full phase details (goals, success criteria, plans) archived in [milestones/v1.0
 
 **Ordering principles (research-derived):** Scaffolding first (5 verified MIPs + fixed batch export gate everything and unblock aggregation) → registration speedup and imaging re-validation before classification (imaging re-validation is mandatory and gates whether detection params re-lock) → classification carries the amygdala-specific region-labeling re-audit → area-based readout and terminal aggregation/export are the downstream readouts. Registration + QuPath detection are human-in-the-loop GUI steps: the executor authors the scripts, the operator runs the GUI.
 
-- [ ] **Phase 5: Series Scaffolding — Multi-Scene MIP + Batch-Export Integrity** - Convert the processed CZI to 5 identity-verified section MIPs and fix the multi-entry export blocker
+- [x] **Phase 5: Series Scaffolding — Multi-Scene MIP + Batch-Export Integrity** - Convert the processed CZI to 5 identity-verified section MIPs and fix the multi-entry export blocker (completed 2026-07-19)
 - [ ] **Phase 6: Registration Speedup** - Register the 5-section series with materially less manual effort (DeepSlice batch + reduced-landmark BigWarp; masked-elastix prototype trialed under an a-priori accept/reject rule)
 - [ ] **Phase 7: Imaging Re-Validation (New 4-Plane / Lower-Laser Params)** - Re-run D-05 QC gates and re-lock the k threshold seed only on drift; confirm the 4-plane MIP is not under-projected
 - [ ] **Phase 8: LA/BA Classification + Brain-Wide Region-Labeling Validation** - Nucleus-anchored TdT+/Fos+/Double+ across all 5 sections over the amygdala ROI, with the CR-01 fix re-audited on non-laminar LA/BA
@@ -56,7 +56,7 @@ Full phase details (goals, success criteria, plans) archived in [milestones/v1.0
   3. Running `03_export_val01_metrics.groovy` "for project" across all 5 QuPath entries produces 5 distinct per-entry output files with no cross-section TSV truncation — each file contains only its own section's rows.
   4. The multi-scene scene API (`get_all_mosaic_scene_bounding_boxes` + `read_mosaic(region=bbox)`) is smoke-tested on the real CZI before the conversion loop is trusted (verification spike, ~5-10 min).
 
-**Plans**: 2/3 plans executed
+**Plans**: 3/3 plans complete
 Plans:
 **Wave 1**
 
@@ -65,7 +65,7 @@ Plans:
 
 **Wave 2** *(blocked on Wave 1 completion)*
 
-- [ ] 05-03-PLAN.md — Wave 2: blocking human-verify of scene identity + TdT/Fos channel identity before the series is trusted (CONV-01, CONV-02)
+- [x] 05-03-PLAN.md — Wave 2: blocking human-verify of scene identity + TdT/Fos channel identity before the series is trusted (CONV-01, CONV-02)
 
 **Notes**: EXP-02 is sequenced here (not at aggregation time) because it is a blocking prerequisite for AGG-01 in Phase 10. All work is scriptable — no GUI dependency.
 
@@ -154,7 +154,7 @@ Plans:
 | 2. Detection Parameter Lock | v1.0 | 2/2 | Complete | 2026-07-09 |
 | 3. Detection Script and Single-Section End-to-End Test | v1.0 | 4/4 | Complete | 2026-07-16 |
 | 4. Biological Plausibility Validation and Imaging Optimization Notes | v1.0 | 3/3 | Complete | 2026-07-17 |
-| 5. Series Scaffolding — Multi-Scene MIP + Batch-Export Integrity | v1.1 | 2/3 | In Progress|  |
+| 5. Series Scaffolding — Multi-Scene MIP + Batch-Export Integrity | v1.1 | 3/3 | Complete   | 2026-07-19 |
 | 6. Registration Speedup | v1.1 | 0/TBD | Not started | - |
 | 7. Imaging Re-Validation (New 4-Plane / Lower-Laser Params) | v1.1 | 0/TBD | Not started | - |
 | 8. LA/BA Classification + Brain-Wide Region-Labeling Validation | v1.1 | 0/TBD | Not started | - |
