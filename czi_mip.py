@@ -133,7 +133,8 @@ def _preflight_scenes(czi: aicspylibczi.CziFile) -> dict:
                     f"FATAL: scene {scene_ids[i]} and scene {scene_ids[j]} bounding boxes "
                     f"overlap -- region-based scene isolation is unsafe on this file"
                 )
-    assert n_scenes >= 2, f"Expected a multi-scene CZI (>=2 scenes), found {n_scenes}"
+    if n_scenes < 2:
+        raise SystemExit(f"Expected a multi-scene CZI (>=2 scenes), found {n_scenes}")
     print(f"  All {n_scenes} scene bboxes pairwise non-overlapping -- PASS")
     return bboxes
 
@@ -237,9 +238,10 @@ def main() -> None:
 
         mip = np.stack(mip_channels, axis=0)   # (C, Y, X)
         C, Y, X = mip.shape
-        assert (Y, X) == (b.h, b.w), (
-            f"Scene {scene_idx}: MIP shape (Y,X)=({Y},{X}) != scene bbox (h,w)=({b.h},{b.w})"
-        )
+        if (Y, X) != (b.h, b.w):
+            raise SystemExit(
+                f"Scene {scene_idx}: MIP shape (Y,X)=({Y},{X}) != scene bbox (h,w)=({b.h},{b.w})"
+            )
         print(f"  Scene {scene_idx} (s{N}) MIP shape: {mip.shape}  dtype: {mip.dtype}")
 
         # ── Scene-identity artifact (CONV-02, D-01/D-02/D-05) ────────────────
@@ -265,16 +267,18 @@ def main() -> None:
         with tifffile.TiffFile(str(out_path)) as tf:
             ome_meta = tf.ome_metadata
         expected_tag = f'PhysicalSizeX="{args.pixel_um}"'
-        assert expected_tag in ome_meta, (
-            f"Scene {scene_idx}: written OME-XML missing {expected_tag!r} -- pixel size did not round-trip"
-        )
+        if expected_tag not in ome_meta:
+            raise SystemExit(
+                f"Scene {scene_idx}: written OME-XML missing {expected_tag!r} -- pixel size did not round-trip"
+            )
         print(f"  Done: {out_path}")
 
     written = sorted(args.outdir.glob(f"{args.animal_prefix}_s*_MIP.ome.tiff"))
-    assert len(written) == n_scenes, (
-        f"FATAL: expected {n_scenes} output MIPs, found {len(written)} in {args.outdir} "
-        f"-- silent scene truncation (see Common Pitfalls)"
-    )
+    if len(written) != n_scenes:
+        raise SystemExit(
+            f"FATAL: expected {n_scenes} output MIPs, found {len(written)} in {args.outdir} "
+            f"-- silent scene truncation (see Common Pitfalls)"
+        )
     print(f"All {n_scenes} scenes converted -> {len(written)} MIP OME-TIFFs written to {args.outdir}")
 
 
