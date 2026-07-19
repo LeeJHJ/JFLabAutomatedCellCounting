@@ -2,13 +2,13 @@
 gsd_state_version: 1.0
 milestone: v1.1
 milestone_name: First Full-Series Run — LA/BA Amygdala Engram
-current_phase: 05
-current_phase_name: series-scaffolding-multi-scene-mip-batch-export-integrity
+current_phase: 6
+current_phase_name: Registration Speedup
 status: verifying
 stopped_at: Completed 05-02-PLAN.md (EXP-02 export-integrity fix)
-last_updated: "2026-07-19T02:44:42.601Z"
-last_activity: 2026-07-18
-last_activity_desc: Phase 05 execution started
+last_updated: "2026-07-19T15:07:21.562Z"
+last_activity: 2026-07-19
+last_activity_desc: Phase 05 complete, transitioned to Phase 6
 progress:
   total_phases: 6
   completed_phases: 1
@@ -34,10 +34,10 @@ progress:
 
 ## Current Position
 
-Phase: 05 (series-scaffolding-multi-scene-mip-batch-export-integrity) — EXECUTING
-Plan: 3 of 3
+Phase: 6 — Registration Speedup
+Plan: Not started
 Status: Phase complete — ready for verification
-Last activity: 2026-07-18 — Phase 05 execution started
+Last activity: 2026-07-19 — Phase 05 complete, transitioned to Phase 6
 
 ## Performance Metrics
 

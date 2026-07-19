@@ -154,7 +154,7 @@ Plans:
 | 2. Detection Parameter Lock | v1.0 | 2/2 | Complete | 2026-07-09 |
 | 3. Detection Script and Single-Section End-to-End Test | v1.0 | 4/4 | Complete | 2026-07-16 |
 | 4. Biological Plausibility Validation and Imaging Optimization Notes | v1.0 | 3/3 | Complete | 2026-07-17 |
-| 5. Series Scaffolding — Multi-Scene MIP + Batch-Export Integrity | v1.1 | 3/3 | Complete   | 2026-07-19 |
+| 5. Series Scaffolding — Multi-Scene MIP + Batch-Export Integrity | v1.1 | 3/3 | Complete    | 2026-07-19 |
 | 6. Registration Speedup | v1.1 | 0/TBD | Not started | - |
 | 7. Imaging Re-Validation (New 4-Plane / Lower-Laser Params) | v1.1 | 0/TBD | Not started | - |
 | 8. LA/BA Classification + Brain-Wide Region-Labeling Validation | v1.1 | 0/TBD | Not started | - |
