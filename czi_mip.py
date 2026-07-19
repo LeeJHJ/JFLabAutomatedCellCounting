@@ -82,6 +82,33 @@ def _extent(d: dict, key: str, default: tuple[int, int] = (0, 1)) -> int:
     return hi - lo
 
 
+def _scene_tile_count(dims_all, scene_keys: list[int], scene_idx: int) -> int:
+    """Per-scene mosaic tile count M, derived defensively from get_dims_shape().
+
+    get_dims_shape() is not self-consistent across files: elsewhere in this
+    module (and per the docstring's Pitfall 2) it is treated as a single
+    aggregate dict (`dims[0]`), yet on a multi-scene mosaic it can instead
+    return one dict per scene. Re-indexing the raw scene key into it blindly
+    either raises IndexError (aggregate form -> crash mid-series, after the
+    scene's MIP is already written) or silently reports M for the wrong scene
+    (CR-01). This helper reconciles both forms and NEVER crashes: M is
+    diagnostic-only identity metadata, so any ambiguity yields -1 ("unknown").
+
+    Alignment is by POSITION among the sorted scene keys, not the raw key, and
+    is trusted only when the list length matches the scene count exactly.
+    """
+    dicts = dims_all if isinstance(dims_all, list) else [dims_all]
+    if len(dicts) == len(scene_keys):
+        d = dicts[scene_keys.index(scene_idx)]
+    elif len(dicts) == 1:
+        d = dicts[0]
+    else:
+        return -1
+    if "M" not in d:
+        return -1
+    return _extent(d, "M")
+
+
 def _preflight_scenes(czi: aicspylibczi.CziFile) -> dict:
     """Retrieve per-scene bounding boxes, print identity, assert pairwise non-overlap.
 
@@ -185,9 +212,10 @@ def main() -> None:
     n_scenes = len(bboxes)
     args.outdir.mkdir(parents=True, exist_ok=True)
     dapi_idx = _dapi_index(args.channels)
-    dims_by_scene = czi.get_dims_shape()
+    dims_all = czi.get_dims_shape()
+    scene_keys = sorted(bboxes)
 
-    for scene_idx in sorted(bboxes):
+    for scene_idx in scene_keys:
         b = bboxes[scene_idx]
         N = scene_idx + 1
         region = (b.x, b.y, b.w, b.h)
@@ -216,7 +244,7 @@ def main() -> None:
 
         # ── Scene-identity artifact (CONV-02, D-01/D-02/D-05) ────────────────
         # Reuse the DAPI channel's already-computed MIP plane -- no extra CZI read.
-        M = dims_by_scene[scene_idx]["M"][1]
+        M = _scene_tile_count(dims_all, scene_keys, scene_idx)
         _scene_identity_record(scene_idx, N, b, M, (b.h, b.w))
         thumb_path = args.outdir / f"{args.animal_prefix}_s{N}_identity.png"
         _save_identity_thumbnail(mip_channels[dapi_idx], thumb_path)
