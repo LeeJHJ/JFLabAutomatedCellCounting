@@ -5,8 +5,8 @@ milestone_name: First Full-Series Run — LA/BA Amygdala Engram
 current_phase: 6
 current_phase_name: Registration Speedup
 status: verifying
-stopped_at: Completed 05-02-PLAN.md (EXP-02 export-integrity fix)
-last_updated: "2026-07-19T15:07:21.562Z"
+stopped_at: Phase 6 context gathered
+last_updated: "2026-07-19T15:28:05.885Z"
 last_activity: 2026-07-19
 last_activity_desc: Phase 05 complete, transitioned to Phase 6
 progress:
@@ -142,11 +142,11 @@ None. First v1.1 execution step (Phase 5) is scriptable (no GUI dependency); Pha
 
 ## Session Continuity
 
-**Last session:** 2026-07-19T02:44:16.687Z
-**Stopped at:** Completed 05-02-PLAN.md (EXP-02 export-integrity fix)
+**Last session:** 2026-07-19T15:28:05.877Z
+**Stopped at:** Phase 6 context gathered
 **Resume file:** 
 
-None
+.planning/phases/06-registration-speedup/06-CONTEXT.md
 
 **Side task:** TRACR registration for another lab in progress (rough, may need a per-section second pass) — see memory. (Retired notes archived in `.planning/archive/retired-memory-notes.md`.)
 
