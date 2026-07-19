@@ -12,7 +12,8 @@ findings:
   warning: 3
   info: 4
   total: 8
-status: issues_found
+status: fixes_applied
+fix_status: CR-01/WR-01/WR-02/WR-03 fixed; IN-01..IN-04 deferred (info, out of scope)
 ---
 
 # Phase 05: Code Review Report
@@ -31,6 +32,8 @@ Cross-file check: the `region_label` semantic asymmetry between the two Groovy T
 ## Critical Issues
 
 ### CR-01: Scene identity record indexes `get_dims_shape()` by scene number, contradicting the file's own documented warning
+
+> **STATUS: FIXED** (commit `3da6124`) — replaced the raw per-scene re-index with `_scene_tile_count()`, which normalizes both aggregate-dict and per-scene-list return forms, aligns by position among sorted scene keys, and returns `-1` ("unknown") on ambiguity instead of crashing. Currently-correct M values (141/152/161/151/161) preserved.
 
 **File:** `czi_mip.py:178,209`
 **Issue:** `dims_by_scene = czi.get_dims_shape()` is indexed per scene at line 209: `M = dims_by_scene[scene_idx]["M"][1]`. This assumes `get_dims_shape()` returns one dict per scene, aligned to the bbox scene keys. But the module's own docstring (line 80) warns that `get_dims_shape()[0]['S']` is "silently wrong / returns 1 on multi-scene files with inconsistent per-scene shape," and line 163 treats the return value as a single aggregate dict (`dim0 = dims[0]`). These two usages are mutually contradictory:
@@ -57,6 +60,8 @@ Treat `M` as diagnostic-only and never let its retrieval crash the conversion of
 
 ### WR-01: Data-integrity guards implemented as bare `assert` — silently disabled under `python -O`
 
+> **STATUS: FIXED** (commit `1dd3445`) — all four integrity guards (scene-count truncation, pixel-size round-trip, MIP-shape, multi-scene precondition) converted from `assert` to explicit `raise SystemExit`, so they survive `python -O`/`-OO`.
+
 **File:** `czi_mip.py:99,202,230,236`
 **Issue:** The scene-count truncation guard (line 236, "silent scene truncation"), the pixel-size round-trip check (line 230), the MIP-shape-vs-bbox check (line 202), and the multi-scene precondition (line 99) are all `assert` statements. Python run with `-O`/`-OO` strips every `assert`, so the very guards the docstring advertises as protecting against silent series corruption vanish, leaving corruption undetected. These are correctness invariants, not debug checks.
 **Fix:** Convert integrity invariants to explicit raises:
@@ -70,6 +75,8 @@ Apply the same to the shape check and the OME-XML round-trip check.
 
 ### WR-02: Dimension extent read as tuple end (`[1]`) instead of extent (`[1] - [0]`)
 
+> **STATUS: FIXED** (commit `cb11ce4`) — added an `_extent()` helper (`end - start`) used for `n_c`/`n_z` and the per-scene tile count, so a nonzero start index can no longer inflate the counts.
+
 **File:** `czi_mip.py:164-165,209`
 **Issue:** `n_c = dim0.get("C", (0, 1))[1]` and `n_z = dim0.get("Z", (0, 1))[1]` (and `M = ...["M"][1]`) take the tuple's end index as the count. `get_dims_shape()` returns `(start, end)` per dimension; the true extent is `end - start`. This is correct only when `start == 0`. If any dimension has a nonzero start, `n_c`/`n_z` overcount, and `range(n_c)`/`range(n_z)` then request channel/z indices that do not exist (read failure), while the channel-count guard at line 172 compares against an inflated `n_c`.
 **Fix:**
@@ -82,6 +89,8 @@ n_z = _extent(dim0, "Z")
 ```
 
 ### WR-03: Filename sanitization can collapse distinct entries to one stem, reintroducing cross-entry clobbering
+
+> **STATUS: FIXED** (commit `775863a`) — export stem now anchored on the project entry's stable unique ID (`entry.getID()`), keeping the sanitized display name only as a readable prefix, so distinct entries can never share a filename. Applied byte-identically to both deployed copies.
 
 **File:** `scripts/03_export_val01_metrics.groovy:158-167`
 **Issue:** The per-entry output stem is `entry.getImageName()` with the set `< > : " / \ | ? *` stripped. Two distinct project entries whose names differ only in stripped characters map to the same stem — e.g. `s1:A` and `s1/A` both become `s1A` — so the second entry's `${stem}__val01_percell_export.tsv` overwrites the first. This is exactly the "Run for project" clobbering regression the script was rewritten (D-06/D-07) to eliminate, just triggered by sanitization collision rather than a fixed filename. `verify_export_integrity.py` would not necessarily catch it: pairing still holds for the survivor, and Assertion 3 only fires when *all* row counts are identical.
