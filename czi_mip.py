@@ -72,6 +72,16 @@ def _bboxes_overlap(a, b) -> bool:
     )
 
 
+def _extent(d: dict, key: str, default: tuple[int, int] = (0, 1)) -> int:
+    """Extent (end - start) of a get_dims_shape() dimension tuple.
+
+    get_dims_shape() returns (start, end) per dimension; the true count is
+    end - start, correct even when start != 0. Taking the tuple end alone
+    overcounts whenever a dimension has a nonzero start index (WR-02)."""
+    lo, hi = d.get(key, default)
+    return hi - lo
+
+
 def _preflight_scenes(czi: aicspylibczi.CziFile) -> dict:
     """Retrieve per-scene bounding boxes, print identity, assert pairwise non-overlap.
 
@@ -161,8 +171,8 @@ def main() -> None:
     czi = aicspylibczi.CziFile(str(args.czi))
     dims = czi.get_dims_shape()
     dim0 = dims[0] if isinstance(dims, list) else dims
-    n_c = dim0.get("C", (0, 1))[1]
-    n_z = dim0.get("Z", (0, 1))[1]
+    n_c = _extent(dim0, "C")
+    n_z = _extent(dim0, "Z")
     print(f"  Channels={n_c}  Z-planes={n_z}")
 
     bboxes = _preflight_scenes(czi)
