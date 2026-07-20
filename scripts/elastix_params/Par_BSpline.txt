@@ -1,0 +1,55 @@
+// Starting-values elastix BSpline parameter map for the REG-05 masked-elastix
+// single-section trial. Standard component set from elastix.dev (matches
+// ABBA's own internal elastix component choices) -- do NOT swap in a custom
+// metric/optimizer combination (see 06-RESEARCH.md "Don't Hand-Roll" and
+// [[feedback-abba-tilt]], the 2026-06-23 mismatched-combination failure).
+// The operator may retune FinalGridSpacingInPhysicalUnits / GridSpacingSchedule
+// / NumberOfResolutions / MaximumNumberOfIterations per RESEARCH Assumption A2
+// before the D-07 keep/reject decision -- a merely-equal fit from an
+// under-tuned run must not be mistaken for a genuine elastix loss.
+// Run this stage second (after Par_Affine.txt), which initializes it.
+
+// ---------- Image types ----------
+(FixedImageDimension 2)
+(MovingImageDimension 2)
+(FixedInternalImagePixelType "float")
+(MovingInternalImagePixelType "float")
+
+// ---------- Main components ----------
+(Registration "MultiResolutionRegistration")
+(Metric "AdvancedMattesMutualInformation")
+(Optimizer "AdaptiveStochasticGradientDescent")
+(Transform "BSplineTransform")
+(Interpolator "BSplineInterpolator")
+(ResampleInterpolator "FinalBSplineInterpolator")
+(Resampler "DefaultResampler")
+(FixedImagePyramid "FixedSmoothingImagePyramid")
+(MovingImagePyramid "MovingSmoothingImagePyramid")
+(ImageSampler "RandomCoordinate")
+
+// ---------- BSpline grid ----------
+(FinalGridSpacingInPhysicalUnits 200)
+(GridSpacingSchedule 8.0 4.0 2.0 1.0)
+(HowToCombineTransforms "Compose")
+
+// ---------- Multi-resolution schedule ----------
+(NumberOfResolutions 4)
+(MaximumNumberOfIterations 512)
+
+// ---------- Sampler ----------
+(NumberOfSpatialSamples 2048)
+(NewSamplesEveryIteration "true")
+
+// ---------- Metric ----------
+(NumberOfHistogramBins 32)
+(ErodeMask "false")
+
+// ---------- Interpolation ----------
+(BSplineInterpolationOrder 1)
+(FinalBSplineInterpolationOrder 3)
+
+// ---------- Output / resampling ----------
+(DefaultPixelValue 0)
+(WriteResultImage "true")
+(ResultImagePixelType "short")
+(ResultImageFormat "tif")
