@@ -80,8 +80,27 @@ Plans:
   2. A reduced-landmark BigWarp pass is applied across all 5 sections and hits a documented per-section effort target below the v1.0 5-15 min manual baseline.
   3. The masked-elastix prototype (`crop_to_tissue.py` DAPI mask → elastix Affine/Spline outside ABBA's GUI) is trialed on exactly one section, compared to DeepSlice-only on fit quality + time, and kept or rejected per the pre-declared rule — the decision is recorded either way.
 
-**Plans**: TBD
-**Notes**: Human-in-the-loop — executor authors the DeepSlice-batch + crop scripts; the operator runs the ABBA/BigWarp GUI. REG-05 is scoped as a single-section experiment so it cannot balloon.
+**Plans**: 5 plans
+Plans:
+
+**Wave 1** *(executor-authored, autonomous)*
+
+- [ ] 06-01-PLAN.md — Wave 1: REG-05 elastix trial scripts + params (extract_atlas_plate.py, elastix_trial_harness.py, Par_Affine.txt/Par_BSpline.txt; all --self-test) (REG-05)
+- [ ] 06-02-PLAN.md — Wave 1: operator-record scaffolds (06-REG03-SOP.md native-DeepSlice params, bigwarp_effort_log.csv template, 06-REG05-FINDINGS.md a-priori rule) (REG-03, REG-04, REG-05)
+
+**Wave 2** *(operator GUI, blocking-human)*
+
+- [ ] 06-03-PLAN.md — Wave 2: operator runs native ABBA DeepSlice-Local on the 5 sections, confirms per-section overlay fit, resolves D-04 angle + D-05 outliers (REG-03)
+
+**Wave 3** *(operator GUI, blocking-human)*
+
+- [ ] 06-04-PLAN.md — Wave 3: operator reduced-landmark amygdala BigWarp across all 5, logs ≤~5 min/section wall-clock, identifies worst-fitting section D-06 (REG-04)
+
+**Wave 4** *(elastix trial + operator judgment)*
+
+- [ ] 06-05-PLAN.md — Wave 4: masked-elastix trial on the one worst-fitting section, operator a-priori D-07 keep/reject recorded either way (REG-05)
+
+**Notes**: Human-in-the-loop — executor authors the elastix/atlas-plate scripts + operator-record scaffolds; the operator runs the ABBA/BigWarp GUI. REG-03 uses ABBA's native "DeepSlice Registration (Local)" command (no run_deepslice.py — 06-CONTEXT ⟳ RESOLUTION). REG-05 is scoped as a single-section experiment so it cannot balloon.
 
 ### Phase 7: Imaging Re-Validation (New 4-Plane / Lower-Laser Params)
 
@@ -155,7 +174,7 @@ Plans:
 | 3. Detection Script and Single-Section End-to-End Test | v1.0 | 4/4 | Complete | 2026-07-16 |
 | 4. Biological Plausibility Validation and Imaging Optimization Notes | v1.0 | 3/3 | Complete | 2026-07-17 |
 | 5. Series Scaffolding — Multi-Scene MIP + Batch-Export Integrity | v1.1 | 3/3 | Complete    | 2026-07-19 |
-| 6. Registration Speedup | v1.1 | 0/TBD | Not started | - |
+| 6. Registration Speedup | v1.1 | 0/5 | Not started | - |
 | 7. Imaging Re-Validation (New 4-Plane / Lower-Laser Params) | v1.1 | 0/TBD | Not started | - |
 | 8. LA/BA Classification + Brain-Wide Region-Labeling Validation | v1.1 | 0/TBD | Not started | - |
 | 9. Generalizable Area-Based Density Readout | v1.1 | 0/TBD | Not started | - |
