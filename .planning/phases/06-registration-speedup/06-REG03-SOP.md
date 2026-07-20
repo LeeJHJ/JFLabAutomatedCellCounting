@@ -95,9 +95,22 @@ projected — unusable). These are **5 separate sections from ONE brain** (opera
    a-priori exclusion on tissue-quality grounds, documented — **not** dropped later because counts
    look off (CLAUDE.md; STATE risk register).
 
-8. **Confirm the atlas overlay tracks tissue** on each of the 5 sections before export (operator
-   visual QC — no ground-truth registration metric exists). No Affine/Spline in ABBA's GUI at this
-   stage; export state is DeepSlice AP + per-section manual angle only. BigWarp is plan 06-04.
+8. **Confirm the atlas overlay tracks tissue** on each of the 5 sections (operator visual QC — no
+   ground-truth registration metric exists). [SUPERSEDED note: the original "no Affine/Spline in ABBA"
+   instruction was overturned 2026-07-20 — the working pipeline IS DeepSlice → global angle →
+   **in-GUI elastix Affine(Nissl Ch0)+Spline(15pts)** → BigWarp refine; see 06-REG05-FINDINGS.md.]
+
+9. **QuPath handoff (REQUIRED for detection — do NOT skip).** ⚠ **Import path matters:** for the
+   registration to reach QuPath, the images should be in a **QuPath project**. Two options:
+   - **Preferred (future runs):** create the QuPath project FIRST, then in ABBA use
+     `Import > Import QuPath Project` (not Bio-Formats) — the export link is then automatic.
+   - **If you already imported via Bio-Formats** (as in this run): create a QuPath project containing
+     the same 5 OME-TIFFs, then in ABBA `File > Export > Export Registrations To QuPath Project` →
+     select that `.qpproj`. ABBA matches slices to entries by the underlying file path and writes
+     `ABBA-Transform-*.json` + `ABBA-RoiSet-*.zip` into each `data/<entry>/`. **Save the ABBA state
+     first** so nothing is lost. If matching fails, hand-place the exported files per
+     [[abba-registration-reuse]] + run `01_load_abba_rois.groovy`.
+   - Then run `scripts/01_load_abba_rois.groovy` "for project" to load the warped atlas regions.
 
 ---
 
