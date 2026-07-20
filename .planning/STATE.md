@@ -87,7 +87,7 @@ Items acknowledged and deferred at v1.0 milestone close on 2026-07-17:
 
 | Decision | Rationale | Status |
 |----------|-----------|--------|
-| No Affine+Spline in ABBA | Elastix degrades without tissue mask; confirmed 2026-06-23 | Locked (REG-05 trials a masked prototype outside ABBA's GUI as the only exception) |
+| ~~No Affine+Spline in ABBA~~ → **works with Nissl (Ch0)** | Original (2026-06-23): elastix degrades without a tissue mask. **REVISED 2026-07-20 (operator, wBA1-3):** root cause was substantially the **wrong atlas fixed channel** — Label Borders (Ch2) is a region-outline line-drawing with no DAPI-intensity correspondence. With atlas **Nissl (Ch0)** as the fixed channel, in-GUI elastix Affine+Spline works. Working pipeline: DeepSlice → single global slicing angle (X=−8.6/Y=3.9, locked) → elastix Affine(Nissl Ch0 // DAPI Ch2) → elastix Spline(15 pts) → BigWarp "Edit last registration" refine (~40 min total / ~8 min per section for all 5). | **Superseded** (Phase 6 REG-04/05) |
 | Channel order override in czi_mip.py | aicspylibczi reads in wrong order vs metadata; always pass `--channels "TdTomato-AF568" "Fos-AF488" "DAPI"` | Locked |
 | Cytoplasmic expansion ring for TdTomato | TdTomato is cytosolic; measure in cytoplasmic compartment to avoid mis-counting | Locked (validated Phase 3 — bg-sub AF568-T2 cytoplasmic measure) |
 | DeepSlice → manual angle → export only | Minimal steps producing correct overlay | Locked |
