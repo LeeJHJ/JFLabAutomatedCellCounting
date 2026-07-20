@@ -2,18 +2,18 @@
 gsd_state_version: 1.0
 milestone: v1.1
 milestone_name: First Full-Series Run — LA/BA Amygdala Engram
-current_phase: 6
-current_phase_name: Registration Speedup
+current_phase: 06
+current_phase_name: registration-speedup
 status: executing
-stopped_at: Phase 6 context gathered
-last_updated: "2026-07-20T15:11:56.273Z"
-last_activity: 2026-07-19
-last_activity_desc: Phase 05 complete, transitioned to Phase 6
+stopped_at: Completed 06-01-PLAN.md
+last_updated: "2026-07-20T15:45:12.900Z"
+last_activity: 2026-07-20
+last_activity_desc: Phase 06 execution started
 progress:
   total_phases: 6
   completed_phases: 1
-  total_plans: 3
-  completed_plans: 3
+  total_plans: 8
+  completed_plans: 4
   percent: 17
 ---
 
@@ -28,16 +28,16 @@ progress:
 
 **Core value:** Biologically plausible TdT+/Fos+/Double+ counts per atlas region across a registered section series, with locked detection parameters and imaging-optimization notes ready to scale brain-wide.
 
-**Current focus:** Phase 05 — series-scaffolding-multi-scene-mip-batch-export-integrity
+**Current focus:** Phase 06 — registration-speedup
 
 ---
 
 ## Current Position
 
-Phase: 6 — Registration Speedup
-Plan: Not started
+Phase: 06 (registration-speedup) — EXECUTING
+Plan: 2 of 5
 Status: Ready to execute
-Last activity: 2026-07-19 — Phase 05 complete, transitioned to Phase 6
+Last activity: 2026-07-20 — Phase 06 execution started
 
 ## Performance Metrics
 
@@ -54,6 +54,7 @@ Last activity: 2026-07-19 — Phase 05 complete, transitioned to Phase 6
 | Phase 05 P01 | 7min | 2 tasks | 1 files |
 | Phase 05 P02 | 15min | 2 tasks | 3 files |
 | Phase 05 P03 | 8min | 1 tasks | 0 files |
+| Phase 06 P01 | 5min | 3 tasks | 4 files |
 
 ## v1.1 Roadmap Snapshot (created 2026-07-17)
 
@@ -142,11 +143,11 @@ None. First v1.1 execution step (Phase 5) is scriptable (no GUI dependency); Pha
 
 ## Session Continuity
 
-**Last session:** 2026-07-19T15:28:05.877Z
-**Stopped at:** Phase 6 context gathered
+**Last session:** 2026-07-20T15:45:12.893Z
+**Stopped at:** Completed 06-01-PLAN.md
 **Resume file:** 
 
-.planning/phases/06-registration-speedup/06-CONTEXT.md
+None
 
 **Side task:** TRACR registration for another lab in progress (rough, may need a per-section second pass) — see memory. (Retired notes archived in `.planning/archive/retired-memory-notes.md`.)
 
@@ -166,3 +167,6 @@ None. First v1.1 execution step (Phase 5) is scriptable (no GUI dependency); Pha
 - [Phase ?]: 05-02: verify_export_integrity.py skips the multi-entry non-clobbering assertion when fewer than 2 stems exist, so the checker is runnable now (single-entry M3) and again on the 5-entry wBA1-3 series in Phase 8/10
 - [Phase ?]: 05-03: Operator confirmed OME-TIFF channel index order (0=TdTomato, 1=Fos, 2=DAPI) on the wBA1-3 series -- the A1 sign-off Phase 8 classification depends on
 - [Phase ?]: 05-03: Operator confirmed 5-scene identity (distinct, intact sections, consistent scene_key<->s{N} mapping) -- CONV-02 satisfied
+- [Phase ?]: 06-01: AP axis resolved dynamically from atlas.orientation (scan for a/p char), never hardcoded to axis 0 (RESEARCH A1)
+- [Phase ?]: 06-01: elastix parameter files use only the standard elastix.dev component set (no invented metric/optimizer combination), flagged as operator-retunable starting values (A2)
+- [Phase ?]: 06-01: elastix_trial_harness.py authored as .py (not .sh) to match project's all-Python/Groovy convention and reuse the --self-test idiom
