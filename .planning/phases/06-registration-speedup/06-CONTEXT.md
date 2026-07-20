@@ -51,6 +51,42 @@ Register the 5-section wBA1-3 series (`wBA1-3_s1..s5_MIP.ome.tiff`) to Allen CCF
 - **DeepSlice ensemble flag** — enabling the ensemble model (higher accuracy, slower) is fine on CPU for only 5 sections; default to on unless it's prohibitively slow.
 - **Channel index for the elastix/BigWarp dialog** — these 3-channel MIPs have **DAPI at index 2** (`AF568-T2`/`AF488-T3`/`DAPI-T4`); the moving-channel index is **2 here, not 0**. Do NOT carry over the single-channel `index 0` habit. See [[feedback-abba-channel-index]].
 
+### ⟳ GUI RECONCILIATION (2026-07-20, operator at the live ABBA dialog)
+
+Several REG-03 values were researched from JAR bytecode / ABBA docs and proved wrong against the live
+GUI. **Operator GUI observation supersedes the researched value in every conflict below.** The
+corrected operative procedure is `06-REG03-SOP.md` (rewritten 2026-07-20).
+
+- **[LOADING] "Multi Image To Atlas" is not a load target.** MIPs are imported via the ABBA window's
+  `Import > Import With Bio-Formats` (or `Import QuPath Project`). RESEARCH's system diagram and the
+  original SOP step 2 were wrong.
+- **[DIALOG FIELDS] Real DeepSlice-Local dialog labels** (not the researched param names): `Slices
+  channels, 0-based` (=2), `Allow change of atlas slicing angle` (checkbox), `Resampling pixel size`
+  (=10), `Average of several models (slower)` (=ensemble, checked), `Post_processing` (dropdown),
+  `Spacing (micrometer)`. There are **no** `section_numbers` or `propagate_angles` named fields.
+- **[D-02 REVERSED] `Post_processing = No post-processing`, NOT `Keep order + set spacing`.** D-02
+  assumed "the operator supplies the known physical section order" — **false**: `s1..s5` are scene/
+  acquisition labels, not true anterior→posterior order (Phase 5 CONV-02 verified only that the
+  scene↔label mapping is *consistent*). Keep-order would impose a false monotonic AP constraint and
+  degrade the fit. Each slice's AP is found independently. The `Spacing` field is therefore N/A.
+- **[D-04 REVERSED] Shared/propagated cutting angle rejected for this series.** "One brain → one
+  cutting angle" holds only for the true blade plane; inconsistent cryostat cutting + poor free-float
+  mounting break it. `Allow change of atlas slicing angle` is left **unchecked**; angle is set
+  **per-section** in Review Mode (D-05 applied series-wide), with BigWarp (06-04) absorbing the
+  in-plane rotation/warp mounting introduces. Diagnostic recorded in the SOP: in-plane (mounting) vs
+  through-plane (asymmetric-AP = real tilt).
+- **[DAPI B&C — concrete] `min 0 / max ≈ 20 000`.** DAPI is 16-bit but tops out at ~33 000
+  (median ~1 800–2 300, p99 ~19–21 k, consistent across all 5). ABBA's auto `0:255` clips →
+  over-saturated; `0:65000` leaves it dark. Set in the "Slices Display" table's `Ch_2` header, not in
+  the DeepSlice dialog.
+- **[ATLAS FIXED CHANNEL] Use Ch 0 (Nissl), never Ch 2 (Label Borders), for elastix/manual matching.**
+  Atlas loads Ch0=Nissl / Ch1=Ara / Ch2=Label Borders. Nissl co-varies with DAPI; Label Borders is a
+  region-outline line-drawing with no intensity correspondence — using it as the elastix fixed channel
+  very likely **compounded the 2026-06-23 "elastix degrades" result** (recorded then as a mask problem
+  only). `extract_atlas_plate.py` correctly uses `.reference` (the Ara average template), so the
+  Wave-4 script is unaffected; this correction applies to the ABBA-GUI elastix/BigWarp/manual path and
+  to [[feedback-abba-channel-index]] (whose "any valid atlas index works" claim was wrong).
+
 </decisions>
 
 <canonical_refs>
