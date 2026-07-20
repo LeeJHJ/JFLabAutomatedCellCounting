@@ -54,28 +54,31 @@ projected — unusable). These are **5 separate sections from ONE brain** (opera
    | `Mp` (MultiSlicePositioner instance) | leave default | Auto-populated. |
    | `('mouse', 'rat') Mouse or Rat ?` | `mouse` | Species. |
    | `Slices channels, 0-based, comma separated, '*' for all channels` | `2` | DAPI. **NOT `0`** — index 0 throws `"Missing channel in selected slice(s)"` on these AF568/AF488/DAPI MIPs (dialog literally says "0-based"; DAPI is index 2). See [[feedback-abba-channel-index]]. |
-   | `Allow change of atlas slicing angle` | **UNCHECKED** | Checking it makes DeepSlice adopt a single *median* DV/ML angle across all 5 — a **shared** angle. These sections are inconsistently cut/mounted, so a shared angle is **rejected** for this series (see Angle section). Keep the atlas at standard coronal and adjust tilt **per-section** manually in Review Mode. |
+   | `Allow change of atlas slicing angle` | **UNCHECKED** | Checking it makes DeepSlice set the (single, global) atlas slicing angle to its *median* DV/ML estimate. Leave unchecked and set the global angle **manually** to a compromise (we distrust DeepSlice's DV/ML). NOTE: ABBA's slicing angle is **one global plane for all slices** — there is no per-section through-plane tilt (see Angle section); per-section residual is fixed with in-plane transforms + BigWarp. |
    | `Resampling pixel size (10 for mouse, 40 for rat)` | `10` | Mouse default; matches the `allen_mouse_10um` atlas. |
    | `Average of several models (slower)` | **CHECKED** | This is the "ensemble" option — CPU-acceptable for 5 sections. |
    | `Post_processing` | **`No post-processing`** | **NOT `Keep order + set spacing`.** `s1..s5` are scene/acquisition labels, NOT true anterior→posterior order (Phase 5 only verified the scene↔label mapping is *consistent*, never that it is AP-monotonic). Keep-order would force a false monotonic AP constraint and degrade the fit. `No post-processing` lets DeepSlice place each slice at its independently-predicted AP — which effectively discovers each section's true AP regardless of label. **This reverses D-02.** |
    | `Spacing (micrometer), used only when 'Keep order + set spacing' is selected` | `0.0` (N/A) | Only used with keep-order+spacing, which we are not using. |
 
-5. **Angle strategy — per-section, NOT a shared propagated angle (this reverses D-04).**
-   The "one brain → one cutting angle" assumption holds only for the *true blade-vs-brain plane*;
-   inconsistent cryostat cutting + poor free-float mounting break it in practice (operator finding
-   2026-07-20). So:
-   - Do **not** adopt a single propagated/median angle. Set each section's tilt by eye in **Review
-     Mode**, per-section. (This is D-05's per-section override applied across the *whole* series, not
-     as a rare outlier.)
-   - **Diagnose in-plane vs through-plane first** (different fixes):
-     - **In-plane / mounting** (common here): whole section is *rotated/shifted/flipped* on the slide
-       but internally front-to-back symmetric. Fix with section rotation/position — **BigWarp
-       (plan 06-04) absorbs the rest.** This is *not* an atlas-slicing-angle problem.
-     - **Through-plane / real cutting tilt**: even after in-plane alignment the coronal plane won't
-       match front-to-back. Tell: **one hemisphere/edge reads more anterior than the other within a
-       single section** (asymmetric AP). Fix with a per-section DV/ML atlas tilt in Review Mode.
-   - Lean on **BigWarp (Wave 3 / 06-04)** for the in-plane rotation + mounting warp — it is the
-     trusted nonlinear escalation for exactly this ([[feedback-abba-tilt]]).
+5. **Angle strategy — ONE global slicing angle + per-section in-plane/BigWarp (corrected 2026-07-20).**
+   ABBA's atlas **slicing angle is a single GLOBAL cutting plane** — changing it rotates the atlas for
+   ALL slices at once (confirmed at the GUI 2026-07-20). This matches ABBA's one-brain-one-cut model;
+   **there is no per-section through-plane tilt.** So "set each section's tilt in Review Mode" is wrong
+   — do this instead:
+   - **Set the global slicing angle ONCE** to the best compromise for the series (it IS one brain, so
+     a real shared cut plane exists), prioritizing LA/BA + ventral-edge fit on the most representative
+     sections. Set it manually (do not blindly adopt DeepSlice's median DV/ML).
+   - **Fix each section's residual with the per-section tools that ARE per-section:** in-plane
+     rotation/translation of the *individual* slice (select just that slice — mounting rotation/offset),
+     then **BigWarp (Wave 3 / 06-04)** for the nonlinear residual — where LA/BA actually gets nailed.
+   - **Diagnose** so you apply the right per-section fix:
+     - **In-plane / mounting** (common here): section rotated/shifted on the slide but internally
+       front-to-back symmetric → in-plane rotate/translate the slice; BigWarp finishes it.
+     - **Through-plane / real cutting tilt**: one hemisphere/edge reads more anterior than the other
+       within a section (asymmetric AP) → **cannot** be set as a per-section angle; BigWarp against the
+       correct AP plate pulls the ROI into alignment (accept it is a 2D warp, not a true 3D re-cut).
+   - Net: don't fight the global angle per-section — set it once, then BigWarp per section
+     ([[feedback-abba-tilt]]).
 
 6. **Atlas fixed channel — for the later elastix / manual-matching steps (NOT the DeepSlice run).**
    When ABBA matches your DAPI *against* the atlas (elastix Affine/Spline, or your eye judging the
@@ -100,7 +103,7 @@ projected — unusable). These are **5 separate sections from ONE brain** (opera
 
 ## Per-section run record (filled in plan 06-03)
 
-| section | DeepSlice AP (mm) | angle: in-plane (mounting) / through-plane (tilt) | per-section tilt set? | overlay fit OK? (yes / needs-BigWarp) | notes |
+| section | DeepSlice AP (mm) | angle: in-plane (mounting) / through-plane (tilt) | residual fix (in-plane / BigWarp) | overlay fit OK? (yes / needs-BigWarp) | notes |
 |---|---|---|---|---|---|
 | wBA1-3_s1 |  |  |  |  |  |
 | wBA1-3_s2 |  |  |  |  |  |

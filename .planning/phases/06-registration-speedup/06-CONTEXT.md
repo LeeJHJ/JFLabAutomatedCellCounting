@@ -71,10 +71,12 @@ corrected operative procedure is `06-REG03-SOP.md` (rewritten 2026-07-20).
   degrade the fit. Each slice's AP is found independently. The `Spacing` field is therefore N/A.
 - **[D-04 REVERSED] Shared/propagated cutting angle rejected for this series.** "One brain → one
   cutting angle" holds only for the true blade plane; inconsistent cryostat cutting + poor free-float
-  mounting break it. `Allow change of atlas slicing angle` is left **unchecked**; angle is set
-  **per-section** in Review Mode (D-05 applied series-wide), with BigWarp (06-04) absorbing the
-  in-plane rotation/warp mounting introduces. Diagnostic recorded in the SOP: in-plane (mounting) vs
-  through-plane (asymmetric-AP = real tilt).
+  mounting break it. **ABBA's slicing angle is a single GLOBAL plane** (confirmed at the GUI
+  2026-07-20 — changing it moves all slices; no per-section through-plane tilt exists). So `Allow
+  change of atlas slicing angle` is left **unchecked**; the **global** angle is set once manually to a
+  compromise, and each section's residual is handled by **per-section in-plane transforms + BigWarp
+  (06-04)** — NOT a per-section slicing angle. Diagnostic recorded in the SOP: in-plane (mounting) vs
+  through-plane (asymmetric-AP = real tilt, which BigWarp pulls in against the correct AP plate).
 - **[DAPI B&C — concrete] `min 0 / max ≈ 20 000`.** DAPI is 16-bit but tops out at ~33 000
   (median ~1 800–2 300, p99 ~19–21 k, consistent across all 5). ABBA's auto `0:255` clips →
   over-saturated; `0:65000` leaves it dark. Set in the "Slices Display" table's `Ch_2` header, not in
