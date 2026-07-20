@@ -4,9 +4,9 @@ milestone: v1.1
 milestone_name: First Full-Series Run — LA/BA Amygdala Engram
 current_phase: 6
 current_phase_name: Registration Speedup
-status: verifying
+status: executing
 stopped_at: Phase 6 context gathered
-last_updated: "2026-07-19T15:28:05.885Z"
+last_updated: "2026-07-20T15:11:56.273Z"
 last_activity: 2026-07-19
 last_activity_desc: Phase 05 complete, transitioned to Phase 6
 progress:
@@ -36,7 +36,7 @@ progress:
 
 Phase: 6 — Registration Speedup
 Plan: Not started
-Status: Phase complete — ready for verification
+Status: Ready to execute
 Last activity: 2026-07-19 — Phase 05 complete, transitioned to Phase 6
 
 ## Performance Metrics
