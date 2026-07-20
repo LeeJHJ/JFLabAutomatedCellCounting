@@ -19,8 +19,8 @@ Requirements for milestone v1.1. Each maps to a roadmap phase. Data: `-001-07_pr
 
 ### Registration Speedup (continues REG-01/02 from v1.0)
 
-- [ ] **REG-03**: DeepSlice batch `predict()` + angle propagation registers the 5-section series with materially less manual effort than per-section from scratch
-- [ ] **REG-04**: A reduced-landmark BigWarp workflow with a documented per-section effort target (middle ground vs the v1.0 5–15 min manual pass), applied across all 5 sections
+- [x] **REG-03**: DeepSlice batch `predict()` + angle propagation registers the 5-section series with materially less manual effort than per-section from scratch
+- [x] **REG-04**: A reduced-landmark BigWarp workflow with a documented per-section effort target (middle ground vs the v1.0 5–15 min manual pass), applied across all 5 sections
 - [x] **REG-05**: An experimental masked-elastix prototype (`crop_to_tissue.py` DAPI mask → elastix Affine/Spline outside ABBA's GUI) is trialed on one section and compared to DeepSlice-only on fit quality + time; kept only if it demonstrably wins (a priori accept/reject rule)
 
 ### Classification (continues CLASS-01 from v1.0)
@@ -78,8 +78,8 @@ Each requirement maps to exactly one phase. Phases continue from v1.0 (Phases 1-
 | CONV-01 | Phase 5 | Complete |
 | CONV-02 | Phase 5 | Complete |
 | EXP-02 | Phase 5 | Complete |
-| REG-03 | Phase 6 | Pending |
-| REG-04 | Phase 6 | Pending |
+| REG-03 | Phase 6 | Complete |
+| REG-04 | Phase 6 | Complete |
 | REG-05 | Phase 6 | Complete |
 | IMG-01 | Phase 7 | Pending |
 | IMG-02 | Phase 7 | Pending |
