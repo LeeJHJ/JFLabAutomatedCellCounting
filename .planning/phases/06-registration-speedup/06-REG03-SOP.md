@@ -103,20 +103,32 @@ projected — unusable). These are **5 separate sections from ONE brain** (opera
 
 ## Per-section run record (filled in plan 06-03)
 
-| section | DeepSlice AP (mm) | angle: in-plane (mounting) / through-plane (tilt) | residual fix (in-plane / BigWarp) | overlay fit OK? (yes / needs-BigWarp) | notes |
+Recorded from the operator's registration run (2026-07-20). Rows ordered by true AP (anterior→posterior):
+
+| section | ABBA axis pos (atlas Z, mm) | true-AP rank | residual fix applied | overlay fit | notes |
 |---|---|---|---|---|---|
-| wBA1-3_s1 |  |  |  |  |  |
-| wBA1-3_s2 |  |  |  |  |  |
-| wBA1-3_s3 |  |  |  |  |  |
-| wBA1-3_s4 |  |  |  |  |  |
-| wBA1-3_s5 |  |  |  |  |  |
+| wBA1-3_s4 | 7.19 | 1 (most anterior) | elastix Affine(Nissl Ch0)+Spline(15pts)+BigWarp refine |  |  |
+| wBA1-3_s1 | 7.59 | 2 | " |  |  |
+| wBA1-3_s2 | 7.79 | 3 | " |  |  |
+| wBA1-3_s5 | 8.01 | 4 | " |  |  |
+| wBA1-3_s3 | 8.44 | 5 (most posterior) | " |  |  |
 
-**Post_processing used:** `No post-processing` (D-02 reversed — `s1..s5` not true AP order).
-**DAPI display range used:** `min 0 / max ______` (target ≈ 20 000).
+**AP order confirms `No post-processing` was correct** — true AP (s4<s1<s2<s5<s3) ≠ label order.
+**Global slicing angle:** X = −8.6°, Y = 3.9° (rotations LOCKED) — one compromise plane for all 5.
+**Post_processing used:** `No post-processing`.
+**DAPI display range used:** `min 0 / max ______` (target ≈ 20 000 — record the value used).
 
-**Decision (D-04):** `Shared/propagated angle REJECTED — sections inconsistently cut/mounted (cryostat
-+ free-float variance); per-section manual angle adopted across the series (D-05 applied series-wide).`
-_(Confirm/adjust after the pass.)_
+**⚠ Working pipeline discovered by operator (2026-07-20, "best in my hands"):**
+DeepSlice Affine → **Elastix 2D Affine (atlas Ch0 Nissl // section Ch2 DAPI)** → **Elastix 2D Spline
+(15 pts)** → **BigWarp via "Edit last registration"** (move the 15 spline pts + add new to refine).
+This **OVERTURNS the locked "No Affine+Spline in ABBA" decision** — with the **Nissl (Ch0)** atlas
+channel (NOT Label Borders), in-GUI elastix Affine+Spline works well; confirms the 2026-06-23 failure
+was substantially the wrong atlas channel, not only the missing mask. Effort: ~40 min for really-accurate
+BigWarp refinement [per-section vs total: TO CONFIRM].
+
+**Decision (D-04):** Shared/propagated DeepSlice angle NOT adopted unseen. A single GLOBAL compromise
+slicing angle (X=−8.6/Y=3.9, locked) was set manually; per-section residual resolved by the
+elastix-Affine(Nissl)+Spline(15)+BigWarp pipeline above.
 
 **D-05 outliers / exclusions:** `<section id + reason, or "no outliers">`
 
