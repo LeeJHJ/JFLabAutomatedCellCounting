@@ -28,18 +28,34 @@ import tifffile
 # ── Private helpers ──────────────────────────────────────────────────────────
 
 def _resolve_ap_axis(orientation: str) -> int:
-    """Resolve the AP axis index from a brainglobe orientation string."""
-    raise NotImplementedError
+    """Resolve the AP axis index from a brainglobe orientation string.
+
+    brainglobe orientation strings are 3-character axis-direction codes
+    (e.g. "asr" = anterior/superior/right). The AP axis is whichever
+    position contains 'a' (anterior) or 'p' (posterior) -- do NOT assume
+    axis 0 (06-RESEARCH.md Assumption A1).
+    """
+    for i, ch in enumerate(orientation):
+        if ch in ("a", "p"):
+            return i
+    raise ValueError(f"No AP axis in orientation {orientation!r}")
 
 
 def _ap_mm_to_index(ap_mm: float, res_um: float, ap_axis: int, volume_shape: tuple[int, int, int]) -> int:
     """Convert an AP position (mm from bregma) to an integer plate index."""
-    raise NotImplementedError
+    index = round(ap_mm * 1000.0 / res_um)
+    bound = volume_shape[ap_axis]
+    if not (0 <= index < bound):
+        raise ValueError(
+            f"AP index {index} (from ap_mm={ap_mm}, res_um={res_um}) is out of bounds "
+            f"[0, {bound}) for ap_axis={ap_axis}, volume_shape={volume_shape}"
+        )
+    return index
 
 
 def _extract_plate(volume: np.ndarray, index: int, ap_axis: int) -> np.ndarray:
     """Extract a 2D coronal plate from a 3D volume at the given AP index."""
-    raise NotImplementedError
+    return np.take(volume, index, axis=ap_axis)
 
 
 def _self_test() -> None:
