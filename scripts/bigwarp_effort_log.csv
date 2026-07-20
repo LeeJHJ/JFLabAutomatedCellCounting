@@ -1,2 +1,6 @@
 section,start_time,end_time,elapsed_min,landmark_count,notes
-wBA1-3_s1,,,,,"anchors: LA/BA lateral boundary, external capsule, optic tract, ventral brain edge"
+wBA1-3_s4,,,8,15,"true-AP rank 1 (atlas Z 7.19). Pipeline: DeepSlice->global angle X-8.6/Y3.9 (locked)->elastix Affine(Nissl Ch0 // DAPI Ch2)->elastix Spline(15pts)->BigWarp 'edit last registration' refine. ~40min TOTAL for all 5 (~8/section; timing tracked at series level)."
+wBA1-3_s1,,,8,15,"atlas Z 7.59; same pipeline"
+wBA1-3_s2,,,8,15,"atlas Z 7.79 (near LA caudal edge); same pipeline"
+wBA1-3_s5,,,8,15,"atlas Z 8.01 -- POSTERIOR of LA (BLA/BMA only at best-fit); LA-presence flagged for Phase 8 LABEL-01; same pipeline"
+wBA1-3_s3,,,8,15,"atlas Z 8.44 -- caudal-tip BLA, posterior of LA and BMA; LA-presence flagged for Phase 8 LABEL-01; same pipeline"

@@ -33,19 +33,36 @@ retune tried should be recorded in the trial record below.
 
 ---
 
-## Trial record (filled in plan 06-05)
+## ⟳ REG-05 answered IN-GUI (2026-07-20) — the separate CLI trial was not needed
 
-- **Worst-fitting section (D-06):** `<section id — e.g. wBA1-3_sN>`
-- **Fixed image:** Allen CCFv3 coronal plate at `<AP mm>` via `extract_atlas_plate.py`
-- **Moving image:** `crop_to_tissue.py` output, DAPI channel index 2
-- **Elastix parameters:** `scripts/elastix_params/Par_Affine.txt` + `Par_BSpline.txt`, masked
-  both sides (`-fMask` / `-mMask`)
-- **Parameter retune tried (if any):** `<description, or "none — defaults used">`
-- **Operator visual comparison at LA/BA boundary + ventral edge vs. BigWarp-only:**
-  `<description>`
+The a-priori rule above was written for a *separate out-of-ABBA masked-elastix CLI trial* on the
+one worst-fitting section. In practice the operator answered REG-05's real question — **does elastix
+earn its keep?** — directly **inside ABBA**, on all 5 sections, using ABBA's built-in `Elastix 2D
+Affine` + `Elastix 2D Spline` with the **atlas Nissl channel (Ch0)** as fixed and section DAPI (Ch2)
+as moving. Per operator decision (2026-07-20) this in-GUI result **is** the REG-05 finding; the
+redundant CLI trial is skipped and the Wave-1 scripts (`extract_atlas_plate.py`,
+`elastix_trial_harness.py`, `Par_Affine/BSpline.txt`) are retained as tested tools for future use.
 
-**Decision: KEEP / REJECT** — `<one-line justification tied to the D-07 quality-only rule, time
-irrelevant>`
+## Trial record (in-GUI, all 5 sections)
+
+- **Mechanism:** ABBA built-in `Elastix 2D Affine` then `Elastix 2D Spline (15 control pts)`, run
+  after DeepSlice + a single global slicing angle (X=−8.6°, Y=3.9°, locked), then **BigWarp refine**
+  via "Edit last registration" (nudge the 15 pts + add more).
+- **Fixed image:** atlas **Nissl (Ch0)** — NOT Label Borders (Ch2). This was the decisive fix.
+- **Moving image:** section DAPI (Ch2).
+- **Masking:** in-GUI elastix masking status **TBC** — resolve when annotations are checked in QuPath
+  (operator to confirm whether the fit was carried by the mask, the Nissl channel, or both).
+- **Comparison vs. DeepSlice+BigWarp-only:** elastix Affine(Nissl)+Spline visibly improved the fit;
+  it is now part of the operator's best-in-hand pipeline.
+
+**Root cause of the 2026-06-23 "elastix degrades" failure (now understood):** substantially the
+**wrong atlas fixed channel** (Label Borders Ch2 = region outlines, no DAPI-intensity correspondence),
+not only the missing tissue mask. With Nissl (Ch0), in-GUI elastix Affine+Spline works. This
+**overturns the locked "No Affine+Spline in ABBA" decision** (see STATE.md Key Decisions).
+
+**Decision: KEEP** — elastix Affine(Nissl Ch0)+Spline(15pts) demonstrably improves the LA/BA-region
+fit and is retained as part of the standard registration pipeline (D-07 quality-only rule; time
+irrelevant). BigWarp remains the final per-section refinement on top.
 
 ---
 

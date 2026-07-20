@@ -36,7 +36,7 @@ Full phase details (goals, success criteria, plans) archived in [milestones/v1.0
 **Ordering principles (research-derived):** Scaffolding first (5 verified MIPs + fixed batch export gate everything and unblock aggregation) → registration speedup and imaging re-validation before classification (imaging re-validation is mandatory and gates whether detection params re-lock) → classification carries the amygdala-specific region-labeling re-audit → area-based readout and terminal aggregation/export are the downstream readouts. Registration + QuPath detection are human-in-the-loop GUI steps: the executor authors the scripts, the operator runs the GUI.
 
 - [x] **Phase 5: Series Scaffolding — Multi-Scene MIP + Batch-Export Integrity** - Convert the processed CZI to 5 identity-verified section MIPs and fix the multi-entry export blocker (completed 2026-07-19)
-- [ ] **Phase 6: Registration Speedup** - Register the 5-section series with materially less manual effort (DeepSlice batch + reduced-landmark BigWarp; masked-elastix prototype trialed under an a-priori accept/reject rule)
+- [x] **Phase 6: Registration Speedup** - Register the 5-section series with materially less manual effort (DeepSlice batch + reduced-landmark BigWarp; masked-elastix prototype trialed under an a-priori accept/reject rule) (completed 2026-07-20)
 - [ ] **Phase 7: Imaging Re-Validation (New 4-Plane / Lower-Laser Params)** - Re-run D-05 QC gates and re-lock the k threshold seed only on drift; confirm the 4-plane MIP is not under-projected
 - [ ] **Phase 8: LA/BA Classification + Brain-Wide Region-Labeling Validation** - Nucleus-anchored TdT+/Fos+/Double+ across all 5 sections over the amygdala ROI, with the CR-01 fix re-audited on non-laminar LA/BA
 - [ ] **Phase 9: Generalizable Area-Based Density Readout** - Region-parameterized percent-area-above-threshold within a DAPI+ mask; additive/parallel to nucleus counts; DG granule layer as the test case
@@ -80,7 +80,7 @@ Plans:
   2. A reduced-landmark BigWarp pass is applied across all 5 sections and hits a documented per-section effort target below the v1.0 5-15 min manual baseline.
   3. The masked-elastix prototype (`crop_to_tissue.py` DAPI mask → elastix Affine/Spline outside ABBA's GUI) is trialed on exactly one section, compared to DeepSlice-only on fit quality + time, and kept or rejected per the pre-declared rule — the decision is recorded either way.
 
-**Plans**: 2/5 plans executed
+**Plans**: 5/5 plans complete
 Plans:
 
 **Wave 1** *(executor-authored, autonomous)*
@@ -90,15 +90,15 @@ Plans:
 
 **Wave 2** *(operator GUI, blocking-human)*
 
-- [ ] 06-03-PLAN.md — Wave 2: operator runs native ABBA DeepSlice-Local on the 5 sections, confirms per-section overlay fit, resolves D-04 angle + D-05 outliers (REG-03)
+- [x] 06-03-PLAN.md — Wave 2: operator runs native ABBA DeepSlice-Local on the 5 sections, confirms per-section overlay fit, resolves D-04 angle + D-05 outliers (REG-03)
 
 **Wave 3** *(operator GUI, blocking-human)*
 
-- [ ] 06-04-PLAN.md — Wave 3: operator reduced-landmark amygdala BigWarp across all 5, logs ≤~5 min/section wall-clock, identifies worst-fitting section D-06 (REG-04)
+- [x] 06-04-PLAN.md — Wave 3: operator reduced-landmark amygdala BigWarp across all 5, logs ≤~5 min/section wall-clock, identifies worst-fitting section D-06 (REG-04)
 
 **Wave 4** *(elastix trial + operator judgment)*
 
-- [ ] 06-05-PLAN.md — Wave 4: masked-elastix trial on the one worst-fitting section, operator a-priori D-07 keep/reject recorded either way (REG-05)
+- [x] 06-05-PLAN.md — Wave 4: masked-elastix trial on the one worst-fitting section, operator a-priori D-07 keep/reject recorded either way (REG-05)
 
 **Notes**: Human-in-the-loop — executor authors the elastix/atlas-plate scripts + operator-record scaffolds; the operator runs the ABBA/BigWarp GUI. REG-03 uses ABBA's native "DeepSlice Registration (Local)" command (no run_deepslice.py — 06-CONTEXT ⟳ RESOLUTION). REG-05 is scoped as a single-section experiment so it cannot balloon.
 
@@ -174,7 +174,7 @@ Plans:
 | 3. Detection Script and Single-Section End-to-End Test | v1.0 | 4/4 | Complete | 2026-07-16 |
 | 4. Biological Plausibility Validation and Imaging Optimization Notes | v1.0 | 3/3 | Complete | 2026-07-17 |
 | 5. Series Scaffolding — Multi-Scene MIP + Batch-Export Integrity | v1.1 | 3/3 | Complete    | 2026-07-19 |
-| 6. Registration Speedup | v1.1 | 2/5 | In Progress|  |
+| 6. Registration Speedup | v1.1 | 5/5 | Complete   | 2026-07-20 |
 | 7. Imaging Re-Validation (New 4-Plane / Lower-Laser Params) | v1.1 | 0/TBD | Not started | - |
 | 8. LA/BA Classification + Brain-Wide Region-Labeling Validation | v1.1 | 0/TBD | Not started | - |
 | 9. Generalizable Area-Based Density Readout | v1.1 | 0/TBD | Not started | - |
