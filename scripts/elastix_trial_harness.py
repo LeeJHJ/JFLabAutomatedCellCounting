@@ -42,7 +42,9 @@ DEFAULT_PARAMS = [DEFAULT_PARAM_DIR / "Par_Affine.txt", DEFAULT_PARAM_DIR / "Par
 
 def _validate_paths(paths: list[Path]) -> None:
     """Raise SystemExit for any path that does not exist (ASVS V5)."""
-    raise NotImplementedError
+    for p in paths:
+        if not p.exists():
+            raise SystemExit(f"FATAL: input does not exist: {p}")
 
 
 def _build_elastix_argv(
@@ -55,14 +57,29 @@ def _build_elastix_argv(
     out_dir: Path,
 ) -> list[str]:
     """Build the elastix subprocess argv list (shell=False)."""
-    raise NotImplementedError
+    argv = [
+        str(elastix_bin),
+        "-f", str(fixed),
+        "-m", str(moving),
+        "-fMask", str(fixed_mask),
+        "-mMask", str(moving_mask),
+    ]
+    for p in param_files:
+        argv += ["-p", str(p)]
+    argv += ["-out", str(out_dir)]
+    return argv
 
 
 def _build_transformix_argv(
     transformix_bin: Path, in_image: Path, transform_params: Path, out_dir: Path
 ) -> list[str]:
     """Build the transformix subprocess argv list (shell=False)."""
-    raise NotImplementedError
+    return [
+        str(transformix_bin),
+        "-in", str(in_image),
+        "-tp", str(transform_params),
+        "-out", str(out_dir),
+    ]
 
 
 def _run(argv: list[str], dry_run: bool, env: dict | None = None) -> None:
