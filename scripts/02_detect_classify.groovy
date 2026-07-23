@@ -1,5 +1,5 @@
 /**
- * 02_detect_classify.groovy — classify/label/report entry point (SCRI-03)
+ * 02_detect_classify.groovy — classify/label/report entry point (SCRI-03, generalized PIPE-01/02/05)
  *
  * SCOPE (D-01): This script does NOT detect. Detection stays in
  * run_braian_detection.groovy — that is the standalone, CPU-heavy BraiAnDetect
@@ -8,58 +8,57 @@
  * Keeping detection out of this script lets the fast threshold-iteration loop
  * re-run without re-detecting.
  *
- * CONFIG-DRIVEN PRECONDITIONS (D-09/D-14/D-15, Phase 06.1 Task 1): region
- * exclusions, k_robust, and cytoplasmic ring geometry are now read from the
- * sidecar `pipeline.yml` at the QuPath project base dir (migrated out of the
- * former EXCLUDE_ACRONYMS/K_ROBUST/GAP_UM/RING_WIDTH_UM literals), and three
- * fail-loud boundary asserts guard the human-in-the-loop GUI seams: ABBA
- * registration loaded, detections present, and the image's channels matching
- * pipeline.yml's declared anchor/marker channels. Per-marker measurement and
- * compound classification generalization is Task 2 of this plan; this script
- * still classifies the Fos/TdT pair explicitly pending that follow-up.
+ * CONFIG-DRIVEN MARKER SET (D-01/D-02/D-09/D-14, Phase 06.1): every marker
+ * (name/channel/compartment), the segmentation anchor (name/channel), region
+ * exclusions, k_robust, and cytoplasmic ring geometry are read from the
+ * sidecar `pipeline.yml` at the QuPath project base dir — nothing
+ * marker-specific is hardcoded here. 1..N markers are supported: a
+ * single-marker (e.g. TdT-only) config degenerates to `<marker>+`/Negative
+ * with no code path naming an absent marker; a >=2-marker config additionally
+ * emits `Double+` (D-03) when >=2 declared markers are positive on a cell.
  *
- * GUARD + IDEMPOTENCY (D-02): if the current entry has zero detections, this
- * script aborts cleanly with a clear message telling the user to run
- * run_braian_detection.groovy first. If detections exist, they are
- * (re)classified in place — setPathClass overwrites, so re-running just
- * refreshes classes; safe to re-run freely during threshold tuning. Under
- * "Run for project", any entry other than the registered/detected entry
- * (M3 062926 3 plane, entry 1) simply aborts cleanly rather than erroring
- * the batch.
+ * GUARD + IDEMPOTENCY (D-02, D-15): if the current entry has zero detections,
+ * or has no ABBA registration loaded, or the image is missing a
+ * config-declared channel, this script aborts cleanly with a clear message
+ * telling the operator what to do. Otherwise detections are (re)classified in
+ * place — setPathClass overwrites, so re-running just refreshes classes; safe
+ * to re-run freely during threshold tuning. Under "Run for project", any
+ * entry that fails a guard simply aborts cleanly rather than erroring the
+ * batch.
  *
  * CLASSIFICATION (nucleus-anchored, no proximity/overlap — CLAUDE.md, locked):
- *   Fos+  iff  (Nucleus:  AF488-T3 mean (bg-sub)) >= Fos threshold   (nuclear compartment)
- *   TdT+  iff  (Cytoplasm: AF568-T2 mean (bg-sub)) >= TdT threshold   (cytoplasmic ring)
- * Compound class per nucleus: Double+ / Fos+ / TdT+ / Negative. This is the
- * exact classify_markers.groovy core (base for this script) — reused verbatim,
- * NOT BraiAn.yml's classifiers:/OverlappingDetections path (Deviation #1,
- * forbidden: that path cannot classify one DAPI detection set by two
- * independent markers without proximity/overlap heuristics).
+ * for each declared marker, `<marker>+` iff its bg-sub measure on its
+ * declared compartment (nuclear -> nucleus ROI, cytoplasmic -> expanded
+ * cell/cytoplasm ROI) is >= that marker's re-derived threshold. Compound
+ * class per nucleus: `Double+` (only when >=2 markers declared AND >=2
+ * positive) / `<marker>+` (exactly one positive) / `Negative`. This is the
+ * exact classify_markers.groovy core (base for this script, now retired —
+ * D-06), generalized to N markers — NOT BraiAn.yml's classifiers:/
+ * OverlappingDetections path (Deviation #1, forbidden: that path cannot
+ * classify one DAPI detection set by multiple independent markers without
+ * proximity/overlap heuristics).
  *
- * D-03/D-05: classification reads the (bg-sub) measure (D-04 above) against
- * thresholds RE-DERIVED on that measure at runtime via a self-calibrating
- * robust cut (background median + k*1.4826*MAD, k read from pipeline.yml's
- * k_robust) -- NOT the old absolute cutoffs (Fos 13000.4538 / TdT 16766.4671,
- * Fos_Classifier_20x.json / TdT_classifier.json), and NOT the superseded
+ * D-03/D-05: classification reads each marker's (bg-sub) measure against a
+ * threshold RE-DERIVED on that measure at runtime via a self-calibrating
+ * robust cut (background median + k*1.4826*MAD, k from pipeline.yml's
+ * k_robust) -- NOT any absolute cutoff, and NOT the superseded
  * nth-histogram-peak strategy (which assumed a bimodality that sparse
- * markers don't have -> NaN -> 100% Negative, the D-05 gate failure). Those
- * two raw-cutoff JSONs are SUPERSEDED for classification and retained only
- * as a documented reference point. The operative bg-sub thresholds live in
- * Fos_Classifier_20x_bgsub.json /
- * TdT_classifier_bgsub.json, which this script re-derives and overwrites on
- * every run (Pitfall 9: do not let the old absolute cutoffs leak back in
- * against the new measure).
+ * markers don't have -> NaN -> 100% Negative, the original D-05 gate
+ * failure). The per-marker bg-sub classifier JSONs
+ * (`<marker>_Classifier_bgsub.json`) are re-derived and overwritten on every
+ * run (Pitfall 9: do not let any stale absolute cutoff leak back in against
+ * the bg-sub measure).
  *
  * EXCLUSIONS: detections whose centroid falls in a config-declared excluded
- * region (`exclude_acronyms` in pipeline.yml, default DG-sg + ventricular
- * systems VS) are set to "Excluded" and NOT marker-classified.
+ * region (`exclude_acronyms`, e.g. DG-sg + ventricular systems VS) are set to
+ * "Excluded" and NOT marker-classified.
  *
  * BACKGROUND-ROBUST MEASURE (D-04): before classification, every detection
  * gains a compartment-agnostic local-background-subtracted measurement for
- * each marker -- "Nucleus: AF488-T3 mean (bg-sub)" (Fos, ring built outside
- * the nucleus ROI) and "Cytoplasm: AF568-T2 mean (bg-sub)" (TdT, ring built
- * outside the expanded cell/cytoplasm ROI). This fixes Phase 2's Deviation #2
- * SSp-autofluorescence false-positive bug without introducing a
+ * EACH declared marker -- "<CompartmentLabel>: <channel> mean (bg-sub)"
+ * (nuclear markers: ring built outside the nucleus ROI; cytoplasmic markers:
+ * ring built outside the expanded cell/cytoplasm ROI). This fixes the
+ * original SSp-autofluorescence false-positive bug without introducing a
  * nucleus:cytoplasm contrast ratio (that alternative is forbidden by D-04 --
  * it does not generalize to a future PNN pericellular-annulus compartment).
  * See localBackgroundSubtractedMean below.
@@ -72,11 +71,8 @@
  * memory-inefficient, and MeasurementList is numeric-only by design (cannot
  * hold a region acronym string). See regionOf below.
  *
- * Thresholds are read at runtime from the bg-sub classifier JSONs
- * (Fos_Classifier_20x_bgsub.json, TdT_classifier_bgsub.json), which this
- * script itself (re-)derives and writes each run (D-05), so this stays
- * correct after future re-derivation without a separate edit step.
- * Run AFTER a BraiAnDetect detection pass.
+ * Run AFTER a BraiAnDetect detection pass, and AFTER pipeline.yml declares
+ * the marker set for this slice-set.
  *
  * @author section-pipeline
  */
@@ -99,7 +95,7 @@ import static qupath.lib.scripting.QP.*
 // wrong project entry under "Run for project").
 println "Running on: " + getCurrentImageData().getServer().getMetadata().getName()
 
-// ── D-09/D-14: pipeline.yml sidecar config reader ───────────────────────────
+// ── D-01/D-02/D-09/D-14: pipeline.yml sidecar config reader ─────────────────
 // No YAML library ships with QuPath's bundled Groovy (the same constraint that
 // forces export_region_dapi_reference.groovy's regex "grab" idiom for
 // BraiAn.yml). This reader is a line-based mini-parser targeted at
@@ -108,10 +104,6 @@ println "Running on: " + getCurrentImageData().getServer().getMetadata().getName
 // ring{gap_um,width_um}. Comments (# ...) are stripped before parsing,
 // tracking quote state so a '#' inside a quoted string is never mistaken for
 // a comment marker (not currently needed by pipeline.yml's values, but safe).
-// The marker LIST itself is read here (Task 2 of this plan wires it into the
-// per-marker measurement/classification loop); this task only needs
-// anchor/exclude_acronyms/k_robust/ring plus the marker channel list for the
-// D-15 channel-match guard below.
 def pipelineYmlFile = new File(getProject().getBaseDirectory(), "pipeline.yml")
 if (!pipelineYmlFile.exists()) {
     println "ERROR: pipeline.yml not found at ${pipelineYmlFile}."
@@ -230,6 +222,11 @@ if (!missingKeys.isEmpty()) {
 println "pipeline.yml loaded: anchor=${anchorName}/${anchorChannel}  markers=${markers.collect { it.name }}  " +
         "exclude_acronyms=${excludeAcronyms}  k_robust=${kRobust}  ring(gap_um=${gapUm}, width_um=${widthUm})"
 
+// nuclear -> Nucleus, cytoplasmic -> Cytoplasm (06.1-01 contract, locked).
+def COMPARTMENT_LABELS = [nuclear: "Nucleus", cytoplasmic: "Cytoplasm"]
+// D-03: Double+ is structurally possible only when >=2 non-anchor markers are declared.
+boolean emitDouble = markers.size() >= 2
+
 // ── image/server/hierarchy handles (shared: guards, bg-sub pass, threshold re-derivation, Atlas_X) ──
 def imageData = getCurrentImageData()
 def server = imageData.getServer()
@@ -246,16 +243,12 @@ if (availableAtlases.isEmpty()) {
 }
 println "Found ABBA registrations: ${availableAtlases}"
 
-// ── runtime classifier-JSON threshold read (Gson; no groovy.json in QuPath) ─
+// ── runtime classifier-JSON base dir (Gson; no groovy.json in QuPath) ───────
 def base = new File(getProject().getBaseDirectory(), "classifiers/object_classifiers")
 def readSpec = { fn ->
     def o = JsonParser.parseString(new File(base, fn).text).getAsJsonObject().getAsJsonObject("function")
     [meas: o.get("measurement").getAsString(), thr: o.get("threshold").getAsDouble()]
 }
-def fos = readSpec("Fos_Classifier_20x.json")
-def tdt = readSpec("TdT_classifier.json")
-println "Fos rule: ${fos.meas} >= ${fos.thr}"
-println "TdT rule: ${tdt.meas} >= ${tdt.thr}"
 
 // build exclusion ROIs (parent region annotations whose acronym is in the config's exclude_acronyms)
 def excludeRois = []
@@ -318,14 +311,15 @@ int bgGeomFailures = 0
 /**
  * Returns the local-background-subtracted mean intensity for channelName in
  * an annulus built immediately outside baseRoi (compartment-agnostic: caller
- * passes the nucleus ROI for Fos, the expanded cell/cytoplasm ROI for TdT --
- * Pitfall 3). Neighboring detections are excluded from the annulus via exact
- * geometric subtraction, using a bounding-box "quick check" neighbor query
- * (getAllObjectsForRegion, NOT the centroid-only getAllObjectsForROI --
- * Pitfall 8) to avoid missing neighbors whose centroid sits outside the ring
- * but whose body intrudes into it. Uses ObjectMeasurements (the same class
- * QuPath's own Nucleus/Cytoplasm measurements are built with) on a throwaway
- * detection object that is never added to the hierarchy -- Don't Hand-Roll.
+ * passes the nucleus ROI for a nuclear marker, the expanded cell/cytoplasm ROI
+ * for a cytoplasmic marker -- Pitfall 3). Neighboring detections are excluded
+ * from the annulus via exact geometric subtraction, using a bounding-box
+ * "quick check" neighbor query (getAllObjectsForRegion, NOT the centroid-only
+ * getAllObjectsForROI -- Pitfall 8) to avoid missing neighbors whose centroid
+ * sits outside the ring but whose body intrudes into it. Uses
+ * ObjectMeasurements (the same class QuPath's own Nucleus/Cytoplasm
+ * measurements are built with) on a throwaway detection object that is never
+ * added to the hierarchy -- Don't Hand-Roll.
  */
 def localBackgroundSubtractedMean = { baseRoi, String channelName, selfDetection ->
     try {
@@ -366,16 +360,19 @@ def localBackgroundSubtractedMean = { baseRoi, String channelName, selfDetection
     }
 }
 
-println "Computing local-background-subtracted measures (D-04) for ${dets.size()} detections..."
-// Self-diagnosing finite-value counters: isolate WHICH input goes NaN if the
-// bg-sub population ends up empty again (raw compartment read vs local-bg annulus).
+println "Computing local-background-subtracted measures (D-04) for ${dets.size()} detections x ${markers.size()} marker(s)..."
+// Self-diagnosing finite-value counters (per marker): isolate WHICH input goes
+// NaN if the bg-sub population ends up empty again (raw compartment read vs
+// local-bg annulus).
 int bgProcessed = 0
-int nFiniteRawFos = 0, nFiniteRawTdt = 0, nFiniteBgFos = 0, nFiniteBgTdt = 0
-int nFiniteBgsubFos = 0, nFiniteBgsubTdt = 0
+def nFiniteRaw = markers.collectEntries { [(it.name): 0] }
+def nFiniteBg = markers.collectEntries { [(it.name): 0] }
+def nFiniteBgsub = markers.collectEntries { [(it.name): 0] }
 boolean realKeySetPrinted = false
 dets.each { d ->
-    // Fos ring anchors OUTSIDE the nucleus ROI; TdT ring anchors OUTSIDE the
-    // expanded cell/cytoplasm ROI -- distinct per-marker anchors (Pitfall 3).
+    // Nuclear markers' ring anchors OUTSIDE the nucleus ROI; cytoplasmic markers'
+    // ring anchors OUTSIDE the expanded cell/cytoplasm ROI -- distinct per-marker
+    // anchors (Pitfall 3).
     def nucleusRoi = (d.respondsTo('getNucleusROI') && d.getNucleusROI() != null) ? d.getNucleusROI() : d.getROI()
     def cellRoi = d.getROI()
 
@@ -386,33 +383,31 @@ dets.each { d ->
         realKeySetPrinted = true
     }
 
-    def rawFosM = d.getMeasurements().get("Nucleus: AF488-T3 mean")
-    double rawFos = rawFosM != null ? rawFosM.doubleValue() : Double.NaN
-    double bgFos = localBackgroundSubtractedMean(nucleusRoi, "AF488-T3", d)
+    markers.each { m ->
+        String label = COMPARTMENT_LABELS[m.compartment]
+        def baseRoi = (m.compartment == "nuclear") ? nucleusRoi : cellRoi
+        String rawKey = "${label}: ${m.channel} mean"
+        String bgsubKey = "${label}: ${m.channel} mean (bg-sub)"
 
-    def rawTdtM = d.getMeasurements().get("Cytoplasm: AF568-T2 mean")
-    double rawTdt = rawTdtM != null ? rawTdtM.doubleValue() : Double.NaN
-    double bgTdt = localBackgroundSubtractedMean(cellRoi, "AF568-T2", d)
+        def rawM = d.getMeasurements().get(rawKey)
+        double raw = rawM != null ? rawM.doubleValue() : Double.NaN
+        double bg = localBackgroundSubtractedMean(baseRoi, m.channel, d)
+        double bgsub = raw - bg
+        d.getMeasurements().put(bgsubKey, bgsub)
 
-    double bgsubFos = rawFos - bgFos
-    double bgsubTdt = rawTdt - bgTdt
-    d.getMeasurements().put("Nucleus: AF488-T3 mean (bg-sub)", bgsubFos)
-    d.getMeasurements().put("Cytoplasm: AF568-T2 mean (bg-sub)", bgsubTdt)
-
-    if (!Double.isNaN(rawFos))   nFiniteRawFos++
-    if (!Double.isNaN(rawTdt))   nFiniteRawTdt++
-    if (!Double.isNaN(bgFos))    nFiniteBgFos++
-    if (!Double.isNaN(bgTdt))    nFiniteBgTdt++
-    if (!Double.isNaN(bgsubFos)) nFiniteBgsubFos++
-    if (!Double.isNaN(bgsubTdt)) nFiniteBgsubTdt++
+        if (!Double.isNaN(raw))   nFiniteRaw[m.name]   = nFiniteRaw[m.name] + 1
+        if (!Double.isNaN(bg))    nFiniteBg[m.name]    = nFiniteBg[m.name] + 1
+        if (!Double.isNaN(bgsub)) nFiniteBgsub[m.name] = nFiniteBgsub[m.name] + 1
+    }
 
     bgProcessed++
     if (bgProcessed % 1000 == 0) println "  ...background-subtracted ${bgProcessed}/${dets.size()} detections"
 }
 fireHierarchyUpdate()
 if (bgGeomFailures > 0)
-    println "  NOTE: ${bgGeomFailures}/${dets.size()} detections hit a geometry-robustness failure in the local-bg annulus and were assigned NaN bg-sub (→ Negative). Negligible if small; investigate if large."
-println "D-04 finite-value counts (of ${dets.size()}): rawFos=${nFiniteRawFos} rawTdt=${nFiniteRawTdt} | bgFos=${nFiniteBgFos} bgTdt=${nFiniteBgTdt} | bgsubFos=${nFiniteBgsubFos} bgsubTdt=${nFiniteBgsubTdt}"
+    println "  NOTE: ${bgGeomFailures} detection-marker annulus computation(s) hit a geometry-robustness failure and were assigned NaN bg-sub (→ Negative contribution). Negligible if small; investigate if large."
+println "D-04 finite-value counts (of ${dets.size()} detections):"
+markers.each { m -> println "  ${m.name}: raw=${nFiniteRaw[m.name]} bg=${nFiniteBg[m.name]} bgsub=${nFiniteBgsub[m.name]}" }
 println "Background-subtracted measures written for ${dets.size()} detections (D-04)."
 
 // ── isExcluded: shared centroid-in-excludeRois test (reused by threshold ───
@@ -426,22 +421,19 @@ def isExcluded = { detection ->
 
 // ── D-05 (redesign): self-calibrating robust threshold on the bg-sub measure ──
 // The original strategy took the nth (2nd) histogram peak, assuming a BIMODAL
-// distribution (background peak + positive peak). TdT+/Fos+ are SPARSE markers
-// (a few % positive), so the bg-sub histogram is unimodal/background-dominated,
-// findPeaks returns 0 peaks -> NaN -> the safe-write guard kept placeholder JSONs
-// carrying RAW-scale cutoffs, and 100% of cells classified Negative (D-05 gate
-// failure, 2026-07-10). Replaced with a robust cut a few outlier-resistant SDs
-// above the near-zero background band:
-//     threshold = background_mode + k * (1.4826 * MAD)
+// distribution (background peak + positive peak). Sparse markers (a few %
+// positive) give a unimodal/background-dominated bg-sub histogram, findPeaks
+// returns 0 peaks -> NaN -> the safe-write guard kept placeholder JSONs
+// carrying RAW-scale cutoffs, and 100% of cells classified Negative (the
+// original D-05 gate failure). Replaced with a robust cut a few
+// outlier-resistant SDs above the near-zero background band:
+//     threshold = background_mode + k_robust * (1.4826 * MAD)
 // background_mode: median of the bg-sub population (a cell in its own local
 //   background has bg-sub ~= 0, so the median tracks the background mode). MAD:
 //   median absolute deviation; 1.4826*MAD is a robust SD estimate. Auto-derives
-//   per section (D-01 series-scalability), needs no bimodality assumption.
+//   per marker per section (D-01 series-scalability), needs no bimodality assumption.
 def classifiable = dets.findAll { !isExcluded(it) }   // Pitfall 6: exclude config-declared regions from the derivation population
 println "Threshold derivation population (excluding ${excludeAcronyms}): ${classifiable.size()} / ${dets.size()} detections"
-
-// k_robust now comes from pipeline.yml (D-09) -- see kRobust above. Sweep 3-5 on
-// this section, then lock as the series seed. Higher k = stricter positive call.
 
 /** Median of a list of Doubles (linear-interpolated for even n); NaN if empty. */
 def medianOf = { List<Double> xs ->
@@ -478,24 +470,14 @@ def positiveFraction = { List<Double> values, double threshold ->
     int pos = values.count { (it as double) >= threshold }
     return (double) pos / values.size()
 }
-
-// Re-derive the operative D-05 thresholds on the bg-sub measure via the robust
-// self-calibrating cut (background median + k robust SDs, k from pipeline.yml).
-// These are the values classification actually uses.
-def bgFosValues = classifiable.collect { it.getMeasurements().get("Nucleus: AF488-T3 mean (bg-sub)")?.doubleValue() }.findAll { it != null && !Double.isNaN(it) }
-def bgTdtValues = classifiable.collect { it.getMeasurements().get("Cytoplasm: AF568-T2 mean (bg-sub)")?.doubleValue() }.findAll { it != null && !Double.isNaN(it) }
-double newFosThreshold = robustThreshold(bgFosValues, kRobust)
-double newTdtThreshold = robustThreshold(bgTdtValues, kRobust)
-println "Re-derived Fos threshold (bg-sub measure, median + ${kRobust}*1.4826*MAD): ${newFosThreshold}"
-println "Re-derived TdT threshold (bg-sub measure, median + ${kRobust}*1.4826*MAD): ${newTdtThreshold}"
-
-// Mandatory self-check (redesigned for the robust strategy): instead of comparing
-// to the superseded RAW cutoffs (13000.4538 / 16766.4671 -- wrong scale for the
-// bg-sub measure), verify each derived threshold lands in a sane band: finite,
-// strictly above the background band (> 0), and calling a SPARSE but non-zero
-// fraction of the classifiable population positive. posFrac == 0 reproduces the
-// exact D-05 gate failure (all-Negative); posFrac > ~0.5 means the cut is far too
-// low. Prints the median/robust-SD that fed each threshold for tuning k.
+/**
+ * Mandatory self-check (per marker): instead of comparing to any superseded
+ * RAW cutoff, verify each derived threshold lands in a sane band: finite,
+ * strictly above the background band (> 0), and calling a SPARSE but non-zero
+ * fraction of the classifiable population positive. posFrac == 0 reproduces the
+ * exact D-05 gate failure (all-Negative); posFrac > ~0.5 means the cut is far too
+ * low. Prints the median/robust-SD that fed each threshold for tuning k_robust.
+ */
 def selfCheck = { String marker, List<Double> values, double threshold ->
     double med = medianOf(values)
     double mad = madOf(values, med)
@@ -510,12 +492,9 @@ def selfCheck = { String marker, List<Double> values, double threshold ->
     println String.format("  %s: n=%d  median=%.4f  robustSD(1.4826*MAD)=%.4f  threshold=%.4f  -> %s",
             marker, values.size(), med, robustSd, threshold, verdict)
 }
-println "Self-check (D-05 redesign): robust-threshold sanity band on the bg-sub population"
-selfCheck("Fos (Nucleus AF488-T3 bg-sub)", bgFosValues, newFosThreshold)
-selfCheck("TdT (Cytoplasm AF568-T2 bg-sub)", bgTdtValues, newTdtThreshold)
 
-/** Writes a bg-sub classifier JSON in the same shape as the existing Fos/TdT classifier files, so readSpec parses it unmodified. */
-def writeBgsubClassifierSpec = { String fn, String measurement, double threshold ->
+/** Writes a bg-sub classifier JSON in the same shape as the legacy Fos/TdT classifier files, so readSpec parses it unmodified. */
+def writeBgsubClassifierSpec = { String fn, String measurement, double threshold, double k ->
     def obj = new JsonObject()
     obj.addProperty("object_classifier_type", "SimpleClassifier")
     def func = new JsonObject()
@@ -531,60 +510,99 @@ def writeBgsubClassifierSpec = { String fn, String measurement, double threshold
     pathClasses.add("Positive")
     obj.add("pathClasses", pathClasses)
     obj.addProperty("filter", "DETECTIONS_ALL")
-    obj.addProperty("note", "D-05: threshold re-derived by 02_detect_classify.groovy via the robust self-calibrating cut (background median + k*1.4826*MAD, k=${kRobust}) on the (bg-sub) measure at ${new Date()}.")
+    obj.addProperty("note", "D-05: threshold re-derived by 02_detect_classify.groovy via the robust self-calibrating cut (background median + k*1.4826*MAD, k_robust=${k}, from pipeline.yml) on the (bg-sub) measure at ${new Date()}.")
     new File(base, fn).text = new GsonBuilder().setPrettyPrinting().create().toJson(obj)
 }
+
+// Re-derive the operative D-05 threshold PER MARKER on the bg-sub measure via
+// the robust self-calibrating cut (background median + k_robust robust SDs).
+// These are the values classification actually uses. Filenames/measurement
+// keys are entirely config-driven (D-09) -- never the two legacy literal names.
+def markerBgValues = [:]
+def markerThresholds = [:]
+def markerSpecs = [:]   // name -> [meas:, thr:] re-read from disk (safe-write round-trip)
+
+markers.each { m ->
+    String label = COMPARTMENT_LABELS[m.compartment]
+    String bgsubKey = "${label}: ${m.channel} mean (bg-sub)"
+    def values = classifiable.collect { it.getMeasurements().get(bgsubKey)?.doubleValue() }.findAll { it != null && !Double.isNaN(it) }
+    markerBgValues[m.name] = values
+    markerThresholds[m.name] = robustThreshold(values, kRobust)
+    println "Re-derived ${m.name} threshold (bg-sub measure, median + ${kRobust}*1.4826*MAD): ${markerThresholds[m.name]}"
+}
+
+println "Self-check (D-05 redesign): robust-threshold sanity band on the bg-sub population, per marker"
+markers.each { m -> selfCheck(m.name, markerBgValues[m.name], markerThresholds[m.name]) }
+
 // Only overwrite the committed placeholder if this run actually produced a
 // finite threshold (idempotent/safe: a run with insufficient/no data leaves the
 // last-known-good JSON on disk rather than clobbering it with NaN).
-if (!Double.isNaN(newFosThreshold)) {
-    writeBgsubClassifierSpec("Fos_Classifier_20x_bgsub.json", "Nucleus: AF488-T3 mean (bg-sub)", newFosThreshold)
-} else {
-    println "  WARNING: Fos bg-sub threshold re-derivation failed (NaN) -- keeping existing Fos_Classifier_20x_bgsub.json unchanged."
+markers.each { m ->
+    String label = COMPARTMENT_LABELS[m.compartment]
+    String bgsubKey = "${label}: ${m.channel} mean (bg-sub)"
+    String fn = "${m.name}_Classifier_bgsub.json"
+    double thr = markerThresholds[m.name]
+    if (!Double.isNaN(thr)) {
+        writeBgsubClassifierSpec(fn, bgsubKey, thr, kRobust)
+    } else {
+        println "  WARNING: ${m.name} bg-sub threshold re-derivation failed (NaN) -- keeping existing ${fn} unchanged."
+    }
+    // Re-read via the SAME readSpec closure used previously (schema-compatible round-trip).
+    markerSpecs[m.name] = readSpec(fn)
+    println "${m.name} rule (bg-sub, D-05, OPERATIVE): ${markerSpecs[m.name].meas} >= ${markerSpecs[m.name].thr}"
 }
-if (!Double.isNaN(newTdtThreshold)) {
-    writeBgsubClassifierSpec("TdT_classifier_bgsub.json", "Cytoplasm: AF568-T2 mean (bg-sub)", newTdtThreshold)
-} else {
-    println "  WARNING: TdT bg-sub threshold re-derivation failed (NaN) -- keeping existing TdT_classifier_bgsub.json unchanged."
-}
-
-// Re-read via the SAME readSpec closure used for the old JSONs (schema-compatible round-trip).
-def fosBg = readSpec("Fos_Classifier_20x_bgsub.json")
-def tdtBg = readSpec("TdT_classifier_bgsub.json")
-println "Fos rule (bg-sub, D-05, OPERATIVE): ${fosBg.meas} >= ${fosBg.thr}"
-println "TdT rule (bg-sub, D-05, OPERATIVE): ${tdtBg.meas} >= ${tdtBg.thr}"
-println "(Superseded reference only, NOT operative: Fos raw >= ${fos.thr}, TdT raw >= ${tdt.thr} -- Pitfall 9)"
 
 // ── compound classification core (nucleus-anchored, no proximity/overlap) ───
-int cFos = 0, cTdt = 0, cDbl = 0, cNeg = 0, cExc = 0
+// D-03: Double+ emitted ONLY when >=2 non-anchor markers are declared AND >=2
+// are positive on the cell. A single-marker config degenerates to
+// "<marker>+"/Negative with no code path naming an absent marker.
+int cExc = 0, cNeg = 0, cDbl = 0
+def markerOnlyCounts = markers.collectEntries { [(it.name): 0] }
 dets.each { d ->
     if (isExcluded(d)) {
         d.setPathClass(getPathClass("Excluded")); cExc++; return
     }
-    def vf = d.getMeasurements().get(fosBg.meas)
-    def vt = d.getMeasurements().get(tdtBg.meas)
-    boolean isF = vf != null && !Double.isNaN(vf.doubleValue()) && vf.doubleValue() >= fosBg.thr
-    boolean isT = vt != null && !Double.isNaN(vt.doubleValue()) && vt.doubleValue() >= tdtBg.thr
-    def cls = (isF && isT) ? "Double+" : isF ? "Fos+" : isT ? "TdT+" : "Negative"
-    d.setPathClass(getPathClass(cls))
-    if (cls == "Double+") cDbl++ else if (cls == "Fos+") cFos++ else if (cls == "TdT+") cTdt++ else cNeg++
+    def positiveMarkers = markers.findAll { m ->
+        def spec = markerSpecs[m.name]
+        def v = d.getMeasurements().get(spec.meas)
+        v != null && !Double.isNaN(v.doubleValue()) && v.doubleValue() >= spec.thr
+    }
+    if (emitDouble && positiveMarkers.size() >= 2) {
+        d.setPathClass(getPathClass("Double+")); cDbl++
+    } else if (positiveMarkers.size() == 1) {
+        def name = positiveMarkers[0].name
+        d.setPathClass(getPathClass("${name}+"))
+        markerOnlyCounts[name] = markerOnlyCounts[name] + 1
+    } else {
+        d.setPathClass(getPathClass("Negative")); cNeg++
+    }
 }
 fireHierarchyUpdate()
 
-// ── class-breakdown console print ────────────────────────────────────────────
+// ── class-breakdown console print (config-driven; no fixed marker pair) ────
 int n = dets.size()
 int classified = n - cExc
 def pct = { c -> classified > 0 ? 100.0 * c / classified : 0.0 }   // % of CLASSIFIED (non-excluded) nuclei
-println "Total nuclei: ${n}  |  Excluded (DG/ventricles): ${cExc}  |  Classified: ${classified}"
+println "Total nuclei: ${n}  |  Excluded: ${cExc}  |  Classified: ${classified}"
 println String.format("  Negative : %d (%.1f%%)", cNeg, pct(cNeg))
-println String.format("  Fos+ only: %d (%.1f%%)", cFos, pct(cFos))
-println String.format("  TdT+ only: %d (%.1f%%)", cTdt, pct(cTdt))
-println String.format("  Double+  : %d (%.1f%%)", cDbl, pct(cDbl))
-println String.format("  => Total Fos+ (incl. Double+): %d (%.1f%%)", cFos + cDbl, pct(cFos + cDbl))
-println String.format("  => Total TdT+ (incl. Double+): %d (%.1f%%)", cTdt + cDbl, pct(cTdt + cDbl))
-def denom = cTdt + cDbl
-println String.format("  Advisory Double+/TdT+ ratio: %s",
-        denom > 0 ? String.format("%.3f", (double) cDbl / denom) : "n/a")
+markers.each { m ->
+    int c = markerOnlyCounts[m.name]
+    println String.format("  %s+ only: %d (%.1f%%)", m.name, c, pct(c))
+}
+if (emitDouble) {
+    println String.format("  Double+  : %d (%.1f%%)", cDbl, pct(cDbl))
+}
+markers.each { m ->
+    int total = markerOnlyCounts[m.name] + (emitDouble ? cDbl : 0)
+    println String.format("  => Total %s+ (incl. Double+): %d (%.1f%%)", m.name, total, pct(total))
+}
+if (emitDouble) {
+    markers.each { m ->
+        int totalM = markerOnlyCounts[m.name] + cDbl
+        println String.format("  Advisory Double+/%s+ ratio: %s", m.name,
+                totalM > 0 ? String.format("%.3f", (double) cDbl / totalM) : "n/a")
+    }
+}
 
 // ── SC2: atlas region label per cell (ephemeral centroid-in-ROI lookup) ─────
 // Leaf region annotations only: an ABBA/Allen annotation with no annotation
@@ -646,8 +664,15 @@ if (!dets.isEmpty()) {
 // above (qc_detection_gates.groovy template) — NOT by reading the pre-existing
 // results/<image>_regions.tsv on disk, which reflects BraiAnDetect's own
 // (incompatible, Deviation #1) classifier application and predates this
-// script's Double+/Fos+/TdT+/Negative ground truth (RESEARCH Pitfall 1).
-def ROLLUP_CLASSES = ["Negative", "Fos+", "TdT+", "Double+", "Excluded"]
+// script's ground truth (RESEARCH Pitfall 1).
+// NOTE: this rollup uses the OLD (pre-CR-01) child-annotation-emptiness leaf
+// heuristic and independent centroid-in-parent-ROI counting -- it is
+// SUPERSEDED by the consolidated export's CR-01 leaf-summed rollup (06.1-03,
+// D-10). Left in place here as a lightweight in-QuPath sanity view only; the
+// class-name LIST itself is built from the declared marker set (not a fixed
+// Fos+/TdT+ pair) so it never silently omits a declared marker's counts.
+def ROLLUP_CLASSES = (["Negative"] + markers.collect { "${it.name}+" } +
+        (emitDouble ? ["Double+"] : []) + ["Excluded"])
 println "Per-region class count rollup (Count: <class> written onto each leaf region annotation):"
 regionAnnotations.each { ann ->
     def roi = ann.getROI()
@@ -669,10 +694,10 @@ fireHierarchyUpdate()
 // Confirms the ABBA-registered CCFv3 coordinate for a handful of classified
 // cells falls in the 5,000-10,000 µm range (proves µm units, not mm or a raw
 // atlas voxel index). This is a sanity check only, not the full per-cell
-// Atlas_X/Y/Z export column (that is v2 EXP-01/EXP-03 — Claude's-Discretion,
-// 03-CONTEXT.md). Pattern 5 (RESEARCH.md): AtlasTools.getAtlasToPixelTransform
-// is the official BIOP/ABBA-author pattern, cross-verified against the
-// installed qupath-extension-abba-0.4.0.jar + bundled imglib2-realtransform.
+// Atlas_X/Y/Z export column (that is the consolidated export, 06.1-03).
+// Pattern 5 (RESEARCH.md): AtlasTools.getAtlasToPixelTransform is the official
+// BIOP/ABBA-author pattern, cross-verified against the installed
+// qupath-extension-abba-0.4.0.jar + bundled imglib2-realtransform.
 println "Atlas_X sanity print (sample of classified cells, expect Atlas_X in [5000, 10000] µm per SC3):"
 // imageData already resolved above (shared handle, D-04 pre-pass) -- do not redeclare.
 def pixelToAtlasTransform = null
@@ -684,9 +709,10 @@ try {
 if (pixelToAtlasTransform == null) {
     println "  No ABBA registration transform available on this entry — skipping Atlas_X sanity print."
 } else {
-    def sample = dets.findAll { it.getPathClass()?.toString() in ["Fos+", "TdT+", "Double+"] }.take(5)
+    def positiveClassNames = (markers.collect { "${it.name}+" } + (emitDouble ? ["Double+"] : [])) as Set
+    def sample = dets.findAll { positiveClassNames.contains(it.getPathClass()?.toString()) }.take(5)
     if (sample.isEmpty()) {
-        println "  No Fos+/TdT+/Double+ classified cells to sample from."
+        println "  No positively-classified cells to sample from."
     }
     sample.each { d ->
         def r = d.getROI()
