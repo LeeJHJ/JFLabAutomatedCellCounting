@@ -1,0 +1,17 @@
+{
+  "object_classifier_type": "SimpleClassifier",
+  "function": {
+    "classifier_fun": "ClassifyByMeasurementFunction",
+    "measurement": "Cytoplasm: AF568-T2 mean (bg-sub)",
+    "pathClassBelow": "Negative",
+    "pathClassEquals": "Positive",
+    "pathClassAbove": "Positive",
+    "threshold": 1319.5649420898435
+  },
+  "pathClasses": [
+    "Negative",
+    "Positive"
+  ],
+  "filter": "DETECTIONS_ALL",
+  "note": "D-05: threshold re-derived by 02_detect_classify.groovy via the robust self-calibrating cut (background median + k*1.4826*MAD, k\u003d3.0) on the (bg-sub) measure at Wed Jul 22 17:18:35 EDT 2026."
+}

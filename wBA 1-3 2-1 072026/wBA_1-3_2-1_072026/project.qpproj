@@ -1,0 +1,644 @@
+{
+  "version": "0.6.0",
+  "createTimestamp": 1784590824044,
+  "modifyTimestamp": 1784590824044,
+  "uri": "file:/home/jflab/Analysis/wBA%201-3%202-1%20072026/wBA_1-3_2-1_072026/project.qpproj",
+  "lastID": 5,
+  "images": [
+    {
+      "serverBuilder": {
+        "builderType": "pyramidize",
+        "builder": {
+          "builderType": "uri",
+          "providerClassName": "qupath.lib.images.servers.bioformats.BioFormatsServerBuilder",
+          "uri": "file:/home/jflab/Analysis/Automated%20Cell%20Counting/wBA%20Sungmo/wBA1-3_s5_MIP.ome.tiff",
+          "args": [
+            "--series",
+            "0"
+          ],
+          "metadata": {
+            "name": "wBA1-3_s5_MIP.ome.tiff - wBA1-3_s5",
+            "width": 14824,
+            "height": 11138,
+            "sizeZ": 1,
+            "sizeT": 1,
+            "channelType": "DEFAULT",
+            "isRGB": false,
+            "pixelType": "UINT16",
+            "levels": [
+              {
+                "downsample": 1.0,
+                "width": 14824,
+                "height": 11138
+              }
+            ],
+            "channels": [
+              {
+                "name": "AF568-T2",
+                "color": -65536
+              },
+              {
+                "name": "AF488-T3",
+                "color": -16711936
+              },
+              {
+                "name": "DAPI-T4",
+                "color": -16776961
+              }
+            ],
+            "pixelCalibration": {
+              "pixelWidth": {
+                "value": 0.6905355,
+                "unit": "µm"
+              },
+              "pixelHeight": {
+                "value": 0.6905355,
+                "unit": "µm"
+              },
+              "zSpacing": {
+                "value": 1.0,
+                "unit": "z-slice"
+              },
+              "timeUnit": "SECONDS",
+              "timepoints": []
+            },
+            "preferredTileWidth": 14824,
+            "preferredTileHeight": 11138
+          }
+        },
+        "metadata": {
+          "name": "wBA1-3_s5_MIP.ome.tiff - wBA1-3_s5",
+          "width": 14824,
+          "height": 11138,
+          "sizeZ": 1,
+          "sizeT": 1,
+          "channelType": "DEFAULT",
+          "isRGB": false,
+          "pixelType": "UINT16",
+          "levels": [
+            {
+              "downsample": 1.0,
+              "width": 14824,
+              "height": 11138
+            },
+            {
+              "downsample": 4.0,
+              "width": 3706,
+              "height": 2784
+            },
+            {
+              "downsample": 16.0,
+              "width": 926,
+              "height": 696
+            }
+          ],
+          "channels": [
+            {
+              "name": "AF568-T2",
+              "color": -65536
+            },
+            {
+              "name": "AF488-T3",
+              "color": -16711936
+            },
+            {
+              "name": "DAPI-T4",
+              "color": -16776961
+            }
+          ],
+          "pixelCalibration": {
+            "pixelWidth": {
+              "value": 0.6905355,
+              "unit": "µm"
+            },
+            "pixelHeight": {
+              "value": 0.6905355,
+              "unit": "µm"
+            },
+            "zSpacing": {
+              "value": 1.0,
+              "unit": "z-slice"
+            },
+            "timeUnit": "SECONDS",
+            "timepoints": []
+          },
+          "preferredTileWidth": 256,
+          "preferredTileHeight": 256
+        }
+      },
+      "entryID": 1,
+      "randomizedName": "4a5de25d-a0d1-4165-ba48-4cd09b45b82d",
+      "imageName": "wBA1-3_s5_MIP.ome.tiff - wBA1-3_s5",
+      "metadata": {},
+      "tags": []
+    },
+    {
+      "serverBuilder": {
+        "builderType": "pyramidize",
+        "builder": {
+          "builderType": "uri",
+          "providerClassName": "qupath.lib.images.servers.bioformats.BioFormatsServerBuilder",
+          "uri": "file:/home/jflab/Analysis/Automated%20Cell%20Counting/wBA%20Sungmo/wBA1-3_s4_MIP.ome.tiff",
+          "args": [
+            "--series",
+            "0"
+          ],
+          "metadata": {
+            "name": "wBA1-3_s4_MIP.ome.tiff - wBA1-3_s4",
+            "width": 13903,
+            "height": 10216,
+            "sizeZ": 1,
+            "sizeT": 1,
+            "channelType": "DEFAULT",
+            "isRGB": false,
+            "pixelType": "UINT16",
+            "levels": [
+              {
+                "downsample": 1.0,
+                "width": 13903,
+                "height": 10216
+              }
+            ],
+            "channels": [
+              {
+                "name": "AF568-T2",
+                "color": -65536
+              },
+              {
+                "name": "AF488-T3",
+                "color": -16711936
+              },
+              {
+                "name": "DAPI-T4",
+                "color": -16776961
+              }
+            ],
+            "pixelCalibration": {
+              "pixelWidth": {
+                "value": 0.6905355,
+                "unit": "µm"
+              },
+              "pixelHeight": {
+                "value": 0.6905355,
+                "unit": "µm"
+              },
+              "zSpacing": {
+                "value": 1.0,
+                "unit": "z-slice"
+              },
+              "timeUnit": "SECONDS",
+              "timepoints": []
+            },
+            "preferredTileWidth": 13903,
+            "preferredTileHeight": 10216
+          }
+        },
+        "metadata": {
+          "name": "wBA1-3_s4_MIP.ome.tiff - wBA1-3_s4",
+          "width": 13903,
+          "height": 10216,
+          "sizeZ": 1,
+          "sizeT": 1,
+          "channelType": "DEFAULT",
+          "isRGB": false,
+          "pixelType": "UINT16",
+          "levels": [
+            {
+              "downsample": 1.0,
+              "width": 13903,
+              "height": 10216
+            },
+            {
+              "downsample": 4.0,
+              "width": 3475,
+              "height": 2554
+            },
+            {
+              "downsample": 16.0,
+              "width": 868,
+              "height": 638
+            }
+          ],
+          "channels": [
+            {
+              "name": "AF568-T2",
+              "color": -65536
+            },
+            {
+              "name": "AF488-T3",
+              "color": -16711936
+            },
+            {
+              "name": "DAPI-T4",
+              "color": -16776961
+            }
+          ],
+          "pixelCalibration": {
+            "pixelWidth": {
+              "value": 0.6905355,
+              "unit": "µm"
+            },
+            "pixelHeight": {
+              "value": 0.6905355,
+              "unit": "µm"
+            },
+            "zSpacing": {
+              "value": 1.0,
+              "unit": "z-slice"
+            },
+            "timeUnit": "SECONDS",
+            "timepoints": []
+          },
+          "preferredTileWidth": 256,
+          "preferredTileHeight": 256
+        }
+      },
+      "entryID": 2,
+      "randomizedName": "ce8f0bf6-e26b-406b-a4ac-37c5e289ddd8",
+      "imageName": "wBA1-3_s4_MIP.ome.tiff - wBA1-3_s4",
+      "metadata": {},
+      "tags": []
+    },
+    {
+      "serverBuilder": {
+        "builderType": "pyramidize",
+        "builder": {
+          "builderType": "uri",
+          "providerClassName": "qupath.lib.images.servers.bioformats.BioFormatsServerBuilder",
+          "uri": "file:/home/jflab/Analysis/Automated%20Cell%20Counting/wBA%20Sungmo/wBA1-3_s3_MIP.ome.tiff",
+          "args": [
+            "--series",
+            "0"
+          ],
+          "metadata": {
+            "name": "wBA1-3_s3_MIP.ome.tiff - wBA1-3_s3",
+            "width": 14824,
+            "height": 10216,
+            "sizeZ": 1,
+            "sizeT": 1,
+            "channelType": "DEFAULT",
+            "isRGB": false,
+            "pixelType": "UINT16",
+            "levels": [
+              {
+                "downsample": 1.0,
+                "width": 14824,
+                "height": 10216
+              }
+            ],
+            "channels": [
+              {
+                "name": "AF568-T2",
+                "color": -65536
+              },
+              {
+                "name": "AF488-T3",
+                "color": -16711936
+              },
+              {
+                "name": "DAPI-T4",
+                "color": -16776961
+              }
+            ],
+            "pixelCalibration": {
+              "pixelWidth": {
+                "value": 0.6905355,
+                "unit": "µm"
+              },
+              "pixelHeight": {
+                "value": 0.6905355,
+                "unit": "µm"
+              },
+              "zSpacing": {
+                "value": 1.0,
+                "unit": "z-slice"
+              },
+              "timeUnit": "SECONDS",
+              "timepoints": []
+            },
+            "preferredTileWidth": 14824,
+            "preferredTileHeight": 10216
+          }
+        },
+        "metadata": {
+          "name": "wBA1-3_s3_MIP.ome.tiff - wBA1-3_s3",
+          "width": 14824,
+          "height": 10216,
+          "sizeZ": 1,
+          "sizeT": 1,
+          "channelType": "DEFAULT",
+          "isRGB": false,
+          "pixelType": "UINT16",
+          "levels": [
+            {
+              "downsample": 1.0,
+              "width": 14824,
+              "height": 10216
+            },
+            {
+              "downsample": 4.0,
+              "width": 3706,
+              "height": 2554
+            },
+            {
+              "downsample": 16.0,
+              "width": 926,
+              "height": 638
+            }
+          ],
+          "channels": [
+            {
+              "name": "AF568-T2",
+              "color": -65536
+            },
+            {
+              "name": "AF488-T3",
+              "color": -16711936
+            },
+            {
+              "name": "DAPI-T4",
+              "color": -16776961
+            }
+          ],
+          "pixelCalibration": {
+            "pixelWidth": {
+              "value": 0.6905355,
+              "unit": "µm"
+            },
+            "pixelHeight": {
+              "value": 0.6905355,
+              "unit": "µm"
+            },
+            "zSpacing": {
+              "value": 1.0,
+              "unit": "z-slice"
+            },
+            "timeUnit": "SECONDS",
+            "timepoints": []
+          },
+          "preferredTileWidth": 256,
+          "preferredTileHeight": 256
+        }
+      },
+      "entryID": 3,
+      "randomizedName": "2eabcf68-59bc-431e-88e9-9ffc1f02592d",
+      "imageName": "wBA1-3_s3_MIP.ome.tiff - wBA1-3_s3",
+      "metadata": {},
+      "tags": []
+    },
+    {
+      "serverBuilder": {
+        "builderType": "pyramidize",
+        "builder": {
+          "builderType": "uri",
+          "providerClassName": "qupath.lib.images.servers.bioformats.BioFormatsServerBuilder",
+          "uri": "file:/home/jflab/Analysis/Automated%20Cell%20Counting/wBA%20Sungmo/wBA1-3_s2_MIP.ome.tiff",
+          "args": [
+            "--series",
+            "0"
+          ],
+          "metadata": {
+            "name": "wBA1-3_s2_MIP.ome.tiff - wBA1-3_s2",
+            "width": 13903,
+            "height": 10216,
+            "sizeZ": 1,
+            "sizeT": 1,
+            "channelType": "DEFAULT",
+            "isRGB": false,
+            "pixelType": "UINT16",
+            "levels": [
+              {
+                "downsample": 1.0,
+                "width": 13903,
+                "height": 10216
+              }
+            ],
+            "channels": [
+              {
+                "name": "AF568-T2",
+                "color": -65536
+              },
+              {
+                "name": "AF488-T3",
+                "color": -16711936
+              },
+              {
+                "name": "DAPI-T4",
+                "color": -16776961
+              }
+            ],
+            "pixelCalibration": {
+              "pixelWidth": {
+                "value": 0.6905355,
+                "unit": "µm"
+              },
+              "pixelHeight": {
+                "value": 0.6905355,
+                "unit": "µm"
+              },
+              "zSpacing": {
+                "value": 1.0,
+                "unit": "z-slice"
+              },
+              "timeUnit": "SECONDS",
+              "timepoints": []
+            },
+            "preferredTileWidth": 13903,
+            "preferredTileHeight": 10216
+          }
+        },
+        "metadata": {
+          "name": "wBA1-3_s2_MIP.ome.tiff - wBA1-3_s2",
+          "width": 13903,
+          "height": 10216,
+          "sizeZ": 1,
+          "sizeT": 1,
+          "channelType": "DEFAULT",
+          "isRGB": false,
+          "pixelType": "UINT16",
+          "levels": [
+            {
+              "downsample": 1.0,
+              "width": 13903,
+              "height": 10216
+            },
+            {
+              "downsample": 4.0,
+              "width": 3475,
+              "height": 2554
+            },
+            {
+              "downsample": 16.0,
+              "width": 868,
+              "height": 638
+            }
+          ],
+          "channels": [
+            {
+              "name": "AF568-T2",
+              "color": -65536
+            },
+            {
+              "name": "AF488-T3",
+              "color": -16711936
+            },
+            {
+              "name": "DAPI-T4",
+              "color": -16776961
+            }
+          ],
+          "pixelCalibration": {
+            "pixelWidth": {
+              "value": 0.6905355,
+              "unit": "µm"
+            },
+            "pixelHeight": {
+              "value": 0.6905355,
+              "unit": "µm"
+            },
+            "zSpacing": {
+              "value": 1.0,
+              "unit": "z-slice"
+            },
+            "timeUnit": "SECONDS",
+            "timepoints": []
+          },
+          "preferredTileWidth": 256,
+          "preferredTileHeight": 256
+        }
+      },
+      "entryID": 4,
+      "randomizedName": "d579761a-77c0-46ce-bd74-71befafc50c7",
+      "imageName": "wBA1-3_s2_MIP.ome.tiff - wBA1-3_s2",
+      "metadata": {},
+      "tags": []
+    },
+    {
+      "serverBuilder": {
+        "builderType": "pyramidize",
+        "builder": {
+          "builderType": "uri",
+          "providerClassName": "qupath.lib.images.servers.bioformats.BioFormatsServerBuilder",
+          "uri": "file:/home/jflab/Analysis/Automated%20Cell%20Counting/wBA%20Sungmo/wBA1-3_s1_MIP.ome.tiff",
+          "args": [
+            "--series",
+            "0"
+          ],
+          "metadata": {
+            "name": "wBA1-3_s1_MIP.ome.tiff - wBA1-3_s1",
+            "width": 13902,
+            "height": 9295,
+            "sizeZ": 1,
+            "sizeT": 1,
+            "channelType": "DEFAULT",
+            "isRGB": false,
+            "pixelType": "UINT16",
+            "levels": [
+              {
+                "downsample": 1.0,
+                "width": 13902,
+                "height": 9295
+              }
+            ],
+            "channels": [
+              {
+                "name": "AF568-T2",
+                "color": -65536
+              },
+              {
+                "name": "AF488-T3",
+                "color": -16711936
+              },
+              {
+                "name": "DAPI-T4",
+                "color": -16776961
+              }
+            ],
+            "pixelCalibration": {
+              "pixelWidth": {
+                "value": 0.6905355,
+                "unit": "µm"
+              },
+              "pixelHeight": {
+                "value": 0.6905355,
+                "unit": "µm"
+              },
+              "zSpacing": {
+                "value": 1.0,
+                "unit": "z-slice"
+              },
+              "timeUnit": "SECONDS",
+              "timepoints": []
+            },
+            "preferredTileWidth": 13902,
+            "preferredTileHeight": 9295
+          }
+        },
+        "metadata": {
+          "name": "wBA1-3_s1_MIP.ome.tiff - wBA1-3_s1",
+          "width": 13902,
+          "height": 9295,
+          "sizeZ": 1,
+          "sizeT": 1,
+          "channelType": "DEFAULT",
+          "isRGB": false,
+          "pixelType": "UINT16",
+          "levels": [
+            {
+              "downsample": 1.0,
+              "width": 13902,
+              "height": 9295
+            },
+            {
+              "downsample": 4.0,
+              "width": 3475,
+              "height": 2323
+            },
+            {
+              "downsample": 16.0,
+              "width": 868,
+              "height": 580
+            }
+          ],
+          "channels": [
+            {
+              "name": "AF568-T2",
+              "color": -65536
+            },
+            {
+              "name": "AF488-T3",
+              "color": -16711936
+            },
+            {
+              "name": "DAPI-T4",
+              "color": -16776961
+            }
+          ],
+          "pixelCalibration": {
+            "pixelWidth": {
+              "value": 0.6905355,
+              "unit": "µm"
+            },
+            "pixelHeight": {
+              "value": 0.6905355,
+              "unit": "µm"
+            },
+            "zSpacing": {
+              "value": 1.0,
+              "unit": "z-slice"
+            },
+            "timeUnit": "SECONDS",
+            "timepoints": []
+          },
+          "preferredTileWidth": 256,
+          "preferredTileHeight": 256
+        }
+      },
+      "entryID": 5,
+      "randomizedName": "48639925-6af5-4a85-841b-d3e4b110ccb9",
+      "imageName": "wBA1-3_s1_MIP.ome.tiff - wBA1-3_s1",
+      "metadata": {},
+      "tags": []
+    }
+  ]
+}

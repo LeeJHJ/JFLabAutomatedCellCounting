@@ -1,0 +1,16 @@
+{
+  "object_classifier_type": "SimpleClassifier",
+  "function": {
+    "classifier_fun": "ClassifyByMeasurementFunction",
+    "measurement": "Cytoplasm: AF568-T2 mean",
+    "pathClassBelow": "Negative",
+    "pathClassEquals": "Positive",
+    "pathClassAbove": "Positive",
+    "threshold": 16766.4671
+  },
+  "pathClasses": [
+    "Negative",
+    "Positive"
+  ],
+  "filter": "DETECTIONS_ALL"
+}

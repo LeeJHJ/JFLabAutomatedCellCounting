@@ -1,0 +1,16 @@
+{
+  "object_classifier_type": "SimpleClassifier",
+  "function": {
+    "classifier_fun": "ClassifyByMeasurementFunction",
+    "measurement": "Nucleus: AF488-T3 mean",
+    "pathClassBelow": "Negative",
+    "pathClassEquals": "Positive",
+    "pathClassAbove": "Positive",
+    "threshold": 13000.4538
+  },
+  "pathClasses": [
+    "Negative",
+    "Positive"
+  ],
+  "filter": "DETECTIONS_ALL"
+}
