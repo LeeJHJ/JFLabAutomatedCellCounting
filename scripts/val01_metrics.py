@@ -1,32 +1,41 @@
 #!/usr/bin/env python3
-"""val01_metrics.py — compute the four VAL-01 bioplausibility metrics (D-03).
+"""val01_metrics.py — compute the VAL-01 bioplausibility metrics (D-03), generalized to a
+variable marker set (D-04).
 
-Reads the per-cell and per-region-area TSVs exported by
-``03_export_val01_metrics.groovy`` (QuPath, human-run "Run for project", AFTER
-02_detect_classify.groovy) and computes, for the single M3 hippocampus entry:
+Reads the per-cell and per-region TSVs exported by ``03_export_region_table.groovy``
+(QuPath, human-run "Run for project", AFTER ``02_detect_classify.groovy``) and computes,
+for the current entry's slice:
 
   1. Double+/TdT+ ratio (both the raw n(Double+)/n(TdT+) convention and the
-     Double+/(Double++TdT+) co-expression fraction), broken down per
-     hippocampal subfield (region_label is a per-cell column).
+     Double+/(Double++TdT+) co-expression fraction), broken down per region
+     (region_label is a per-cell column). SKIPPED (with a printed note) when
+     the per-cell TSV has no TdT_bgsub column, or only one marker's *_bgsub
+     column is present at all (Double+ is never emitted on a single-marker
+     config per D-03, so the ratio is undefined — not merely absent).
   2. Per-region DAPI nucleus density/mm² (per-cell counts joined to the
-     per-region area export).
+     per-region area export). Marker-agnostic — always computed.
   3. Nucleus-area distribution peak (10 µm^2 histogram-mode bins, matching
      qc_detection_gates.groovy's Gate-1 binning), plus median/IQR/skew as
-     bin-independent cross-checks.
+     bin-independent cross-checks. Marker-agnostic — always computed.
   4. Fos+ rate on the SSp corroboration region (hippocampus has no clean
      negative control; SSp's post-bg-sub-fix Fos+ rate is reported as a
      sanity anchor per CONTEXT.md's Claude's-Discretion allowance), plus any
-     fiber-tract-labelled rows if present.
+     fiber-tract-labelled rows if present. SKIPPED (with a printed note) when
+     the per-cell TSV has no Fos_bgsub column.
 
-All four metrics are printed to stdout in a labeled block, each against its
-VAL-01 target band, so Plan 04-03 can transcribe them into 04-VALIDATION.md.
-This script does NOT assert pass/fail (D-01: findings record, not a gate).
+D-04: the per-cell schema is driven by whichever ``<marker>_bgsub`` columns are
+actually present — there is no hardcoded two-column fos/tdt requirement. This is
+what lets metrics 2/3 run (and 1/4 skip cleanly) on a TdT-only slice.
+
+All computed metrics are printed to stdout in a labeled block, each against its
+VAL-01 target band, so a validation record can transcribe them. This script does
+NOT assert pass/fail (D-01: findings record, not a gate).
 
 Usage (from the Analysis root, braian env):
   conda run -n braian python scripts/val01_metrics.py
   conda run -n braian python scripts/val01_metrics.py \\
-      --percell-tsv "M3 Hippocampus 20x 062926 3 plane/results/val01_percell_export.tsv" \\
-      --region-tsv "M3 Hippocampus 20x 062926 3 plane/results/val01_region_area.tsv" \\
+      --percell-tsv "M3 Hippocampus 20x 062926 3 plane/results/<stem>__percell_export.tsv" \\
+      --region-tsv "M3 Hippocampus 20x 062926 3 plane/results/<stem>__region_table.tsv" \\
       --out results/val01_metrics.json
 """
 from __future__ import annotations
@@ -40,8 +49,14 @@ import numpy as np
 import pandas as pd
 from scipy.stats import skew
 
-DEFAULT_PERCELL_TSV = Path("M3 Hippocampus 20x 062926 3 plane/results/val01_percell_export.tsv")
-DEFAULT_REGION_TSV = Path("M3 Hippocampus 20x 062926 3 plane/results/val01_region_area.tsv")
+# Placeholder defaults only — 03_export_region_table.groovy's EXP-02 output stem is
+# per-entry (`<safeName>__id<entryId>`), so the real filename is not knowable until the
+# consolidated export has actually run against a live QuPath entry (deferred to 06.1-06).
+# Operators MUST override these via --percell-tsv/--region-tsv with the real stemmed path.
+DEFAULT_PERCELL_TSV = Path(
+    "M3 Hippocampus 20x 062926 3 plane/results/M3_20x_MIP_Z1-3.ome.tiff - czi_to_mip__percell_export.tsv")
+DEFAULT_REGION_TSV = Path(
+    "M3 Hippocampus 20x 062926 3 plane/results/M3_20x_MIP_Z1-3.ome.tiff - czi_to_mip__region_table.tsv")
 
 RATIO_TARGET = (0.10, 0.40)
 DENSITY_TARGET = (500.0, 2000.0)
@@ -50,9 +65,11 @@ FOS_CONTROL_TARGET = (0.01, 0.03)
 
 FIBER_TRACT_LABELS = ["fiber tracts", "cc", "fx", "or", "ec", "em"]
 
-PERCELL_EXPECTED_COLS = [
-    "class", "region_label", "nucleus_area_um2",
-    "centroid_x_px", "centroid_y_px", "fos_bgsub", "tdt_bgsub",
+# D-04: only the five marker-agnostic columns are hard-required. Per-marker
+# "<marker>_bgsub" columns are detected at load time (detect_marker_bgsub_columns),
+# never assumed to be a fixed fos_bgsub/tdt_bgsub pair.
+PERCELL_FIXED_COLS = [
+    "class", "region_label", "nucleus_area_um2", "centroid_x_px", "centroid_y_px",
 ]
 REGION_EXPECTED_COLS = ["region_label", "hemisphere", "acronym", "is_leaf", "area_mm2"]
 
@@ -78,7 +95,7 @@ def area_histogram_mode(areas_um2: np.ndarray, bin_width: float = 10.0) -> tuple
 def _load_tsv(path: Path, expected_cols: list[str], label: str) -> pd.DataFrame:
     if not path.exists():
         sys.exit(f"ERROR: {label} TSV not found: {path}\n"
-                  f"Run 03_export_val01_metrics.groovy in QuPath first (AFTER 02_detect_classify.groovy).")
+                  f"Run 03_export_region_table.groovy in QuPath first (AFTER 02_detect_classify.groovy).")
     df = pd.read_csv(path, sep="\t")
     missing = [c for c in expected_cols if c not in df.columns]
     if missing:
@@ -87,13 +104,24 @@ def _load_tsv(path: Path, expected_cols: list[str], label: str) -> pd.DataFrame:
     return df
 
 
+def detect_marker_bgsub_columns(df: pd.DataFrame) -> list[str]:
+    """Return the marker names (not full column names) for every '<marker>_bgsub'
+    column actually present in the per-cell TSV (D-04): never hard-require a fixed
+    fos_bgsub/tdt_bgsub pair — the schema adapts to whichever markers
+    03_export_region_table.groovy declared for this slice (e.g. a TdT-only slice
+    has no column named Fos_bgsub)."""
+    return sorted(c[: -len("_bgsub")] for c in df.columns if c.endswith("_bgsub"))
+
+
 def load_percell(path: Path) -> pd.DataFrame:
-    df = _load_tsv(path, PERCELL_EXPECTED_COLS, "per-cell")
+    df = _load_tsv(path, PERCELL_FIXED_COLS, "per-cell")
     if len(df) == 0:
         sys.exit(f"ERROR: per-cell TSV {path} has zero rows.")
     df["class"] = df["class"].fillna("Negative")
     df["region_label"] = df["region_label"].fillna("(no region)")
-    for col in ["nucleus_area_um2", "centroid_x_px", "centroid_y_px", "fos_bgsub", "tdt_bgsub"]:
+    numeric_cols = (["nucleus_area_um2", "centroid_x_px", "centroid_y_px"] +
+                     [c for c in df.columns if c.endswith("_bgsub")])
+    for col in numeric_cols:
         df[col] = pd.to_numeric(df[col], errors="coerce")
     return df
 
@@ -105,7 +133,21 @@ def load_region_area(path: Path) -> pd.DataFrame:
     return df
 
 
-def compute_double_tdt_ratio(percell: pd.DataFrame) -> dict:
+def compute_double_tdt_ratio(percell: pd.DataFrame, markers: list[str]) -> dict | None:
+    """Double+/TdT+ ratio metric. Requires a TdT_bgsub column AND >=2 declared
+    markers (Double+ is only ever emitted per D-03 when >=2 non-anchor markers
+    are declared) — on a TdT-only slice this metric is undefined, not merely
+    zero, so it is skipped rather than silently reporting NaN as a finding."""
+    if "TdT" not in markers:
+        print("marker absent — metric skipped: no TdT_bgsub column found in the per-cell TSV; "
+              "cannot compute the Double+/TdT+ ratio.")
+        return None
+    if len(markers) < 2:
+        print(f"marker absent — metric skipped: only {len(markers)} marker(s) declared ({markers}); "
+              f"Double+ is never emitted on a single-marker config (D-03), so the Double+/TdT+ "
+              f"ratio is undefined.")
+        return None
+
     counts = percell["class"].value_counts()
     n_double = int(counts.get("Double+", 0))
     n_tdt = int(counts.get("TdT+", 0))
@@ -171,7 +213,15 @@ def compute_area_peak(percell: pd.DataFrame) -> dict:
             "n_valid": int(areas_valid.size)}
 
 
-def compute_fos_control_rate(percell: pd.DataFrame) -> dict:
+def compute_fos_control_rate(percell: pd.DataFrame, markers: list[str]) -> dict | None:
+    """Fos+ control-rate metric. Requires a Fos_bgsub column — on a TdT-only slice
+    there is no Fos marker at all, so this metric is skipped rather than reporting
+    a meaningless zero rate."""
+    if "Fos" not in markers:
+        print("marker absent — metric skipped: no Fos_bgsub column found in the per-cell TSV; "
+              "cannot compute the Fos+ control rate.")
+        return None
+
     ssp = percell[percell["region_label"].astype(str).str.startswith("SSp")]
     result = {"ssp_n": int(len(ssp))}
     if len(ssp) > 0:
@@ -202,26 +252,29 @@ def _band(v: float, lo: float, hi: float) -> str:
     return "IN RANGE" if lo <= v <= hi else "flagged OUT of range"
 
 
-def print_report(ratio: dict, density: dict, area_peak: dict, fos_control: dict) -> None:
+def print_report(ratio: dict | None, density: dict, area_peak: dict, fos_control: dict | None) -> None:
     print("=" * 78)
     print("VAL-01 BIOPLAUSIBILITY METRICS (findings record, not a pass/fail gate -- D-01)")
     print("=" * 78)
 
     print("-" * 78)
     print("1. Double+/TdT+ ratio")
-    print(f"   n(Double+)={ratio['n_double']}  n(TdT+)={ratio['n_tdt']}")
-    print(f"   Double+/TdT+ ratio  (n(Double+)/n(TdT+))          = {ratio['ratio_convention']:.3f}"
-          f"   [target {RATIO_TARGET[0]:.0%}-{RATIO_TARGET[1]:.0%}: {_band(ratio['ratio_convention'], *RATIO_TARGET)}]")
-    print(f"   Co-expression fraction (Double+/(Double++TdT+))   = {ratio['coexpr_fraction']:.3f}"
-          f"   [no separate target band; the {RATIO_TARGET[0]:.0%}-{RATIO_TARGET[1]:.0%} band above is defined for the ratio convention only (IN-03)]")
-    print("   Per hippocampal subfield (region_label):")
-    for row in ratio["per_region"]:
-        r = row["ratio"]
-        rs = f"{r:.3f}" if not np.isnan(r) else "n/a"
-        cf = row["coexpr_fraction"]
-        cfs = f"{cf:.3f}" if not np.isnan(cf) else "n/a"
-        print(f"     {row['region_label']}: n(Double+)={row['n_double']} n(TdT+)={row['n_tdt']} "
-              f"ratio={rs} coexpr_fraction={cfs}")
+    if ratio is None:
+        print("   SKIPPED — marker absent (see note printed above; D-04/D-03).")
+    else:
+        print(f"   n(Double+)={ratio['n_double']}  n(TdT+)={ratio['n_tdt']}")
+        print(f"   Double+/TdT+ ratio  (n(Double+)/n(TdT+))          = {ratio['ratio_convention']:.3f}"
+              f"   [target {RATIO_TARGET[0]:.0%}-{RATIO_TARGET[1]:.0%}: {_band(ratio['ratio_convention'], *RATIO_TARGET)}]")
+        print(f"   Co-expression fraction (Double+/(Double++TdT+))   = {ratio['coexpr_fraction']:.3f}"
+              f"   [no separate target band; the {RATIO_TARGET[0]:.0%}-{RATIO_TARGET[1]:.0%} band above is defined for the ratio convention only (IN-03)]")
+        print("   Per region (region_label):")
+        for row in ratio["per_region"]:
+            r = row["ratio"]
+            rs = f"{r:.3f}" if not np.isnan(r) else "n/a"
+            cf = row["coexpr_fraction"]
+            cfs = f"{cf:.3f}" if not np.isnan(cf) else "n/a"
+            print(f"     {row['region_label']}: n(Double+)={row['n_double']} n(TdT+)={row['n_tdt']} "
+                  f"ratio={rs} coexpr_fraction={cfs}")
 
     print("-" * 78)
     print(f"2. Per-region DAPI nucleus density (target {DENSITY_TARGET[0]:.0f}-{DENSITY_TARGET[1]:.0f}/mm^2)")
@@ -240,21 +293,24 @@ def print_report(ratio: dict, density: dict, area_peak: dict, fos_control: dict)
 
     print("-" * 78)
     print(f"4. Fos+ control rate (target {FOS_CONTROL_TARGET[0]:.0%}-{FOS_CONTROL_TARGET[1]:.0%}, or absence documented)")
-    print("   No clean negative-control region in this hippocampus-only section (documented absence).")
-    if fos_control["ssp_n"] > 0:
-        print(f"   SSp corroboration: n={fos_control['ssp_n']} "
-              f"Fos+={fos_control['ssp_fos_positive_n']} "
-              f"rate={fos_control['ssp_fos_rate']:.3f}  "
-              f"[{_band(fos_control['ssp_fos_rate'], *FOS_CONTROL_TARGET)}] "
-              f"(SSp is NOT a true negative control -- corroboration anchor only)")
+    if fos_control is None:
+        print("   SKIPPED — marker absent (see note printed above; D-04).")
     else:
-        print("   SSp corroboration: no SSp-labelled cells found in this export.")
-    if fos_control["fiber_tract_n"] > 0:
-        print(f"   Fiber-tract soft anchor: n={fos_control['fiber_tract_n']} "
-              f"Fos+={fos_control['fiber_tract_fos_positive_n']} "
-              f"rate={fos_control['fiber_tract_fos_rate']:.3f}")
-    else:
-        print("   Fiber-tract soft anchor: no fiber-tract-labelled cells found in this export.")
+        print("   No clean negative-control region in this hippocampus-only section (documented absence).")
+        if fos_control["ssp_n"] > 0:
+            print(f"   SSp corroboration: n={fos_control['ssp_n']} "
+                  f"Fos+={fos_control['ssp_fos_positive_n']} "
+                  f"rate={fos_control['ssp_fos_rate']:.3f}  "
+                  f"[{_band(fos_control['ssp_fos_rate'], *FOS_CONTROL_TARGET)}] "
+                  f"(SSp is NOT a true negative control -- corroboration anchor only)")
+        else:
+            print("   SSp corroboration: no SSp-labelled cells found in this export.")
+        if fos_control["fiber_tract_n"] > 0:
+            print(f"   Fiber-tract soft anchor: n={fos_control['fiber_tract_n']} "
+                  f"Fos+={fos_control['fiber_tract_fos_positive_n']} "
+                  f"rate={fos_control['fiber_tract_fos_rate']:.3f}")
+        else:
+            print("   Fiber-tract soft anchor: no fiber-tract-labelled cells found in this export.")
     print("=" * 78)
 
 
@@ -278,9 +334,9 @@ def main() -> None:
     ap = argparse.ArgumentParser(
         description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter, epilog=__doc__)
     ap.add_argument("--percell-tsv", type=Path, default=DEFAULT_PERCELL_TSV,
-                     help="per-cell export TSV from 03_export_val01_metrics.groovy")
+                     help="per-cell export TSV from 03_export_region_table.groovy")
     ap.add_argument("--region-tsv", type=Path, default=DEFAULT_REGION_TSV,
-                     help="per-region-area export TSV from 03_export_val01_metrics.groovy")
+                     help="per-region export TSV from 03_export_region_table.groovy")
     ap.add_argument("--out", type=Path, default=None,
                      help="optional JSON dump of all computed metrics")
     args = ap.parse_args()
@@ -288,12 +344,15 @@ def main() -> None:
     percell = load_percell(args.percell_tsv)
     region_area = load_region_area(args.region_tsv)
     print(f"Loaded {len(percell)} per-cell rows from {args.percell_tsv}")
-    print(f"Loaded {len(region_area)} per-region-area rows from {args.region_tsv}")
+    print(f"Loaded {len(region_area)} per-region rows from {args.region_tsv}")
 
-    ratio = compute_double_tdt_ratio(percell)
+    markers = detect_marker_bgsub_columns(percell)
+    print(f"Detected marker(s) (<marker>_bgsub columns present): {markers}")
+
+    ratio = compute_double_tdt_ratio(percell, markers)
     density = compute_density(percell, region_area)
     area_peak = compute_area_peak(percell)
-    fos_control = compute_fos_control_rate(percell)
+    fos_control = compute_fos_control_rate(percell, markers)
 
     print_report(ratio, density, area_peak, fos_control)
 

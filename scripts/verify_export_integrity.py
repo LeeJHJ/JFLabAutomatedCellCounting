@@ -1,12 +1,12 @@
 #!/usr/bin/env python3
 """verify_export_integrity.py — EXP-02 export-integrity checker (D-06/D-07).
 
-Validates the non-clobbering property of `03_export_val01_metrics.groovy`'s
-per-entry output: after a QuPath "Run for project" pass, every distinct
-project entry must have written its OWN percell/region TSV pair into
-`results/`, named `<stem>__val01_percell_export.tsv` /
-`<stem>__val01_region_area.tsv`. This script is read-only — it never
-mutates anything in `--results`.
+Validates the non-clobbering property of `03_export_region_table.groovy`'s
+(the consolidated per-region export, D-07) per-entry output: after a QuPath
+"Run for project" pass, every distinct project entry must have written its
+OWN percell/region TSV pair into `results/`, named
+`<stem>__percell_export.tsv` / `<stem>__region_table.tsv`. This script is
+read-only — it never mutates anything in `--results`.
 
 Asserts:
   1. Pairing — every percell stem has a matching region stem and vice versa.
@@ -35,8 +35,8 @@ import argparse
 import sys
 from pathlib import Path
 
-PERCELL_SUFFIX = "__val01_percell_export.tsv"
-REGION_SUFFIX = "__val01_region_area.tsv"
+PERCELL_SUFFIX = "__percell_export.tsv"
+REGION_SUFFIX = "__region_table.tsv"
 
 
 def parse_args() -> argparse.Namespace:
@@ -77,7 +77,7 @@ def main() -> None:
         sys.exit(
             f"ERROR: no per-entry export files found in {results_dir}\n"
             f"Expected files matching '*{PERCELL_SUFFIX}' and '*{REGION_SUFFIX}'.\n"
-            f"Run 03_export_val01_metrics.groovy (\"Run for project\") first, "
+            f"Run 03_export_region_table.groovy (\"Run for project\") first, "
             f"or check --results points at the right directory."
         )
 
