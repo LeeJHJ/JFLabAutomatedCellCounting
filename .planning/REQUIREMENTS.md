@@ -23,6 +23,17 @@ Requirements for milestone v1.1. Each maps to a roadmap phase. Data: `-001-07_pr
 - [x] **REG-04**: A reduced-landmark BigWarp workflow with a documented per-section effort target (middle ground vs the v1.0 5–15 min manual pass), applied across all 5 sections
 - [x] **REG-05**: An experimental masked-elastix prototype (`crop_to_tissue.py` DAPI mask → elastix Affine/Spline outside ABBA's GUI) is trialed on one section and compared to DeepSlice-only on fit quality + time; kept only if it demonstrably wins (a priori accept/reject rule)
 
+### Pipeline Generalization (region-agnostic per-region readout spine — Phase 06.1)
+
+Derived from Phase 06.1 discuss-phase decisions D-01→D-17 (see `phases/06.1-…/06.1-CONTEXT.md`). This phase consolidates the ad-hoc wBA1-3 script collection into one region-agnostic, config-driven pipeline; its per-slice/per-region spine feeds CLASS-02, LABEL-01, AGG-01, EXP-03/04 downstream.
+
+- [ ] **PIPE-01**: The marker set is variable and config-declared — an explicit `name → channel → compartment` block declares markers, the detection/segmentation anchor channel is itself declared in config (default DAPI, never hardwired), Double+ is auto-derived only when ≥2 non-anchor markers are declared, and per-slice tables omit columns for absent markers (a TdT-only slice emits DAPI+/TdT+ only — no assumed Fos+/Double+) (D-01–D-04)
+- [ ] **PIPE-02**: The ad-hoc scripts consolidate to one canonical spine — the detect/classify split is kept (`run_braian_detection.groovy` + `02_detect_classify.groovy`), the duplicate `classify_markers.groovy` is retired (its logic already lives in `02`), and a single config-driven export emits both the per-cell TSV and the per-region table (folding in `export_region_dapi_reference.groovy` + `03_export_val01_metrics.groovy`) (D-05–D-07)
+- [ ] **PIPE-03**: The export emits all atlas regions present on the slice (exclusion literals like `["DG-sg","VS"]` moved from source into config), every cell is assigned to exactly one smallest-area leaf (CR-01 rule) and parent rows are the SUM of descendant-leaf counts up the atlas tree — never an independent parent-ROI containment pass — with density reported as cells/mm² (region count ÷ region area_mm²) (D-08–D-11)
+- [ ] **PIPE-04**: Each slice produces a self-contained per-region table, and rows are appended to a growing combined CSV in long/tidy format — one row per region×marker: `slice, config_tag, region, hemisphere, is_leaf, marker, class, count, density` — where absent markers produce no rows (no NA, aggregation-ready for BraiAnalyse/pandas) (D-12–D-13)
+- [ ] **PIPE-05**: Pipeline config (marker list, anchor, compartments, exclusions) lives in a new sidecar file separate from `BraiAn.yml` and is read by every groovy entry; each scriptable entry fail-loud asserts its preconditions (ABBA ROIs loaded, detections present, image channels match the declared markers) before doing work, guarding the human-in-the-loop GUI seams (D-14–D-15)
+- [ ] **PIPE-06**: The pipeline is captured as a single operator-checklist `RUNBOOK.md` (czi→MIP → ABBA register → BraiAnDetect → classify → export → per-region table, each step marked GUI-vs-scriptable with exact commands + QuPath/ABBA click-paths and the marker-config block documented) backed by per-stage detail docs, and validated end-to-end on the incoming TdT-only slice set — a schema-correct, non-empty per-region table with correctly omitted Fos+/Double+ columns plus a spot bioplausibility sanity check (DAPI+ densities in the ~Phase-2 band) (D-16–D-17)
+
 ### Classification (continues CLASS-01 from v1.0)
 
 - [ ] **CLASS-02**: Nucleus-anchored TdT+/Fos+/Double+ classification runs across all 5 sections over the LA/BA amygdala ROI, producing the per-region primary counts (same detection/colocalization rules as v1.0)
@@ -71,7 +82,7 @@ Deferred to a future milestone.
 
 ## Traceability
 
-Each requirement maps to exactly one phase. Phases continue from v1.0 (Phases 1-4); v1.1 spans Phases 5-10.
+Each requirement maps to exactly one phase. Phases continue from v1.0 (Phases 1-4); v1.1 spans Phases 5-10, plus inserted Phase 06.1 (pipeline generalization, PIPE-01…06).
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
@@ -81,6 +92,12 @@ Each requirement maps to exactly one phase. Phases continue from v1.0 (Phases 1-
 | REG-03 | Phase 6 | Complete |
 | REG-04 | Phase 6 | Complete |
 | REG-05 | Phase 6 | Complete |
+| PIPE-01 | Phase 06.1 | Pending |
+| PIPE-02 | Phase 06.1 | Pending |
+| PIPE-03 | Phase 06.1 | Pending |
+| PIPE-04 | Phase 06.1 | Pending |
+| PIPE-05 | Phase 06.1 | Pending |
+| PIPE-06 | Phase 06.1 | Pending |
 | IMG-01 | Phase 7 | Pending |
 | IMG-02 | Phase 7 | Pending |
 | CLASS-02 | Phase 8 | Pending |
@@ -93,10 +110,10 @@ Each requirement maps to exactly one phase. Phases continue from v1.0 (Phases 1-
 
 **Coverage:**
 
-- v1.1 requirements: 15 total
-- Mapped to phases: 15 ✓
+- v1.1 requirements: 21 total
+- Mapped to phases: 21 ✓
 - Unmapped: 0 ✓
 
 ---
 *Requirements defined: 2026-07-17*
-*Last updated: 2026-07-17 after roadmap creation (Phases 5-10 mapped, 15/15 coverage)*
+*Last updated: 2026-07-23 — Phase 06.1 requirements minted (PIPE-01…06 from decisions D-01→D-17), 21/21 coverage*

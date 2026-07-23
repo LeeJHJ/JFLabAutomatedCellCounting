@@ -102,6 +102,17 @@ Plans:
 
 **Notes**: Human-in-the-loop — executor authors the elastix/atlas-plate scripts + operator-record scaffolds; the operator runs the ABBA/BigWarp GUI. REG-03 uses ABBA's native "DeepSlice Registration (Local)" command (no run_deepslice.py — 06-CONTEXT ⟳ RESOLUTION). REG-05 is scoped as a single-section experiment so it cannot balloon.
 
+### Phase 06.1: Pipeline Generalization + Per-Region Readout Runbook (INSERTED)
+
+**Goal:** The ad-hoc wBA1-3 script collection is consolidated into a single region-agnostic, documented pipeline that emits a per-region DAPI+/Fos+/TdT+/Double+ count-and-density table for any atlas region in each slice — with the marker set treated as variable (incoming slices may be TdT-only, so absent Fos+/Double+ must be handled, not assumed) — validated end-to-end on a new set of brain slices and captured as a step-by-step runbook for reuse.
+**Requirements**: PIPE-01, PIPE-02, PIPE-03, PIPE-04, PIPE-05, PIPE-06 (minted 2026-07-23 from discuss-phase decisions D-01→D-17)
+**Depends on:** Phase 6
+**Plans:** 0 plans
+
+Plans:
+
+- [ ] TBD (run /gsd-plan-phase 06.1 to break down)
+
 ### Phase 7: Imaging Re-Validation (New 4-Plane / Lower-Laser Params)
 
 **Goal**: Detection and classification are confirmed valid on the new imaging parameters so classification runs on trustworthy signal — the D-05 QC gates are re-run and the k robust-threshold seed is re-locked only if it has drifted.
