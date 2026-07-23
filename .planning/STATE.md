@@ -6,14 +6,14 @@ current_phase: 06.1
 current_phase_name: pipeline-generalization-per-region-readout-runbook
 status: executing
 stopped_at: Phase 06.1 context gathered
-last_updated: "2026-07-23T21:32:07.860Z"
+last_updated: "2026-07-23T21:43:33.437Z"
 last_activity: 2026-07-23
 last_activity_desc: Phase 06.1 execution started
 progress:
   total_phases: 7
   completed_phases: 2
   total_plans: 14
-  completed_plans: 11
+  completed_plans: 12
   percent: 29
 ---
 
@@ -35,7 +35,7 @@ progress:
 ## Current Position
 
 Phase: 06.1 (pipeline-generalization-per-region-readout-runbook) — EXECUTING
-Plan: 4 of 6
+Plan: 5 of 6
 Status: Ready to execute
 Last activity: 2026-07-23 — Phase 06.1 execution started
 
@@ -59,6 +59,7 @@ Last activity: 2026-07-23 — Phase 06.1 execution started
 | Phase 06.1 P01 | 6min | 2 tasks | 4 files |
 | Phase 06.1 P02 | 4min | 3 tasks | 6 files |
 | Phase 06.1 P03 | 12min | 3 tasks | 3 files |
+| Phase 06.1 P04 | ~5min | 3 tasks | 5 files |
 
 ## v1.1 Roadmap Snapshot (created 2026-07-17)
 
@@ -151,7 +152,7 @@ None. First v1.1 execution step (Phase 5) is scriptable (no GUI dependency); Pha
 
 ## Session Continuity
 
-**Last session:** 2026-07-23T21:31:10.339Z
+**Last session:** 2026-07-23T21:42:56.640Z
 **Stopped at:** Phase 06.1 context gathered
 **Resume file:** 
 
@@ -185,3 +186,5 @@ None
 - [Phase ?]: 06.1-03: Export consumes the class vocabulary already assigned by 02_detect_classify.groovy (getPathClass()) rather than recomputing thresholds -- pure readout, not a second classifier
 - [Phase ?]: 06.1-03: columnPrefixFor (wide-table, anchor no '+') and classFor (combined-CSV class label, anchor has '+') kept as two distinct closures -- collapsing them would break one of the two established contracts
 - [Phase ?]: 06.1-03: zero-leak assertion sums only the anchor category's own-bucket counts vs total non-excluded classified detections; unresolved cells (no containing region) counted/reported separately, not silently dropped
+- [Phase ?]: 06.1-04: check-zero-leak re-proves D-10 from the CSV alone, independent of the groovy exporter's own assertion, decoupled from live QuPath data via a --self-test synthetic tree
+- [Phase ?]: 06.1-04: Fos/Double-dependent VAL-01 metrics (ratio, Fos control rate) SKIP rather than report 0/NaN when their marker is structurally absent (D-03/D-04)

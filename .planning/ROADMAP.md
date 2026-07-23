@@ -107,7 +107,7 @@ Plans:
 **Goal:** The ad-hoc wBA1-3 script collection is consolidated into a single region-agnostic, documented pipeline that emits a per-region DAPI+/Fos+/TdT+/Double+ count-and-density table for any atlas region in each slice — with the marker set treated as variable (incoming slices may be TdT-only, so absent Fos+/Double+ must be handled, not assumed) — validated end-to-end on a new set of brain slices and captured as a step-by-step runbook for reuse.
 **Requirements**: PIPE-01, PIPE-02, PIPE-03, PIPE-04, PIPE-05, PIPE-06 (minted 2026-07-23 from discuss-phase decisions D-01→D-17)
 **Depends on:** Phase 6
-**Plans:** 3/6 plans executed
+**Plans:** 4/6 plans executed
 
 Plans:
 
@@ -122,7 +122,7 @@ Plans:
 
 **Wave 3** *(autonomous)*
 
-- [ ] 06.1-04-PLAN.md — Python consumers to long/tidy schema + --check-zero-leak re-proof; retire the two folded-in export scripts (PIPE-02, PIPE-04)
+- [x] 06.1-04-PLAN.md — Python consumers to long/tidy schema + --check-zero-leak re-proof; retire the two folded-in export scripts (PIPE-02, PIPE-04)
 
 **Wave 4** *(autonomous)*
 
