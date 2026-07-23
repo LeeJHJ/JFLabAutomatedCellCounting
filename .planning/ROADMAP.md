@@ -107,13 +107,13 @@ Plans:
 **Goal:** The ad-hoc wBA1-3 script collection is consolidated into a single region-agnostic, documented pipeline that emits a per-region DAPI+/Fos+/TdT+/Double+ count-and-density table for any atlas region in each slice — with the marker set treated as variable (incoming slices may be TdT-only, so absent Fos+/Double+ must be handled, not assumed) — validated end-to-end on a new set of brain slices and captured as a step-by-step runbook for reuse.
 **Requirements**: PIPE-01, PIPE-02, PIPE-03, PIPE-04, PIPE-05, PIPE-06 (minted 2026-07-23 from discuss-phase decisions D-01→D-17)
 **Depends on:** Phase 6
-**Plans:** 6 plans
+**Plans:** 1/6 plans executed
 
 Plans:
 
 **Wave 1** *(autonomous — contract foundation)*
 
-- [ ] 06.1-01-PLAN.md — Sidecar pipeline config (markers/anchor/exclusions/k/ring) + validator fixing the shared marker-key/class/column contract (PIPE-01, PIPE-05)
+- [x] 06.1-01-PLAN.md — Sidecar pipeline config (markers/anchor/exclusions/k/ring) + validator fixing the shared marker-key/class/column contract (PIPE-01, PIPE-05)
 
 **Wave 2** *(autonomous authoring; parallel — no file overlap)*
 

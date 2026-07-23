@@ -2,18 +2,18 @@
 gsd_state_version: 1.0
 milestone: v1.1
 milestone_name: First Full-Series Run — LA/BA Amygdala Engram
-current_phase: 08
-current_phase_name: la-ba-classification
+current_phase: 06.1
+current_phase_name: pipeline-generalization-per-region-readout-runbook
 status: executing
 stopped_at: Phase 06.1 context gathered
-last_updated: "2026-07-23T19:35:46.897Z"
+last_updated: "2026-07-23T21:01:24.770Z"
 last_activity: 2026-07-23
-last_activity_desc: Backfilled Phases 7 + 8 into GSD record
+last_activity_desc: Phase 06.1 execution started
 progress:
   total_phases: 7
   completed_phases: 2
-  total_plans: 8
-  completed_plans: 8
+  total_plans: 14
+  completed_plans: 9
   percent: 29
 ---
 
@@ -28,16 +28,16 @@ progress:
 
 **Core value:** Biologically plausible TdT+/Fos+/Double+ counts per atlas region across a registered section series, with locked detection parameters and imaging-optimization notes ready to scale brain-wide.
 
-**Current focus:** Phases 7 + 8 backfilled; Phase 9 (area readout) / Phase 10 (aggregation) next
+**Current focus:** Phase 06.1 — pipeline-generalization-per-region-readout-runbook
 
 ---
 
 ## Current Position
 
-Phase: 08 (la-ba-classification) — COMPLETE (ad-hoc, backfilled 2026-07-23)
-Plan: n/a (executed ad-hoc, no formal plans; retrospective VERIFICATION on record)
-Status: Phases 5-8 done; Phase 9 unplanned, Phase 10 aggregation is the remaining deliverable
-Last activity: 2026-07-23 — Backfilled Phases 7 + 8 into GSD record
+Phase: 06.1 (pipeline-generalization-per-region-readout-runbook) — EXECUTING
+Plan: 2 of 6
+Status: Ready to execute
+Last activity: 2026-07-23 — Phase 06.1 execution started
 
 ## Performance Metrics
 
@@ -56,6 +56,7 @@ Last activity: 2026-07-23 — Backfilled Phases 7 + 8 into GSD record
 | Phase 05 P03 | 8min | 1 tasks | 0 files |
 | Phase 06 P01 | 5min | 3 tasks | 4 files |
 | Phase 06 P02 | 6min | 3 tasks | 3 files |
+| Phase 06.1 P01 | 6min | 2 tasks | 4 files |
 
 ## v1.1 Roadmap Snapshot (created 2026-07-17)
 
@@ -148,11 +149,11 @@ None. First v1.1 execution step (Phase 5) is scriptable (no GUI dependency); Pha
 
 ## Session Continuity
 
-**Last session:** 2026-07-23T19:35:46.891Z
+**Last session:** 2026-07-23T21:00:41.425Z
 **Stopped at:** Phase 06.1 context gathered
 **Resume file:** 
 
-.planning/phases/06.1-pipeline-generalization-per-region-readout-runbook/06.1-CONTEXT.md
+None
 
 **Side task:** TRACR registration for another lab in progress (rough, may need a per-section second pass) — see memory. (Retired notes archived in `.planning/archive/retired-memory-notes.md`.)
 
@@ -176,3 +177,5 @@ None. First v1.1 execution step (Phase 5) is scriptable (no GUI dependency); Pha
 - [Phase ?]: 06-01: elastix parameter files use only the standard elastix.dev component set (no invented metric/optimizer combination), flagged as operator-retunable starting values (A2)
 - [Phase ?]: 06-01: elastix_trial_harness.py authored as .py (not .sh) to match project's all-Python/Groovy convention and reuse the --self-test idiom
 - [Phase 06]: 06-02: scripts/run_deepslice.py NOT authored -- 06-CONTEXT resolution supersedes RESEARCH; REG-03 uses ABBA native DeepSlice Registration (Local) command, D-01 met by 06-REG03-SOP.md record
+- [Phase ?]: 06.1-01: Compartment-label map fixed nuclear->Nucleus, cytoplasmic->Cytoplasm; bg-sub measurement key locked as '<label>: <channel> mean (bg-sub)' for all downstream consumers
+- [Phase ?]: 06.1-01: pipeline.yml's load_config() defensively rejects any leaked BraiAnDetect detection-param key, enforcing D-14's separation from BraiAn.yml at validation time, not just by convention
