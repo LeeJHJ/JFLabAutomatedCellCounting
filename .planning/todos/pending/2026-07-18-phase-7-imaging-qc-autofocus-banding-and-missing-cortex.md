@@ -49,3 +49,14 @@ D-05 imaging gates at the new 4-plane/lower-laser acquisition parameters:
 
 Source: operator sign-off transcript, Phase 5 plan 05-03
 (`.planning/phases/05-series-scaffolding-multi-scene-mip-batch-export-integrity/05-03-SUMMARY.md`).
+
+## Resolution (2026-07-23, Phase 7 backfill)
+
+Phase 7 closed as a **methods-validation** pass (backfilled `07-VERIFICATION.md`). Both items
+were **triaged and consciously CARRIED, not closed** — acceptable on the n=1 suboptimally
+cut/mounted brain, but they must be RE-GATED when the real (re-cut) series arrives:
+  1. autofocus/tile-row focus banding — add explicit per-row focus-discontinuity check before
+     trusting detection on affected rows.
+  2. missing cortex pieces — per-section tissue-QC + a-priori exclusion rule (feeds Phase 9 area
+     denominator).
+Kept in `pending/` intentionally: the real-series re-gate is future work, now owned by this todo.

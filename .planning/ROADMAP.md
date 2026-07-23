@@ -37,8 +37,8 @@ Full phase details (goals, success criteria, plans) archived in [milestones/v1.0
 
 - [x] **Phase 5: Series Scaffolding — Multi-Scene MIP + Batch-Export Integrity** - Convert the processed CZI to 5 identity-verified section MIPs and fix the multi-entry export blocker (completed 2026-07-19)
 - [x] **Phase 6: Registration Speedup** - Register the 5-section series with materially less manual effort (DeepSlice batch + reduced-landmark BigWarp; masked-elastix prototype trialed under an a-priori accept/reject rule) (completed 2026-07-20)
-- [ ] **Phase 7: Imaging Re-Validation (New 4-Plane / Lower-Laser Params)** - Re-run D-05 QC gates and re-lock the k threshold seed only on drift; confirm the 4-plane MIP is not under-projected
-- [ ] **Phase 8: LA/BA Classification + Brain-Wide Region-Labeling Validation** - Nucleus-anchored TdT+/Fos+/Double+ across all 5 sections over the amygdala ROI, with the CR-01 fix re-audited on non-laminar LA/BA
+- [x] **Phase 7: Imaging Re-Validation (New 4-Plane / Lower-Laser Params)** - Re-run D-05 QC gates and re-lock the k threshold seed only on drift; confirm the 4-plane MIP is not under-projected (completed ad-hoc 2026-07-23, backfilled — sigma re-tuned 2.5→2.0, k swept 2-3, 2 acquisition-QC items carried open; see `phases/07-imaging-re-validation/07-VERIFICATION.md`)
+- [x] **Phase 8: LA/BA Classification + Brain-Wide Region-Labeling Validation** - Nucleus-anchored TdT+/Fos+/Double+ across all 5 sections over the amygdala ROI, with the CR-01 fix re-audited on non-laminar LA/BA (completed ad-hoc 2026-07-23, backfilled — LA 5,067 / BLA 9,301 cells, P(Fos+|TdT+) ~36-42%; see `phases/08-la-ba-classification-region-labeling-validation/08-VERIFICATION.md`)
 - [ ] **Phase 9: Generalizable Area-Based Density Readout** - Region-parameterized percent-area-above-threshold within a DAPI+ mask; additive/parallel to nucleus counts; DG granule layer as the test case
 - [ ] **Phase 10: Animal-Level Aggregation + Atlas-Space Export & Point Cloud** - Roll up 5 sections to one wBA1-3 animal table, persist per-cell CCFv3 micron coords, render the brainrender point cloud
 

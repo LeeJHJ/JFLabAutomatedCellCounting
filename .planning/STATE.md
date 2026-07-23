@@ -2,19 +2,19 @@
 gsd_state_version: 1.0
 milestone: v1.1
 milestone_name: First Full-Series Run — LA/BA Amygdala Engram
-current_phase: 06
-current_phase_name: registration-speedup
+current_phase: 08
+current_phase_name: la-ba-classification-region-labeling-validation
 status: executing
-stopped_at: Completed 06-01-PLAN.md
-last_updated: "2026-07-20T15:50:04.597Z"
-last_activity: 2026-07-20
-last_activity_desc: Phase 06 execution started
+stopped_at: "Phases 5-6 GSD-tracked complete. Phases 7 (imaging re-val: sigma 2.5->2.0, k swept 2-3, 2 acquisition-QC items carried open) + 8 (LA/BA classification: LA 5,067/BLA 9,301 cells, P(Fos+|TdT+) ~36-42%, region-labeling audit corrected wrong atlas-band prediction) were executed AD-HOC and are now BACKFILLED (07/08-VERIFICATION.md, 2026-07-23). Phase-10/EXP-04 point cloud also done ad-hoc (NOT yet backfilled). NEXT: plan Phase 9 (area-based readout) and/or Phase 10 post-processing (TSV -> animal-level aggregation, AGG-01/EXP-03). Incoming: new wBA slices with NO Fos+ channel (TdT-only; aggregation schema must handle variable marker sets)."
+last_updated: "2026-07-23T00:00:00.000Z"
+last_activity: 2026-07-23
+last_activity_desc: Backfilled ad-hoc Phases 7 + 8 into GSD record (retrospective VERIFICATIONs)
 progress:
   total_phases: 6
-  completed_phases: 1
+  completed_phases: 4
   total_plans: 8
   completed_plans: 5
-  percent: 17
+  percent: 67
 ---
 
 # Project State: M3 Section Pipeline — TRAP2 / Airyscan
@@ -28,16 +28,16 @@ progress:
 
 **Core value:** Biologically plausible TdT+/Fos+/Double+ counts per atlas region across a registered section series, with locked detection parameters and imaging-optimization notes ready to scale brain-wide.
 
-**Current focus:** Phase 06 — registration-speedup
+**Current focus:** Phases 7 + 8 backfilled; Phase 9 (area readout) / Phase 10 (aggregation) next
 
 ---
 
 ## Current Position
 
-Phase: 06 (registration-speedup) — EXECUTING
-Plan: 3 of 5
-Status: Ready to execute
-Last activity: 2026-07-20 — Phase 06 execution started
+Phase: 08 (la-ba-classification) — COMPLETE (ad-hoc, backfilled 2026-07-23)
+Plan: n/a (executed ad-hoc, no formal plans; retrospective VERIFICATION on record)
+Status: Phases 5-8 done; Phase 9 unplanned, Phase 10 aggregation is the remaining deliverable
+Last activity: 2026-07-23 — Backfilled Phases 7 + 8 into GSD record
 
 ## Performance Metrics
 
