@@ -8,6 +8,16 @@
  * Keeping detection out of this script lets the fast threshold-iteration loop
  * re-run without re-detecting.
  *
+ * CONFIG-DRIVEN PRECONDITIONS (D-09/D-14/D-15, Phase 06.1 Task 1): region
+ * exclusions, k_robust, and cytoplasmic ring geometry are now read from the
+ * sidecar `pipeline.yml` at the QuPath project base dir (migrated out of the
+ * former EXCLUDE_ACRONYMS/K_ROBUST/GAP_UM/RING_WIDTH_UM literals), and three
+ * fail-loud boundary asserts guard the human-in-the-loop GUI seams: ABBA
+ * registration loaded, detections present, and the image's channels matching
+ * pipeline.yml's declared anchor/marker channels. Per-marker measurement and
+ * compound classification generalization is Task 2 of this plan; this script
+ * still classifies the Fos/TdT pair explicitly pending that follow-up.
+ *
  * GUARD + IDEMPOTENCY (D-02): if the current entry has zero detections, this
  * script aborts cleanly with a clear message telling the user to run
  * run_braian_detection.groovy first. If detections exist, they are
@@ -27,21 +37,22 @@
  * independent markers without proximity/overlap heuristics).
  *
  * D-03/D-05: classification reads the (bg-sub) measure (D-04 above) against
- * thresholds RE-DERIVED on that measure at runtime via a self-calibrating robust
- * cut (background median + k*1.4826*MAD, k=3 seed) -- NOT the old absolute cutoffs
- * (Fos 13000.4538 / TdT 16766.4671, Fos_Classifier_20x.json / TdT_classifier.json),
- * and NOT the superseded nth-histogram-peak strategy (which assumed a bimodality
- * that sparse markers don't have -> NaN -> 100% Negative, the D-05 gate failure).
- * Those two raw-cutoff JSONs are SUPERSEDED for classification and retained only
+ * thresholds RE-DERIVED on that measure at runtime via a self-calibrating
+ * robust cut (background median + k*1.4826*MAD, k read from pipeline.yml's
+ * k_robust) -- NOT the old absolute cutoffs (Fos 13000.4538 / TdT 16766.4671,
+ * Fos_Classifier_20x.json / TdT_classifier.json), and NOT the superseded
+ * nth-histogram-peak strategy (which assumed a bimodality that sparse
+ * markers don't have -> NaN -> 100% Negative, the D-05 gate failure). Those
+ * two raw-cutoff JSONs are SUPERSEDED for classification and retained only
  * as a documented reference point. The operative bg-sub thresholds live in
  * Fos_Classifier_20x_bgsub.json /
  * TdT_classifier_bgsub.json, which this script re-derives and overwrites on
  * every run (Pitfall 9: do not let the old absolute cutoffs leak back in
  * against the new measure).
  *
- * EXCLUSIONS: detections whose centroid falls in an excluded region (DG-sg +
- * ventricular systems VS) are set to "Excluded" and NOT marker-classified.
- * Locked in Phase 2 — not a Phase-3 decision; EXCLUDE_ACRONYMS unchanged.
+ * EXCLUSIONS: detections whose centroid falls in a config-declared excluded
+ * region (`exclude_acronyms` in pipeline.yml, default DG-sg + ventricular
+ * systems VS) are set to "Excluded" and NOT marker-classified.
  *
  * BACKGROUND-ROBUST MEASURE (D-04): before classification, every detection
  * gains a compartment-agnostic local-background-subtracted measurement for
@@ -88,8 +99,152 @@ import static qupath.lib.scripting.QP.*
 // wrong project entry under "Run for project").
 println "Running on: " + getCurrentImageData().getServer().getMetadata().getName()
 
-// ── excluded regions (Allen acronyms; parent ROI covers its subfields) ──────
-def EXCLUDE_ACRONYMS = ["DG-sg", "VS"] as Set   // DG granule cell layer (too dense) + ventricular systems. (DG-mo/DG-po stay in.)
+// ── D-09/D-14: pipeline.yml sidecar config reader ───────────────────────────
+// No YAML library ships with QuPath's bundled Groovy (the same constraint that
+// forces export_region_dapi_reference.groovy's regex "grab" idiom for
+// BraiAn.yml). This reader is a line-based mini-parser targeted at
+// pipeline.yml's known shape (D-14): anchor{name,channel},
+// markers[]{name,channel,compartment}, exclude_acronyms[], k_robust,
+// ring{gap_um,width_um}. Comments (# ...) are stripped before parsing,
+// tracking quote state so a '#' inside a quoted string is never mistaken for
+// a comment marker (not currently needed by pipeline.yml's values, but safe).
+// The marker LIST itself is read here (Task 2 of this plan wires it into the
+// per-marker measurement/classification loop); this task only needs
+// anchor/exclude_acronyms/k_robust/ring plus the marker channel list for the
+// D-15 channel-match guard below.
+def pipelineYmlFile = new File(getProject().getBaseDirectory(), "pipeline.yml")
+if (!pipelineYmlFile.exists()) {
+    println "ERROR: pipeline.yml not found at ${pipelineYmlFile}."
+    println "       Author the sidecar pipeline config (anchor/markers/exclude_acronyms/k_robust/ring) first."
+    return
+}
+
+def stripComment = { String line ->
+    int quoteCount = 0
+    for (int i = 0; i < line.length(); i++) {
+        char c = line.charAt(i)
+        if (c == ('"' as char)) quoteCount++
+        else if (c == ('#' as char) && quoteCount % 2 == 0) return line.substring(0, i)
+    }
+    return line
+}
+def indentOf = { String line -> line.length() - line.replaceAll(/^\s+/, "").length() }
+
+def rawLines = pipelineYmlFile.readLines().collect { stripComment(it) }
+
+String anchorName = null, anchorChannel = null
+def markers = []            // [ [name:, channel:, compartment:], ... ] -- non-anchor markers only (D-01)
+def excludeAcronyms = [] as Set
+Double kRobust = null
+Double gapUm = null, widthUm = null
+
+int i = 0
+int nLines = rawLines.size()
+while (i < nLines) {
+    def trimmed = rawLines[i].trim()
+    if (trimmed.isEmpty()) { i++; continue }
+
+    if (trimmed == "anchor:") {
+        int j = i + 1
+        while (j < nLines && (rawLines[j].trim().isEmpty() || indentOf(rawLines[j]) > 0)) {
+            def t = rawLines[j].trim()
+            def mName = (t =~ /^name:\s*"([^"]+)"/)
+            def mChan = (t =~ /^channel:\s*"([^"]+)"/)
+            if (mName.find()) anchorName = mName.group(1)
+            if (mChan.find()) anchorChannel = mChan.group(1)
+            j++
+        }
+        i = j
+        continue
+    }
+
+    if (trimmed == "markers:") {
+        int j = i + 1
+        def current = null
+        while (j < nLines && (rawLines[j].trim().isEmpty() || indentOf(rawLines[j]) > 0)) {
+            def t = rawLines[j].trim()
+            def mNew = (t =~ /^-\s*name:\s*"([^"]+)"/)
+            if (mNew.find()) {
+                if (current != null) markers << current
+                current = [name: mNew.group(1), channel: null, compartment: null]
+            } else if (current != null) {
+                def mChan = (t =~ /^channel:\s*"([^"]+)"/)
+                def mComp = (t =~ /^compartment:\s*"([^"]+)"/)
+                if (mChan.find()) current.channel = mChan.group(1)
+                if (mComp.find()) current.compartment = mComp.group(1)
+            }
+            j++
+        }
+        if (current != null) markers << current
+        i = j
+        continue
+    }
+
+    def mExcl = (trimmed =~ /^exclude_acronyms:\s*\[(.*)\]/)
+    if (mExcl.find()) {
+        def inner = mExcl.group(1)
+        (inner =~ /"([^"]*)"/).each { m -> excludeAcronyms << m[1] }
+        i++
+        continue
+    }
+
+    def mK = (trimmed =~ /^k_robust:\s*([0-9.eE+-]+)/)
+    if (mK.find()) { kRobust = mK.group(1) as Double; i++; continue }
+
+    if (trimmed == "ring:") {
+        int j = i + 1
+        while (j < nLines && (rawLines[j].trim().isEmpty() || indentOf(rawLines[j]) > 0)) {
+            def t = rawLines[j].trim()
+            def mGap = (t =~ /^gap_um:\s*([0-9.eE+-]+)/)
+            def mWid = (t =~ /^width_um:\s*([0-9.eE+-]+)/)
+            if (mGap.find()) gapUm = mGap.group(1) as Double
+            if (mWid.find()) widthUm = mWid.group(1) as Double
+            j++
+        }
+        i = j
+        continue
+    }
+
+    i++
+}
+
+// ── Fail-loud: every required key must be present (T-06.1-03) ──────────────
+def missingKeys = []
+if (anchorName == null)    missingKeys << "anchor.name"
+if (anchorChannel == null) missingKeys << "anchor.channel"
+if (markers.isEmpty())     missingKeys << "markers (empty or missing)"
+markers.eachWithIndex { m, idx ->
+    if (m.channel == null)     missingKeys << "markers[${idx}].channel (name=${m.name})"
+    if (m.compartment == null) missingKeys << "markers[${idx}].compartment (name=${m.name})"
+    else if (!(m.compartment in ["nuclear", "cytoplasmic"]))
+        missingKeys << "markers[${idx}].compartment invalid value '${m.compartment}' (name=${m.name}; must be nuclear or cytoplasmic)"
+}
+if (kRobust == null) missingKeys << "k_robust"
+if (gapUm == null)   missingKeys << "ring.gap_um"
+if (widthUm == null) missingKeys << "ring.width_um"
+if (!missingKeys.isEmpty()) {
+    println "ERROR: pipeline.yml is missing/invalid required key(s): ${missingKeys}"
+    println "       Fix pipeline.yml and re-run. Aborting."
+    return
+}
+println "pipeline.yml loaded: anchor=${anchorName}/${anchorChannel}  markers=${markers.collect { it.name }}  " +
+        "exclude_acronyms=${excludeAcronyms}  k_robust=${kRobust}  ring(gap_um=${gapUm}, width_um=${widthUm})"
+
+// ── image/server/hierarchy handles (shared: guards, bg-sub pass, threshold re-derivation, Atlas_X) ──
+def imageData = getCurrentImageData()
+def server = imageData.getServer()
+def hierarchy = imageData.getHierarchy()
+
+// ── D-15 guard 1: ABBA registration present (mirrors 01_load_abba_rois.groovy) ──
+def availableAtlases = AtlasTools.getAvailableAtlasRegistration(imageData)
+if (availableAtlases.isEmpty()) {
+    println "ERROR: No ABBA registration files found in data directory."
+    println "       Run ABBA export from Fiji first:"
+    println "       Plugins > Atlas > Multi Image To Atlas > Export"
+    println "       -> 'ABBA - Export Registrations To QuPath Project'"
+    return
+}
+println "Found ABBA registrations: ${availableAtlases}"
 
 // ── runtime classifier-JSON threshold read (Gson; no groovy.json in QuPath) ─
 def base = new File(getProject().getBaseDirectory(), "classifiers/object_classifiers")
@@ -102,25 +257,32 @@ def tdt = readSpec("TdT_classifier.json")
 println "Fos rule: ${fos.meas} >= ${fos.thr}"
 println "TdT rule: ${tdt.meas} >= ${tdt.thr}"
 
-// build exclusion ROIs (parent region annotations whose acronym is in EXCLUDE_ACRONYMS)
+// build exclusion ROIs (parent region annotations whose acronym is in the config's exclude_acronyms)
 def excludeRois = []
 getAnnotationObjects().each { ann ->
     def label = ann.getPathClass()?.toString() ?: ann.getName()
     if (label == null || ann.getROI() == null) return
     def m = (label =~ /(?i)^(?:Left|Right):\s*(.+)$/)
     def acr = m.find() ? m.group(1) : label
-    if (EXCLUDE_ACRONYMS.contains(acr)) excludeRois << ann.getROI()
+    if (excludeAcronyms.contains(acr)) excludeRois << ann.getROI()
 }
-println "Exclusion regions (${EXCLUDE_ACRONYMS}): ${excludeRois.size()} annotation ROI(s)"
+println "Exclusion regions (${excludeAcronyms}): ${excludeRois.size()} annotation ROI(s)"
 
-// ── D-02 zero-detection guard ────────────────────────────────────────────────
+// ── D-15 guard 2: detections present ────────────────────────────────────────
 def dets = getDetectionObjects()
 if (dets.isEmpty()) { println "No detections — run BraiAnDetect first. Aborting."; return }
 
-// ── image/server/hierarchy handles (shared: bg-sub pass, threshold re-derivation, Atlas_X) ──
-def imageData = getCurrentImageData()
-def server = imageData.getServer()
-def hierarchy = imageData.getHierarchy()
+// ── D-15 guard 3 (NEW): config-declared channels present on this image ─────
+def imageChannelNames = server.getMetadata().getChannels().collect { it.getName() } as Set
+def declaredChannels = ([anchorChannel] + markers.collect { it.channel }) as Set
+def missingChannels = declaredChannels.findAll { !imageChannelNames.contains(it) }
+if (!missingChannels.isEmpty()) {
+    println "ERROR: pipeline.yml declares channel(s) not present on this image: ${missingChannels}"
+    println "       Image channels available: ${imageChannelNames}"
+    println "       Fix pipeline.yml (or re-check the image's channel names) and re-run. Aborting."
+    return
+}
+println "Channel-match OK: all declared channels (${declaredChannels}) present on image (${imageChannelNames})."
 
 // ── D-04 / Pattern 1: compartment-agnostic local-background-subtracted measure ──
 // Resolve pixel size (µm/px) the same fallback way as qc_detection_gates.groovy:
@@ -136,14 +298,11 @@ if (cal != null && cal.hasPixelSizeMicrons()) {
     println "WARNING: image server has no pixel calibration -- falling back to hard-coded ${FALLBACK_PIXEL_SIZE_UM} µm/px (server.json PhysicalSizeX)"
 }
 
-// Ring-geometry seed constants (µm) -- [ASSUMED] starting point (Assumption A4),
-// tune visually on DG like Phase 2's cellExpansionMicrons; ring must not eat
-// into the cell's own compartment. Buffer distances are in PIXELS (Pitfall 2),
-// so convert before use.
-double GAP_UM = 1.0
-double RING_WIDTH_UM = 8.0
-double gapPx = GAP_UM / pixelUm
-double outerPx = (GAP_UM + RING_WIDTH_UM) / pixelUm
+// Ring-geometry (µm), from pipeline.yml (D-09) -- tune visually per slice-set,
+// like Phase 2's cellExpansionMicrons; ring must not eat into the cell's own
+// compartment. Buffer distances are in PIXELS (Pitfall 2), so convert before use.
+double gapPx = gapUm / pixelUm
+double outerPx = (gapUm + widthUm) / pixelUm
 
 // A5 guard: print the throwaway measurement object's key set exactly once, so
 // the "Cell: <channel> mean" key name assumption is confirmed before the loop
@@ -278,12 +437,11 @@ def isExcluded = { detection ->
 //   background has bg-sub ~= 0, so the median tracks the background mode). MAD:
 //   median absolute deviation; 1.4826*MAD is a robust SD estimate. Auto-derives
 //   per section (D-01 series-scalability), needs no bimodality assumption.
-def classifiable = dets.findAll { !isExcluded(it) }   // Pitfall 6: exclude DG-sg/VS from the derivation population
-println "Threshold derivation population (excluding DG-sg/VS): ${classifiable.size()} / ${dets.size()} detections"
+def classifiable = dets.findAll { !isExcluded(it) }   // Pitfall 6: exclude config-declared regions from the derivation population
+println "Threshold derivation population (excluding ${excludeAcronyms}): ${classifiable.size()} / ${dets.size()} detections"
 
-// Single tunable seed. Default k=3 (sweep 3-5 on this section, then lock as the
-// series seed). Higher k = stricter positive call.
-double K_ROBUST = 3.0
+// k_robust now comes from pipeline.yml (D-09) -- see kRobust above. Sweep 3-5 on
+// this section, then lock as the series seed. Higher k = stricter positive call.
 
 /** Median of a list of Doubles (linear-interpolated for even n); NaN if empty. */
 def medianOf = { List<Double> xs ->
@@ -322,14 +480,14 @@ def positiveFraction = { List<Double> values, double threshold ->
 }
 
 // Re-derive the operative D-05 thresholds on the bg-sub measure via the robust
-// self-calibrating cut (background median + k robust SDs). These are the values
-// classification actually uses.
+// self-calibrating cut (background median + k robust SDs, k from pipeline.yml).
+// These are the values classification actually uses.
 def bgFosValues = classifiable.collect { it.getMeasurements().get("Nucleus: AF488-T3 mean (bg-sub)")?.doubleValue() }.findAll { it != null && !Double.isNaN(it) }
 def bgTdtValues = classifiable.collect { it.getMeasurements().get("Cytoplasm: AF568-T2 mean (bg-sub)")?.doubleValue() }.findAll { it != null && !Double.isNaN(it) }
-double newFosThreshold = robustThreshold(bgFosValues, K_ROBUST)
-double newTdtThreshold = robustThreshold(bgTdtValues, K_ROBUST)
-println "Re-derived Fos threshold (bg-sub measure, median + ${K_ROBUST}*1.4826*MAD): ${newFosThreshold}"
-println "Re-derived TdT threshold (bg-sub measure, median + ${K_ROBUST}*1.4826*MAD): ${newTdtThreshold}"
+double newFosThreshold = robustThreshold(bgFosValues, kRobust)
+double newTdtThreshold = robustThreshold(bgTdtValues, kRobust)
+println "Re-derived Fos threshold (bg-sub measure, median + ${kRobust}*1.4826*MAD): ${newFosThreshold}"
+println "Re-derived TdT threshold (bg-sub measure, median + ${kRobust}*1.4826*MAD): ${newTdtThreshold}"
 
 // Mandatory self-check (redesigned for the robust strategy): instead of comparing
 // to the superseded RAW cutoffs (13000.4538 / 16766.4671 -- wrong scale for the
@@ -373,7 +531,7 @@ def writeBgsubClassifierSpec = { String fn, String measurement, double threshold
     pathClasses.add("Positive")
     obj.add("pathClasses", pathClasses)
     obj.addProperty("filter", "DETECTIONS_ALL")
-    obj.addProperty("note", "D-05: threshold re-derived by 02_detect_classify.groovy via the robust self-calibrating cut (background median + k*1.4826*MAD, k=${K_ROBUST}) on the (bg-sub) measure at ${new Date()}.")
+    obj.addProperty("note", "D-05: threshold re-derived by 02_detect_classify.groovy via the robust self-calibrating cut (background median + k*1.4826*MAD, k=${kRobust}) on the (bg-sub) measure at ${new Date()}.")
     new File(base, fn).text = new GsonBuilder().setPrettyPrinting().create().toJson(obj)
 }
 // Only overwrite the committed placeholder if this run actually produced a
