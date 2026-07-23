@@ -6,12 +6,12 @@
     "pathClassBelow": "Negative",
     "pathClassEquals": "Positive",
     "pathClassAbove": "Positive",
-    "threshold": 1679.0823498046873
+    "threshold": 1614.7347242187498
   },
   "pathClasses": [
     "Negative",
     "Positive"
   ],
   "filter": "DETECTIONS_ALL",
-  "note": "D-05: threshold re-derived by 02_detect_classify.groovy via the robust self-calibrating cut (background median + k*1.4826*MAD, k\u003d3.0) on the (bg-sub) measure at Thu Jul 16 13:38:13 EDT 2026."
+  "note": "D-05: threshold re-derived by 02_detect_classify.groovy via the robust self-calibrating cut (background median + k*1.4826*MAD, k\u003d3.0) on the (bg-sub) measure at Fri Jul 17 10:10:04 EDT 2026."
 }

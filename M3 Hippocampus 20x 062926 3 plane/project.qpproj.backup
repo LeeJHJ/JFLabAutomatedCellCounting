@@ -3,7 +3,7 @@
   "createTimestamp": 1782761370058,
   "modifyTimestamp": 1782761370058,
   "uri": "file:/home/jflab/Analysis/M3%20Hippocampus%2020x%20062926%203%20plane/project.qpproj",
-  "lastID": 2,
+  "lastID": 3,
   "images": [
     {
       "serverBuilder": {
@@ -127,7 +127,7 @@
         }
       },
       "entryID": 1,
-      "randomizedName": "29e02d5e-ee1c-4d44-85cc-21c997a75282",
+      "randomizedName": "2da0042f-f672-4867-bb31-86aa46d1c724",
       "imageName": "M3_20x_MIP_Z1-3.ome.tiff - czi_to_mip",
       "metadata": {},
       "tags": []
@@ -138,13 +138,13 @@
         "builder": {
           "builderType": "uri",
           "providerClassName": "qupath.lib.images.servers.bioformats.BioFormatsServerBuilder",
-          "uri": "file:/home/jflab/Analysis/M3%20Hippocampus%2020x%20062226/M3_20x_MIP_Z1-3_MIP.ome.tiff",
+          "uri": "file:/home/jflab/Analysis/M3%20Hippocampus%2020x%20062226/M3_20x_hybrid_dapiZ2_mipZ0-2.ome.tiff",
           "args": [
             "--series",
             "0"
           ],
           "metadata": {
-            "name": "M3_20x_MIP_Z1-3_MIP.ome.tiff - czi_to_mip",
+            "name": "M3_20x_hybrid_dapiZ2_mipZ0-2.ome.tiff - Analysis_hybrid",
             "width": 15770,
             "height": 10240,
             "sizeZ": 1,
@@ -194,7 +194,7 @@
           }
         },
         "metadata": {
-          "name": "M3_20x_MIP_Z1-3_MIP.ome.tiff - czi_to_mip",
+          "name": "M3_20x_hybrid_dapiZ2_mipZ0-2.ome.tiff - Analysis_hybrid",
           "width": 15770,
           "height": 10240,
           "sizeZ": 1,
@@ -253,9 +253,9 @@
           "preferredTileHeight": 256
         }
       },
-      "entryID": 2,
-      "randomizedName": "d506ce6e-493f-4f0a-a6ba-85db6534c5d5",
-      "imageName": "M3_20x_MIP_Z1-3_MIP.ome.tiff - czi_to_mip",
+      "entryID": 3,
+      "randomizedName": "f2f84453-b1a9-4446-9589-b9b2d815e1bd",
+      "imageName": "M3_20x_hybrid_dapiZ2_mipZ0-2.ome.tiff - Analysis_hybrid",
       "metadata": {},
       "tags": []
     }
