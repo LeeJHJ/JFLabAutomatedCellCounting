@@ -347,3 +347,117 @@ percellRows.each { row ->
 // Overwrite (truncate) each run — this is a per-run snapshot, not a growing cross-image reference.
 percellFile.text = percellSb.toString()
 println "Wrote ${percellRows.size()} per-cell rows -> ${percellFile}"
+
+// ── D-10: leaf tally + ancestor-walk parent rollup (zero-leak) ─────────────
+// Category order matches the D-04/derive_contract column order: anchor total
+// first, then per-marker positive (including Double+), then Double+ itself
+// (only when emitDouble). columnPrefixFor is the WIDE-TABLE column prefix
+// (anchor gets NO "+" -- matches scripts/validate_pipeline_config.py's
+// derive_contract columns: "<anchor>_count"/"<anchor>_density"); classFor is
+// the combined-CSV class LABEL (anchor DOES get a "+" -- "<anchor.name>+",
+// per D-13). These intentionally differ; do not collapse them into one.
+def CATEGORIES = ([anchorName] + markers.collect { it.name } + (emitDouble ? ["Double+"] : []))
+def columnPrefixFor = { String cat -> (cat == "Double+" || cat == anchorName) ? cat : "${cat}+" }
+def classFor = { String cat -> cat == "Double+" ? "Double+" : "${cat}+" }
+def zeroCounts = { CATEGORIES.collectEntries { [(it): 0] } }
+
+// ownCounts: per-resolved-annotation, per-category tally -- the "leaf" bucket
+// as CR-01's regionOf resolves it (occasionally a non-geometric-leaf rollup
+// annotation, for a cell whose centroid falls in no finer subregion).
+def ownCounts = [:]   // annotation -> [category: count]
+int nClassified = 0, nExcluded = 0, nUnresolved = 0
+dets.each { d ->
+    def cls = d.getPathClass()?.toString() ?: "Negative"
+    if (cls == "Excluded") { nExcluded++; return }
+    nClassified++
+    def region = regionOf(d)
+    if (region == null) { nUnresolved++; return }
+    def counts = ownCounts.computeIfAbsent(region) { zeroCounts() }
+    // Anchor total: every non-excluded classified nucleus in the leaf (D-13).
+    counts[anchorName] = counts[anchorName] + 1
+    // Per-marker positive count, INCLUDING Double+ (D-13 category definition:
+    // a cell positive for this marker, whether it ended up "<marker>+" alone
+    // or "Double+" with another marker).
+    markers.each { marker ->
+        if (cls == "${marker.name}+" || cls == "Double+") {
+            counts[marker.name] = counts[marker.name] + 1
+        }
+    }
+    if (emitDouble && cls == "Double+") {
+        counts["Double+"] = counts["Double+"] + 1
+    }
+}
+if (nUnresolved > 0) {
+    println "WARNING: ${nUnresolved} classified, non-excluded detection(s) had no resolvable atlas region (regionOf returned null) -- excluded from the region table and the zero-leak sum below."
+}
+
+// Ancestor-walk rollup (D-10, NEW code -- no independent parent-ROI containment
+// pass, do NOT copy 02_detect_classify.groovy's lines ~483-507, which predates
+// CR-01). Initialize every candidate region annotation's rolled-up counts from
+// its OWN bucket (zero if it received no direct cells), then walk each
+// contributing annotation's already-resolved parent chain via ann.getParent()
+// (resolveHierarchy() in 01_load_abba_rois.groovy makes this available) and ADD
+// its own-bucket counts into every ancestor still within the candidate region
+// set. This makes each parent row the exact SUM of its descendant-leaf counts.
+def rolledCounts = [:]
+regionAnnotations.each { ann -> rolledCounts[ann] = zeroCounts() }
+ownCounts.each { ann, counts ->
+    counts.each { cat, cnt -> rolledCounts[ann][cat] = rolledCounts[ann][cat] + cnt }
+    def p = ann.getParent()
+    while (p != null && regionAnnotationSet.contains(p)) {
+        counts.each { cat, cnt -> rolledCounts[p][cat] = rolledCounts[p][cat] + cnt }
+        p = p.getParent()
+    }
+}
+
+// ── D-10 zero-leak assertion (fail-loud) ────────────────────────────────────
+// The sum of ALL own-bucket anchor counts must equal the total non-excluded
+// classified detections. Parent rows are summed FROM these same own-buckets
+// (never independently re-counted via centroid-in-parent-ROI containment), so
+// this single check proves no cell was silently lost or double-counted
+// anywhere in the rollup.
+int sumAnchorOwn = (ownCounts.values().collect { it[anchorName] }.sum()) ?: 0
+if (sumAnchorOwn != nClassified) {
+    println "ERROR: zero-leak FAILED -- summed leaf ${anchorName} counts (${sumAnchorOwn}) != total classified non-excluded detections (${nClassified})."
+    println "       (${nUnresolved} unresolved detection(s) with no containing region account for part of any gap.)"
+    throw new RuntimeException("D-10 zero-leak assertion failed: ${sumAnchorOwn} != ${nClassified}")
+}
+println "zero-leak PASS: summed leaf ${anchorName} counts = ${sumAnchorOwn} == total classified non-excluded detections = ${nClassified}"
+
+// ── per-slice wide region table (D-11: density = count / area_mm2) ─────────
+// One row per region annotation (leaves AND parent rollups); is_leaf is the
+// GEOMETRIC isLeafOf flag regardless of whether a cell happened to resolve
+// directly onto that annotation. Columns adapt to the declared marker set
+// (D-04) -- absent-marker columns are never emitted because CATEGORIES is
+// built purely from pipeline.yml's declared markers.
+def regionRows = []
+regionAnnotations.each { ann ->
+    def roi = ann.getROI()
+    def label = ann.getPathClass()?.toString() ?: ann.getName()
+    def isLeaf = isLeafOf(ann)
+    def hemisphere = ""; def acronym = label
+    def mm = (label =~ /(?i)^(Left|Right):\s*(.+)$/)
+    if (mm.find()) { hemisphere = mm.group(1); acronym = mm.group(2) }
+    def areaMm2 = roi.getArea() * pxToMm2
+    if (areaMm2 <= 0) return
+    def counts = rolledCounts[ann] ?: zeroCounts()
+    regionRows << [label: label, hemisphere: hemisphere, acronym: acronym, isLeaf: isLeaf, areaMm2: areaMm2, counts: counts]
+}
+
+def regionHeader = (["region_label", "hemisphere", "acronym", "is_leaf", "area_mm2"] +
+        CATEGORIES.collectMany { cat -> ["${columnPrefixFor(cat)}_count", "${columnPrefixFor(cat)}_density"] }).join("\t")
+def regionFile = new File(buildPathInProject("results", "${stem}__region_table.tsv"))
+def regionSb = new StringBuilder()
+regionSb.append(regionHeader).append("\n")
+regionRows.each { row ->
+    def cells = [row.label, row.hemisphere, row.acronym, row.isLeaf, String.format('%.6f', row.areaMm2)]
+    CATEGORIES.each { cat ->
+        int cnt = (row.counts[cat] ?: 0) as int
+        double dens = row.areaMm2 > 0 ? (cnt / row.areaMm2) : Double.NaN
+        cells << cnt
+        cells << (Double.isNaN(dens) ? "" : String.format('%.3f', dens))
+    }
+    regionSb.append(cells.join("\t")).append("\n")
+}
+regionFile.text = regionSb.toString()
+println "Wrote ${regionRows.size()} per-region rows -> ${regionFile} (categories: ${CATEGORIES})"
