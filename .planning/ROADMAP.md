@@ -107,7 +107,7 @@ Plans:
 **Goal:** The ad-hoc wBA1-3 script collection is consolidated into a single region-agnostic, documented pipeline that emits a per-region DAPI+/Fos+/TdT+/Double+ count-and-density table for any atlas region in each slice — with the marker set treated as variable (incoming slices may be TdT-only, so absent Fos+/Double+ must be handled, not assumed) — validated end-to-end on a new set of brain slices and captured as a step-by-step runbook for reuse.
 **Requirements**: PIPE-01, PIPE-02, PIPE-03, PIPE-04, PIPE-05, PIPE-06 (minted 2026-07-23 from discuss-phase decisions D-01→D-17)
 **Depends on:** Phase 6
-**Plans:** 1/6 plans executed
+**Plans:** 2/6 plans executed
 
 Plans:
 
@@ -117,7 +117,7 @@ Plans:
 
 **Wave 2** *(autonomous authoring; parallel — no file overlap)*
 
-- [ ] 06.1-02-PLAN.md — Generalize 02_detect_classify.groovy to config-driven markers + D-15 fail-loud asserts + retire classify_markers.groovy (PIPE-01, PIPE-02, PIPE-05)
+- [x] 06.1-02-PLAN.md — Generalize 02_detect_classify.groovy to config-driven markers + D-15 fail-loud asserts + retire classify_markers.groovy (PIPE-01, PIPE-02, PIPE-05)
 - [ ] 06.1-03-PLAN.md — Consolidated export 03_export_region_table.groovy: per-cell TSV + per-region count/density table + long/tidy combined CSV, CR-01 leaf + ancestor-walk zero-leak rollup (PIPE-02, PIPE-03, PIPE-04, PIPE-05)
 
 **Wave 3** *(autonomous)*

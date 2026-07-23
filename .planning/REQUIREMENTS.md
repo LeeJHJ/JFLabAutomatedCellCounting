@@ -28,7 +28,7 @@ Requirements for milestone v1.1. Each maps to a roadmap phase. Data: `-001-07_pr
 Derived from Phase 06.1 discuss-phase decisions D-01→D-17 (see `phases/06.1-…/06.1-CONTEXT.md`). This phase consolidates the ad-hoc wBA1-3 script collection into one region-agnostic, config-driven pipeline; its per-slice/per-region spine feeds CLASS-02, LABEL-01, AGG-01, EXP-03/04 downstream.
 
 - [x] **PIPE-01**: The marker set is variable and config-declared — an explicit `name → channel → compartment` block declares markers, the detection/segmentation anchor channel is itself declared in config (default DAPI, never hardwired), Double+ is auto-derived only when ≥2 non-anchor markers are declared, and per-slice tables omit columns for absent markers (a TdT-only slice emits DAPI+/TdT+ only — no assumed Fos+/Double+) (D-01–D-04)
-- [ ] **PIPE-02**: The ad-hoc scripts consolidate to one canonical spine — the detect/classify split is kept (`run_braian_detection.groovy` + `02_detect_classify.groovy`), the duplicate `classify_markers.groovy` is retired (its logic already lives in `02`), and a single config-driven export emits both the per-cell TSV and the per-region table (folding in `export_region_dapi_reference.groovy` + `03_export_val01_metrics.groovy`) (D-05–D-07)
+- [x] **PIPE-02**: The ad-hoc scripts consolidate to one canonical spine — the detect/classify split is kept (`run_braian_detection.groovy` + `02_detect_classify.groovy`), the duplicate `classify_markers.groovy` is retired (its logic already lives in `02`), and a single config-driven export emits both the per-cell TSV and the per-region table (folding in `export_region_dapi_reference.groovy` + `03_export_val01_metrics.groovy`) (D-05–D-07)
 - [ ] **PIPE-03**: The export emits all atlas regions present on the slice (exclusion literals like `["DG-sg","VS"]` moved from source into config), every cell is assigned to exactly one smallest-area leaf (CR-01 rule) and parent rows are the SUM of descendant-leaf counts up the atlas tree — never an independent parent-ROI containment pass — with density reported as cells/mm² (region count ÷ region area_mm²) (D-08–D-11)
 - [ ] **PIPE-04**: Each slice produces a self-contained per-region table, and rows are appended to a growing combined CSV in long/tidy format — one row per region×marker: `slice, config_tag, region, hemisphere, is_leaf, marker, class, count, density` — where absent markers produce no rows (no NA, aggregation-ready for BraiAnalyse/pandas) (D-12–D-13)
 - [x] **PIPE-05**: Pipeline config (marker list, anchor, compartments, exclusions) lives in a new sidecar file separate from `BraiAn.yml` and is read by every groovy entry; each scriptable entry fail-loud asserts its preconditions (ABBA ROIs loaded, detections present, image channels match the declared markers) before doing work, guarding the human-in-the-loop GUI seams (D-14–D-15)
@@ -93,7 +93,7 @@ Each requirement maps to exactly one phase. Phases continue from v1.0 (Phases 1-
 | REG-04 | Phase 6 | Complete |
 | REG-05 | Phase 6 | Complete |
 | PIPE-01 | Phase 06.1 | Complete |
-| PIPE-02 | Phase 06.1 | Pending |
+| PIPE-02 | Phase 06.1 | Complete |
 | PIPE-03 | Phase 06.1 | Pending |
 | PIPE-04 | Phase 06.1 | Pending |
 | PIPE-05 | Phase 06.1 | Complete |

@@ -6,14 +6,14 @@ current_phase: 06.1
 current_phase_name: pipeline-generalization-per-region-readout-runbook
 status: executing
 stopped_at: Phase 06.1 context gathered
-last_updated: "2026-07-23T21:01:24.770Z"
+last_updated: "2026-07-23T21:21:55.432Z"
 last_activity: 2026-07-23
 last_activity_desc: Phase 06.1 execution started
 progress:
   total_phases: 7
   completed_phases: 2
   total_plans: 14
-  completed_plans: 9
+  completed_plans: 10
   percent: 29
 ---
 
@@ -35,7 +35,7 @@ progress:
 ## Current Position
 
 Phase: 06.1 (pipeline-generalization-per-region-readout-runbook) — EXECUTING
-Plan: 2 of 6
+Plan: 3 of 6
 Status: Ready to execute
 Last activity: 2026-07-23 — Phase 06.1 execution started
 
@@ -57,6 +57,7 @@ Last activity: 2026-07-23 — Phase 06.1 execution started
 | Phase 06 P01 | 5min | 3 tasks | 4 files |
 | Phase 06 P02 | 6min | 3 tasks | 3 files |
 | Phase 06.1 P01 | 6min | 2 tasks | 4 files |
+| Phase 06.1 P02 | 4min | 3 tasks | 6 files |
 
 ## v1.1 Roadmap Snapshot (created 2026-07-17)
 
@@ -149,7 +150,7 @@ None. First v1.1 execution step (Phase 5) is scriptable (no GUI dependency); Pha
 
 ## Session Continuity
 
-**Last session:** 2026-07-23T21:00:41.425Z
+**Last session:** 2026-07-23T21:21:08.194Z
 **Stopped at:** Phase 06.1 context gathered
 **Resume file:** 
 
@@ -179,3 +180,4 @@ None
 - [Phase 06]: 06-02: scripts/run_deepslice.py NOT authored -- 06-CONTEXT resolution supersedes RESEARCH; REG-03 uses ABBA native DeepSlice Registration (Local) command, D-01 met by 06-REG03-SOP.md record
 - [Phase ?]: 06.1-01: Compartment-label map fixed nuclear->Nucleus, cytoplasmic->Cytoplasm; bg-sub measurement key locked as '<label>: <channel> mean (bg-sub)' for all downstream consumers
 - [Phase ?]: 06.1-01: pipeline.yml's load_config() defensively rejects any leaked BraiAnDetect detection-param key, enforcing D-14's separation from BraiAn.yml at validation time, not just by convention
+- [Phase ?]: 06.1-02: pipeline.yml parsed via a line-based state-machine (no YAML lib in QuPath Groovy); config-driven per-marker bg-sub classifier JSON filenames replace the two legacy literal filenames
