@@ -3,18 +3,18 @@ gsd_state_version: 1.0
 milestone: v1.1
 milestone_name: First Full-Series Run — LA/BA Amygdala Engram
 current_phase: 08
-current_phase_name: la-ba-classification-region-labeling-validation
+current_phase_name: la-ba-classification
 status: executing
-stopped_at: "Phases 5-6 GSD-tracked complete. Phases 7 (imaging re-val: sigma 2.5->2.0, k swept 2-3, 2 acquisition-QC items carried open) + 8 (LA/BA classification: LA 5,067/BLA 9,301 cells, P(Fos+|TdT+) ~36-42%, region-labeling audit corrected wrong atlas-band prediction) were executed AD-HOC and are now BACKFILLED (07/08-VERIFICATION.md, 2026-07-23). Phase-10/EXP-04 point cloud also done ad-hoc (NOT yet backfilled). NEXT: plan Phase 9 (area-based readout) and/or Phase 10 post-processing (TSV -> animal-level aggregation, AGG-01/EXP-03). Incoming: new wBA slices with NO Fos+ channel (TdT-only; aggregation schema must handle variable marker sets)."
-last_updated: "2026-07-23T00:00:00.000Z"
+stopped_at: Phase 06.1 context gathered
+last_updated: "2026-07-23T19:35:46.897Z"
 last_activity: 2026-07-23
-last_activity_desc: Backfilled ad-hoc Phases 7 + 8 into GSD record (retrospective VERIFICATIONs)
+last_activity_desc: Backfilled Phases 7 + 8 into GSD record
 progress:
-  total_phases: 6
-  completed_phases: 4
+  total_phases: 7
+  completed_phases: 2
   total_plans: 8
-  completed_plans: 5
-  percent: 67
+  completed_plans: 8
+  percent: 29
 ---
 
 # Project State: M3 Section Pipeline — TRAP2 / Airyscan
@@ -142,13 +142,17 @@ None. First v1.1 execution step (Phase 5) is scriptable (no GUI dependency); Pha
 
 ---
 
+### Roadmap Evolution
+
+- Phase 06.1 inserted after Phase 6: Pipeline Generalization + Per-Region Readout Runbook (URGENT)
+
 ## Session Continuity
 
-**Last session:** 2026-07-20T15:49:38.169Z
-**Stopped at:** Completed 06-01-PLAN.md
+**Last session:** 2026-07-23T19:35:46.891Z
+**Stopped at:** Phase 06.1 context gathered
 **Resume file:** 
 
-None
+.planning/phases/06.1-pipeline-generalization-per-region-readout-runbook/06.1-CONTEXT.md
 
 **Side task:** TRACR registration for another lab in progress (rough, may need a per-section second pass) — see memory. (Retired notes archived in `.planning/archive/retired-memory-notes.md`.)
 
