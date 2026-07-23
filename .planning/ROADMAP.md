@@ -126,7 +126,7 @@ Plans:
 
 **Wave 4** *(autonomous)*
 
-- [ ] 06.1-05-PLAN.md — RUNBOOK.md operator checklist + per-stage registration/detection docs (PIPE-06)
+- [ ] 06.1-05-PLAN.md — User-friendly tutorial packaging: MkDocs Material site (docs/index.md + per-stage docs, local preview + opt-in GitHub Pages) + one-command run_pipeline.py launcher + slim RUNBOOK.md pointer (PIPE-06, D-18)
 
 **Wave 5** *(blocking-human GUI validation)*
 
