@@ -1,4 +1,14 @@
 /**
+ * RETIRED 2026-07-23 (Phase 06.1 Plan 02, D-06): superseded by
+ * scripts/02_detect_classify.groovy, which contains this same classification
+ * core (compare lines 56-71 below to 02_detect_classify.groovy's compound
+ * classification block) plus bg-sub background subtraction, robust
+ * self-calibrating thresholds, atlas region labeling, and (as of this phase)
+ * a config-driven N-marker loop reading pipeline.yml instead of the two
+ * hardcoded Fos/TdT literals below. Kept here for historical reference only
+ * — do not deploy or run this file; no QuPath project script/ dir references
+ * it anymore (PIPE-02).
+ *
  * classify_markers.groovy — nucleus-anchored Fos/TdT/Double classification (+ region exclusion)
  *
  * WHY: BraiAnDetect's config-driven classifier list (BraiAn.yml `classifiers:`) can only
