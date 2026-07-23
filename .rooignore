@@ -1,0 +1,9 @@
+# Protect the model from massive bioimage files
+*.tif
+*.tiff
+*.nd2
+
+# Ignore Python environments and logs
+.venv/
+__pycache__/
+*.csv
