@@ -1,4 +1,12 @@
 /**
+ * RETIRED 2026-07-23 (Phase 06.1 Plan 04, D-07): superseded by
+ * scripts/03_export_region_table.groovy, which folds in this script's per-cell
+ * export role (CR-01 leaf resolution, per-entry non-clobbering stem) plus
+ * export_region_dapi_reference.groovy's all-region loop + growing-CSV pattern,
+ * generalized from a fixed Fos/TdT pair to any N declared markers (pipeline.yml).
+ * Kept here for historical reference only — do not deploy or run this file; no
+ * QuPath project scripts/ dir references it anymore (PIPE-02).
+ *
  * 03_export_val01_metrics.groovy — VAL-01 per-cell + per-region export (D-03/D-04)
  *
  * SCOPE: This script does NOT detect or classify. It MUST run AFTER

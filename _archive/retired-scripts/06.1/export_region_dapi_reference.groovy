@@ -1,4 +1,12 @@
 /**
+ * RETIRED 2026-07-23 (Phase 06.1 Plan 04, D-07): superseded by
+ * scripts/03_export_region_table.groovy, which folds in this script's
+ * all-region loop + config_tag + growing-CSV append pattern (generalized from
+ * DAPI-only to any N declared markers via pipeline.yml, D-13's long/tidy
+ * schema) plus 03_export_val01_metrics.groovy's CR-01 leaf resolution and
+ * per-cell export. Kept here for historical reference only — do not deploy or
+ * run this file; no QuPath project scripts/ dir references it anymore (PIPE-02).
+ *
  * export_region_dapi_reference.groovy
  *
  * Appends THIS image's per-region DAPI density to a central, growing internal
