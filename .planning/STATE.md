@@ -6,7 +6,7 @@ current_phase: 06.1
 current_phase_name: pipeline-generalization-per-region-readout-runbook
 status: executing
 stopped_at: Completed 06.1-05-PLAN.md
-last_updated: "2026-07-24T14:36:25.566Z"
+last_updated: "2026-07-24T14:39:40.900Z"
 last_activity: 2026-07-23
 last_activity_desc: Phase 06.1 execution started
 progress:
@@ -137,7 +137,9 @@ Items acknowledged and deferred at v1.0 milestone close on 2026-07-17:
 
 ### Blockers
 
-None. First v1.1 execution step (Phase 5) is scriptable (no GUI dependency); Phases 6-8 include human-in-the-loop QuPath/ABBA GUI handoffs.
+First v1.1 execution step (Phase 5) is scriptable (no GUI dependency); Phases 6-8 include human-in-the-loop QuPath/ABBA GUI handoffs.
+
+- 06.1-06 Task 2 (operator GUI run: ABBA register + BraiAnDetect + classify + export on the TdT-only slice set) awaiting the incoming TdT-only slice set data + operator availability at the monitor. pipeline.tdt-only.yml authored and config-side validated (D-03/D-04 proven); no TdT-only QuPath project exists on disk yet.
 
 ### Quick Tasks Completed
 
@@ -153,7 +155,7 @@ None. First v1.1 execution step (Phase 5) is scriptable (no GUI dependency); Pha
 
 ## Session Continuity
 
-**Last session:** 2026-07-24T14:36:25.559Z
+**Last session:** 2026-07-24T14:39:18.862Z
 **Stopped at:** Completed 06.1-05-PLAN.md
 **Resume file:** 
 
