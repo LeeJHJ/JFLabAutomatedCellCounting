@@ -48,6 +48,10 @@ from scipy import ndimage as ndi
 DEFAULT_CHANNELS = ["AF568-T2", "AF488-T3", "DAPI-T4"]
 DEFAULT_PIXEL_UM = 0.6905355   # server.json PhysicalSizeX of the registered production MIP
 DEFAULT_ANIMAL_PREFIX = "wBA1-3"
+DEFAULT_FEATHER_MARGIN = 130   # px; ~ the real ZEN mosaic tile overlap (x-step 1382 on 1512px
+                                # tiles); operator-tunable via _stitch_scene_tiles(feather_margin=)
+DEFAULT_SHADING_SMOOTH_SIGMA = 5.0   # px; gaussian smoothing of the estimated per-channel
+                                      # illumination-shape field; operator-tunable
 
 
 def parse_args() -> argparse.Namespace:
@@ -128,7 +132,39 @@ def _scene_tile_count(dims_all, scene_keys: list[int], scene_idx: int) -> int:
     return _extent(d, "M")
 
 
-def _stitch_scene_tiles(tiles: list[tuple[int, int, np.ndarray]]) -> np.ndarray:
+def _feather_weights(h: int, w: int, margin: int) -> np.ndarray:
+    """Per-pixel (h, w) float64 weight map for feathered tile blending.
+
+    Ramps linearly from a small POSITIVE floor at each of the four tile
+    edges up to 1.0 at `margin` pixels inward, staying 1.0 in the core.
+    Computed as the per-pixel minimum of an independent horizontal edge-ramp
+    and vertical edge-ramp (a pixel near a corner is limited by whichever
+    edge it is closer to).
+
+    Weight is strictly > 0 everywhere (the floor is never exactly 0) so a
+    pixel covered by exactly one tile recovers that tile's value exactly
+    after weighted-sum / weight-sum normalization (weight cancels).
+
+    `margin` is clamped to at most min(h, w) // 2 so small tiles (including
+    self-test synthetic tiles) never see the ramp overshoot the tile.
+    """
+    floor = 1e-3
+    margin = max(1, min(int(margin), min(h, w) // 2))
+
+    def _ramp(n: int) -> np.ndarray:
+        idx = np.arange(n, dtype=np.float64)
+        dist = np.minimum(idx, (n - 1) - idx)
+        r = np.clip(dist / margin, 0.0, 1.0)
+        return floor + (1.0 - floor) * r
+
+    wy = _ramp(h).reshape(h, 1)
+    wx = _ramp(w).reshape(1, w)
+    return np.minimum(wy, wx)
+
+
+def _stitch_scene_tiles(
+    tiles: list[tuple[int, int, np.ndarray]], feather_margin: int = DEFAULT_FEATHER_MARGIN
+) -> np.ndarray:
     """Stitch ONE scene's tiles into a single (Y, X) canvas, sized to that
     scene's OWN tile-union (never the full mosaic).
 
@@ -144,21 +180,103 @@ def _stitch_scene_tiles(tiles: list[tuple[int, int, np.ndarray]]) -> np.ndarray:
     legitimately differ slightly from the reported scene bbox.
 
     Where two of this scene's OWN tiles overlap at a shared seam (normal ZEN
-    intra-scene mosaic stitching overlap), the seam is resolved brighter-wins
-    via `np.maximum` -- safe for MIP / cell-counting use (never darkens
-    signal, and any single real photon count survives at the seam).
+    intra-scene mosaic stitching overlap), the seam is resolved by a
+    FEATHERED WEIGHTED-AVERAGE cross-fade (`_feather_weights`), not the old
+    brighter-wins `np.maximum` -- accumulate weight*data and weight into
+    float64 canvases, then divide (weight==0 -> 0, i.e. uncovered pixels
+    stay 0). A pixel covered by exactly one tile recovers that tile's value
+    exactly (weight cancels in the ratio); integer dtypes are rounded to
+    nearest before the final cast so this exactness survives the uint16
+    round-trip, float dtypes are cast without rounding. Isolation (only this
+    scene's own tiles are ever passed in) and union-sizing are unchanged
+    from the prior brighter-wins implementation.
+
+    `feather_margin` defaults to `DEFAULT_FEATHER_MARGIN` (~ the real ~130 px
+    ZEN mosaic tile overlap) and is operator-tunable per call.
     """
     origin_x = min(x for x, y, data in tiles)
     origin_y = min(y for x, y, data in tiles)
     ext_x = max(x + data.shape[1] for x, y, data in tiles) - origin_x
     ext_y = max(y + data.shape[0] for x, y, data in tiles) - origin_y
-    canvas = np.zeros((ext_y, ext_x), dtype=tiles[0][2].dtype)
+    out_dtype = tiles[0][2].dtype
+    weighted_sum = np.zeros((ext_y, ext_x), dtype=np.float64)
+    weight_sum = np.zeros((ext_y, ext_x), dtype=np.float64)
     for x, y, data in tiles:
         ry, rx = y - origin_y, x - origin_x
         h, w = data.shape
-        dst = canvas[ry:ry + h, rx:rx + w]
-        np.maximum(dst, data, out=dst)
-    return canvas
+        weights = _feather_weights(h, w, feather_margin)
+        weighted_sum[ry:ry + h, rx:rx + w] += weights * data.astype(np.float64)
+        weight_sum[ry:ry + h, rx:rx + w] += weights
+    canvas_f = np.zeros((ext_y, ext_x), dtype=np.float64)
+    covered = weight_sum > 0
+    canvas_f[covered] = weighted_sum[covered] / weight_sum[covered]
+    if np.issubdtype(out_dtype, np.integer):
+        info = np.iinfo(out_dtype)
+        canvas_f = np.clip(np.round(canvas_f), info.min, info.max)
+    return canvas_f.astype(out_dtype)
+
+
+def _estimate_shading_field(
+    tile_arrays: list[np.ndarray], smooth_sigma: float = DEFAULT_SHADING_SMOOTH_SIGMA
+) -> np.ndarray:
+    """Estimate a per-channel retrospective flat-field illumination SHAPE
+    from a pool of already-read same-shape tiles (one channel, pooled across
+    all Z and M -- no extra CZI read; caller reuses tiles it already read).
+
+    Per-tile robust-mean normalization (each kept tile is divided by its own
+    mean so bright and dim tiles contribute the illumination SHAPE equally,
+    not their absolute brightness) -> per-pixel MEDIAN across the normalized
+    kept tiles (robust to any single tile's real tissue structure or
+    outlier brightness) -> `ndi.gaussian_filter` smoothing (suppresses
+    residual tissue texture, keeps the slow illumination gradient) ->
+    renormalize to mean 1.0 (an identity-safe multiplicative scale).
+
+    Near-empty tiles (robust mean at or below a small floor) are skipped --
+    they carry no illumination-shape signal and would divide-by-near-zero.
+    Falls back to a uniform ones field (== no correction, i.e. the identity
+    shading map) if no tile qualifies, or if the input tiles are not all the
+    same shape. Never returns NaN or inf -- a bad field must never silently
+    corrupt pixel values (T-kmj-01).
+    """
+    eps = 1e-6
+    if not tile_arrays:
+        return np.ones((1, 1), dtype=np.float64)
+    shape0 = tile_arrays[0].shape
+    if any(t.shape != shape0 for t in tile_arrays):
+        return np.ones(shape0, dtype=np.float64)
+    normalized = []
+    for t in tile_arrays:
+        m = float(np.mean(t.astype(np.float64)))
+        if m <= eps:
+            continue   # near-empty tile: no illumination-shape signal, skip
+        normalized.append(t.astype(np.float64) / m)
+    if not normalized:
+        return np.ones(shape0, dtype=np.float64)
+    raw_field = np.median(np.stack(normalized, axis=0), axis=0)
+    smoothed = ndi.gaussian_filter(raw_field, sigma=smooth_sigma)
+    field_mean = float(np.mean(smoothed))
+    if field_mean <= eps:
+        return np.ones(shape0, dtype=np.float64)
+    smoothed = smoothed / field_mean
+    smoothed = np.nan_to_num(smoothed, nan=1.0, posinf=1.0, neginf=1.0)
+    smoothed = np.where(smoothed > eps, smoothed, 1.0)   # guard: field stays strictly positive
+    return smoothed
+
+
+def _apply_shading(tile: np.ndarray, field: np.ndarray) -> np.ndarray:
+    """Apply a per-channel retrospective flat-field correction to one tile:
+    divide by the estimated illumination-shape `field` (guarded > 0), round,
+    clip to the tile dtype's valid range, cast back to the tile's own dtype.
+
+    Vignetting is corrected PER CHANNEL because `field` is estimated
+    per-channel (T-kmj-01/T-kmj-02: guarded divisor, clip-before-cast so no
+    overflow wraps)."""
+    safe_field = np.where(field > 0, field, 1.0)
+    corrected = tile.astype(np.float64) / safe_field
+    if np.issubdtype(tile.dtype, np.integer):
+        info = np.iinfo(tile.dtype)
+        corrected = np.clip(np.round(corrected), info.min, info.max)
+    return corrected.astype(tile.dtype)
 
 
 def _scene_tile_geometry(czi: aicspylibczi.CziFile, scene_idx: int, n_tiles: int) -> list[tuple[int, int]]:
@@ -181,18 +299,28 @@ def _read_channel_stacks_tiles(
     czi: aicspylibczi.CziFile, scene_idx: int, n_tiles: int,
     tile_boxes: list[tuple[int, int]], n_c: int, n_z: int,
 ) -> list[list[np.ndarray]]:
-    """Read one scene's channel stacks via per-tile reads + `_stitch_scene_tiles`,
-    returning the SAME `channel_stacks` structure `_read_channel_stacks_region`
-    produces (one list-of-(Y,X)-planes per physical channel) so it drops
-    straight into `_hybrid_scene_projection` unchanged.
+    """Read one scene's channel stacks via per-tile reads, per-channel
+    retrospective flat-field shading correction, and feathered
+    `_stitch_scene_tiles`, returning the SAME `channel_stacks` structure
+    `_read_channel_stacks_region` produces (one list-of-(Y,X)-planes per
+    physical channel) so it drops straight into `_hybrid_scene_projection`
+    unchanged.
 
     Reads are scoped to THIS scene's S= and this scene's own M= tiles only --
     no neighbor-scene pixel is ever read, let alone stitched in.
+
+    Per channel: all (z, m) tiles are read ONCE into memory (no extra CZI
+    reads), pooled (tiles matching the channel's modal tile shape) to
+    `_estimate_shading_field` a single illumination-shape field for that
+    channel, then `_apply_shading` corrects each z's tiles before they are
+    fed to the feathered `_stitch_scene_tiles`. Peak memory is bounded to one
+    channel's tiles across Z; the pool is released before the next channel.
     """
     channel_stacks: list[list[np.ndarray]] = []
     for c in range(n_c):
         print(f"    Channel {c}/{n_c - 1}: reading {n_z} z-planes ({n_tiles} tiles each, tile-stitch)...", flush=True)
-        stack = []
+        raw_by_z: list[list[tuple[int, int, np.ndarray]]] = []
+        shape_counts: dict[tuple[int, ...], int] = {}
         for z in range(n_z):
             tiles = []
             for m in range(n_tiles):
@@ -200,9 +328,22 @@ def _read_channel_stacks_tiles(
                 raw, _dims = czi.read_image(S=scene_idx, M=m, C=c, Z=z)
                 data = raw.squeeze()
                 tiles.append((x, y, data))
-            stitched = _stitch_scene_tiles(tiles)
+                shape_counts[data.shape] = shape_counts.get(data.shape, 0) + 1
+            raw_by_z.append(tiles)
+
+        modal_shape = max(shape_counts, key=shape_counts.get)
+        pooled = [data for tiles in raw_by_z for (_x, _y, data) in tiles if data.shape == modal_shape]
+        print(f"    Channel {c}: estimating flat-field shading from {len(pooled)} pooled tiles "
+              f"(modal shape {modal_shape})...", flush=True)
+        field = _estimate_shading_field(pooled)
+
+        stack = []
+        for z in range(n_z):
+            corrected_tiles = [(x, y, _apply_shading(data, field)) for (x, y, data) in raw_by_z[z]]
+            stitched = _stitch_scene_tiles(corrected_tiles)
             stack.append(stitched)
-            print(f"      z={z} shape={stitched.shape} dtype={stitched.dtype} (stitched from {n_tiles} tiles)", flush=True)
+            print(f"      z={z} shape={stitched.shape} dtype={stitched.dtype} "
+                  f"(stitched from {n_tiles} tiles, flat-field + feather)", flush=True)
         channel_stacks.append(stack)
         print(f"    Channel {c} read done ({n_z} planes).", flush=True)
     return channel_stacks
@@ -405,9 +546,19 @@ def _self_test() -> None:
     (d) `_stitch_scene_tiles` isolates strictly to the tiles it is given
         (a neighbor scene's tile value never leaks in), sizes the canvas to
         that scene's own tile-union, and resolves intra-scene seam overlap
-        brighter-wins (np.maximum).
+        via a feathered weighted-average cross-fade (overlap value strictly
+        between the two tile values, not the old brighter-wins step).
     (e) Tile-stitched channel stacks compose with `_hybrid_scene_projection`
         exactly like region-read stacks do.
+    (f) `_estimate_shading_field` + `_apply_shading` + feathered stitch
+        flattens a known synthetic radial vignette: boundary-vs-interior
+        modulation is present without correction, and collapses toward a
+        ~1.0 ratio after flat-field correction.
+    (g) Feathered seam blending produces a smooth ramp across an overlap
+        (small max first-difference), never a hard brighter-wins step.
+    (h) Cross-scene isolation re-proven explicitly under the feathered
+        blend path: a value never passed to `_stitch_scene_tiles` can never
+        appear in its output.
     Also exercises `_resolve_isolation_mode`'s auto/region/tiles decision
     table, including the region+overlap SystemExit refusal.
     """
@@ -476,9 +627,9 @@ def _self_test() -> None:
         "CONTAMINATION: neighbor scene B's tile value (99) leaked into scene A's canvas -- "
         "_stitch_scene_tiles must isolate strictly to the tiles it was given"
     )
-    assert canvas_a[0, 35] == 20, (
-        f"seam resolution must be brighter-wins (np.maximum): expected canvas_a[0,35]=20, "
-        f"got {canvas_a[0, 35]}"
+    assert 10 < canvas_a[0, 35] < 20, (
+        f"seam resolution must be a feathered weighted-average cross-fade strictly between "
+        f"the two tile values (10, 20): got canvas_a[0,35]={canvas_a[0, 35]}"
     )
 
     canvas_b = _stitch_scene_tiles(scene_b_tiles)
@@ -522,6 +673,81 @@ def _self_test() -> None:
         "tile-stitched marker output must be byte-identical to the full-Z max of stitched planes"
     )
 
+    # (f) Flat-field correction: known radial vignette flattens after
+    # _estimate_shading_field + _apply_shading + feathered stitch.
+    tile_hw = 60
+    yy, xx = np.mgrid[0:tile_hw, 0:tile_hw].astype(np.float64)
+    cy = cx = (tile_hw - 1) / 2.0
+    r = np.sqrt((yy - cy) ** 2 + (xx - cx) ** 2)
+    r_norm = r / r.max()
+    vignette = 1.0 - 0.35 * r_norm ** 2   # 1.0 at center, ~0.65 at corners -- known SHAPE
+    tissue_value = 1000.0
+    vignette_fill = np.round(vignette * tissue_value).astype(np.uint16)
+    overlap_f = 15
+    step_f = tile_hw - overlap_f
+    grid_positions = [(gx * step_f, gy * step_f) for gy in range(3) for gx in range(3)]
+    vignette_tiles = [(x, y, vignette_fill.copy()) for x, y in grid_positions]
+
+    # Uncorrected: feather-stitch the raw vignetted tiles directly (no shading correction).
+    uncorrected = _stitch_scene_tiles(vignette_tiles, feather_margin=overlap_f)
+    # Interior sample: dead center of the middle tile, uniquely covered by ONE tile (no seam).
+    interior_y = interior_x = step_f + tile_hw // 2
+    # Boundary sample: the 4-tile grid-corner junction closest to the origin.
+    boundary_y = boundary_x = step_f
+    interior_before = float(uncorrected[interior_y, interior_x])
+    boundary_before = float(uncorrected[boundary_y, boundary_x])
+    ratio_before = boundary_before / interior_before
+    assert abs(ratio_before - 1.0) > 0.05, (
+        f"uncorrected vignetted tile-grid stitch must show boundary-vs-interior modulation "
+        f"(the periodic-grid defect being fixed): ratio={ratio_before:.4f}"
+    )
+
+    # Corrected: estimate the shading field from the raw tiles (reused, no extra read),
+    # apply per-tile, then feather-stitch.
+    field_f = _estimate_shading_field([data for (_x, _y, data) in vignette_tiles])
+    corrected_tiles = [(x, y, _apply_shading(data, field_f)) for (x, y, data) in vignette_tiles]
+    corrected = _stitch_scene_tiles(corrected_tiles, feather_margin=overlap_f)
+    interior_after = float(corrected[interior_y, interior_x])
+    boundary_after = float(corrected[boundary_y, boundary_x])
+    ratio_after = boundary_after / interior_after
+    assert abs(ratio_after - 1.0) < 0.05, (
+        f"flat-field corrected + feathered stitch must flatten boundary-vs-interior modulation "
+        f"toward ~1.0: ratio={ratio_after:.4f} (before correction was {ratio_before:.4f})"
+    )
+
+    # (g) Feather no-hard-seam: two overlapping uniform tiles ramp smoothly across the
+    # seam row, not a hard brighter-wins step.
+    h_g, w_g = 100, 100
+    overlap_g, margin_g = 30, 20
+    tile_g0 = (0, 0, np.full((h_g, w_g), 100, dtype=np.uint16))
+    tile_g1 = (w_g - overlap_g, 0, np.full((h_g, w_g), 200, dtype=np.uint16))
+    canvas_g = _stitch_scene_tiles([tile_g0, tile_g1], feather_margin=margin_g)
+    mid_row = h_g // 2   # far from top/bottom edges -> vertical ramp saturated at 1.0
+    profile = canvas_g[mid_row, :].astype(np.float64)
+    max_first_diff = float(np.abs(np.diff(profile)).max())
+    assert max_first_diff < 50.0, (
+        f"feathered stitch must ramp smoothly across the seam (max first-diff too large "
+        f"for a smooth cross-fade): {max_first_diff}"
+    )
+
+    # (h) Isolation under feathering, re-proven explicitly for the feathered blend path
+    # (not just the (d) legacy brighter-wins-era isolation check): a value never passed
+    # to _stitch_scene_tiles must not appear in its output, even near tile edges where
+    # feather weight approaches the floor.
+    scene_h_own = [
+        (0, 0, np.full((30, 30), 5, dtype=np.uint16)),
+        (20, 0, np.full((30, 30), 7, dtype=np.uint16)),
+    ]
+    canvas_h = _stitch_scene_tiles(scene_h_own)
+    assert not np.any(canvas_h == 123), (
+        "CONTAMINATION under feathering: a value never passed to _stitch_scene_tiles "
+        "(e.g. a would-be neighbor-scene tile) must not appear in its output"
+    )
+    assert np.all(canvas_h > 0), (
+        "feathered canvas within the tile-union (both tiles' own coverage) must be fully "
+        "covered with strictly positive values"
+    )
+
     # _resolve_isolation_mode: auto/region/tiles decision table.
     assert _resolve_isolation_mode("auto", []) == "region"
     assert _resolve_isolation_mode("auto", [(0, 1)]) == "tiles"
@@ -541,8 +767,13 @@ def _self_test() -> None:
         "(c) sharpest-plane selection is independent per scene (different scenes -> "
         f"different dapi_z: {dapi_z} vs {dapi_z_2}); "
         "(d) tile-stitch isolates strictly to one scene's own tiles (neighbor-scene value "
-        "never leaks in), sizes the canvas to that scene's tile-union, and resolves seams "
-        "brighter-wins; (e) tile-stitch output composes with hybrid projection byte-identically; "
+        "never leaks in), sizes the canvas to that scene's tile-union, and resolves seams via "
+        "a feathered weighted-average cross-fade (strictly between the two tile values); "
+        "(e) tile-stitch output composes with hybrid projection byte-identically; "
+        "(f) flat-field shading correction flattens a known radial vignette "
+        f"(boundary/interior ratio {ratio_before:.3f} -> {ratio_after:.3f}); "
+        "(g) feathered blending ramps smoothly across a seam (no hard brighter-wins step); "
+        "(h) cross-scene isolation re-proven under the feathered blend path; "
         "_resolve_isolation_mode auto/region/tiles decision table (incl. region+overlap "
         "SystemExit) verified."
     )
