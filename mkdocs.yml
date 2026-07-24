@@ -1,0 +1,40 @@
+site_name: "JF Lab — Per-Region Cell-Counting Pipeline"
+site_description: "Operator tutorial for the TRAP2/Airyscan section pipeline: czi->MIP, ABBA registration, BraiAnDetect, classification, and per-region export."
+site_url: "https://leejhj.github.io/JFLabAutomatedCellCounting/"
+repo_url: "https://github.com/LeeJHJ/JFLabAutomatedCellCounting"
+repo_name: "JFLabAutomatedCellCounting"
+
+docs_dir: docs
+
+theme:
+  name: material
+  palette:
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      toggle:
+        icon: material/brightness-7
+        name: "Switch to dark mode"
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      toggle:
+        icon: material/brightness-4
+        name: "Switch to light mode"
+  features:
+    - navigation.instant
+    - navigation.tabs
+    - navigation.top
+    - navigation.sections
+    - search.suggest
+    - search.highlight
+    - content.code.copy
+
+nav:
+  - Home: index.md
+  - GUI stages:
+      - "1. ABBA registration": runbook/01-registration.md
+      - "2. BraiAnDetect detection": runbook/02-detection.md
+
+# NOTE (D-18d): publishing is manual-only via `mkdocs gh-deploy`. No
+# .github/workflows/ auto-deploy exists and none should be added here --
+# repo/tutorial visibility is a research-data-privacy decision the operator
+# owns, never a push-triggered side effect.

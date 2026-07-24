@@ -1,0 +1,5 @@
+# Docs-only dev tooling for previewing/publishing the operator tutorial
+# (mkdocs.yml + docs/). Pure-Python, NOT part of the pipeline runtime -- install
+# into the `braian` conda env or a throwaway venv (e.g. `python -m venv .venv-docs`),
+# never merged into the pipeline's isolated conda envs.
+mkdocs-material>=9.5,<10
