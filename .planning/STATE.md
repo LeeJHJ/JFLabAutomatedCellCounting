@@ -4,11 +4,11 @@ milestone: v1.1
 milestone_name: First Full-Series Run — LA/BA Amygdala Engram
 current_phase: 06.1
 current_phase_name: pipeline-generalization-per-region-readout-runbook
-status: executing
+status: verifying
 stopped_at: Completed 06.1-05-PLAN.md
-last_updated: "2026-07-24T17:41:10.047Z"
-last_activity: 2026-07-24
-last_activity_desc: "Quick task 260724-iqn: czi_mip.py multi-scene tile-stitch isolation"
+last_updated: "2026-07-24T19:08:41.564Z"
+last_activity: 2026-07-23
+last_activity_desc: Phase 06.1 execution started
 progress:
   total_phases: 7
   completed_phases: 2
@@ -36,7 +36,7 @@ progress:
 
 Phase: 06.1 (pipeline-generalization-per-region-readout-runbook) — EXECUTING
 Plan: 6 of 6
-Status: Ready to execute
+Status: Phase complete — ready for verification
 Last activity: 2026-07-23 — Phase 06.1 execution started
 
 ## Performance Metrics
@@ -63,6 +63,7 @@ Last activity: 2026-07-23 — Phase 06.1 execution started
 | Phase 06.1 P05 | ~20min | 4 tasks | 14 files |
 | Phase quick-260724-h6y P01 | 12min | 2 tasks | 1 files |
 | Phase quick-260724-iqn P01 | 6min | 2 tasks | 1 files |
+| Phase quick-260724-kmj P01 | 7min | 2 tasks | 1 files |
 
 ## v1.1 Roadmap Snapshot (created 2026-07-17)
 
@@ -150,6 +151,7 @@ First v1.1 execution step (Phase 5) is scriptable (no GUI dependency); Phases 6-
 | 260706-kfm | DAPI tissue-mask auto-crop CLI (crop_to_tissue.py) for ABBA elastix scaling | 2026-07-06 | n/a | [260706-kfm-dapi-tissue-mask-auto-crop-cli-crop-to-t](./quick/260706-kfm-dapi-tissue-mask-auto-crop-cli-crop-to-t/) |
 | 260724-h6y | czi_mip.py hybrid DAPI projection — single sharpest Z plane (var-of-Laplacian, per scene) + full-Z marker MIP | 2026-07-24 | 17e2cd8 | [260724-h6y-czi-mip-hybrid-dapi](./quick/260724-h6y-czi-mip-hybrid-dapi/) |
 | 260724-iqn | czi_mip.py multi-scene tile-stitch isolation — additive per-scene tile-stitch path + `--isolate {auto,region,tiles}` for overlapping mosaics, region path unchanged for non-overlapping files | 2026-07-24 | 2820928 | [260724-iqn-czi-mip-tile-stitch](./quick/260724-iqn-czi-mip-tile-stitch/) |
+| 260724-kmj | czi_mip.py flat-field shading correction + feathered overlap blending in tile-stitch path (fixes periodic DAPI grid) + OME per-channel display colors (DAPI blue, AF568/TdT red, AF488/Fos green); region path byte-unchanged | 2026-07-24 | 00b6261 | [260724-kmj-flatfield-blend](./quick/260724-kmj-flatfield-blend/) |
 
 ---
 
@@ -159,7 +161,7 @@ First v1.1 execution step (Phase 5) is scriptable (no GUI dependency); Phases 6-
 
 ## Session Continuity
 
-**Last session:** 2026-07-24T16:33:17.358Z
+**Last session:** 2026-07-24T19:07:17.338Z
 **Stopped at:** Completed 06.1-05-PLAN.md
 **Resume file:** 
 
@@ -201,3 +203,5 @@ None
 - [Phase ?]: 260724-h6y: hybrid-projection provenance (dapi_z) embedded as OME-XML comment, not filename, to preserve the _MIP.ome.tiff output-count glob
 - [Phase ?]: 260724-iqn: tile-stitch canvas sized to each scene's OWN tile-union (min/max of that scene's tile origins), never the full mosaic or reported bbox -- structural isolation guarantee against cross-scene contamination on overlapping mosaics
 - [Phase ?]: 260724-iqn: --isolate auto is default and preserves byte-identical region=bbox behavior for non-overlapping files; --isolate region still refuses (SystemExit) on overlap, tile-stitch is the fallback, never silent
+- [Phase quick-260724-kmj]: 260724-kmj: flat-field/feather changes confined strictly to the tile-stitch path; _read_channel_stacks_region and read_mosaic left byte-unchanged (verified against pre-task baseline)
+- [Phase quick-260724-kmj]: 260724-kmj: DEFAULT_FEATHER_MARGIN=130 and DEFAULT_SHADING_SMOOTH_SIGMA=5.0 are module-level operator-tunable constants, not CLI flags
