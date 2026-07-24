@@ -402,6 +402,14 @@ def _self_test() -> None:
         full-Z max projection (byte-identical to np.max(stack, axis=0)).
     (c) Sharpest-plane selection is independent per scene: two scenes with
         the sharp plane at different Z indices yield different dapi_z.
+    (d) `_stitch_scene_tiles` isolates strictly to the tiles it is given
+        (a neighbor scene's tile value never leaks in), sizes the canvas to
+        that scene's own tile-union, and resolves intra-scene seam overlap
+        brighter-wins (np.maximum).
+    (e) Tile-stitched channel stacks compose with `_hybrid_scene_projection`
+        exactly like region-read stacks do.
+    Also exercises `_resolve_isolation_mode`'s auto/region/tiles decision
+    table, including the region+overlap SystemExit refusal.
     """
     print("Running --self-test (synthetic hybrid-projection proof, no CZI)...")
     rng = np.random.default_rng(0)
@@ -449,12 +457,94 @@ def _self_test() -> None:
         f"per-scene independence violated: both scenes picked the same dapi_z={dapi_z}"
     )
 
+    # (d) Cross-scene isolation + union sizing + seam resolution via _stitch_scene_tiles.
+    # Mirrors the real bug: a neighbor scene's tile GLOBAL position falls INSIDE the
+    # first scene's extent. Scene A tiles overlap each other in x=30..40 (normal
+    # intra-scene ZEN stitch overlap); scene B's tile sits at x=20 (would fall inside
+    # A's x-range if A's canvas were sized to the full mosaic instead of A's own tiles).
+    tile_a0 = np.full((40, 40), 10, dtype=np.uint16)
+    tile_a1 = np.full((40, 40), 20, dtype=np.uint16)
+    tile_b0 = np.full((40, 40), 99, dtype=np.uint16)
+    scene_a_tiles = [(0, 0, tile_a0), (30, 0, tile_a1)]
+    scene_b_tiles = [(20, 0, tile_b0)]
+
+    canvas_a = _stitch_scene_tiles(scene_a_tiles)
+    assert canvas_a.shape == (40, 70), (
+        f"expected scene A tile-union canvas shape (40, 70), got {canvas_a.shape}"
+    )
+    assert not np.any(canvas_a == 99), (
+        "CONTAMINATION: neighbor scene B's tile value (99) leaked into scene A's canvas -- "
+        "_stitch_scene_tiles must isolate strictly to the tiles it was given"
+    )
+    assert canvas_a[0, 35] == 20, (
+        f"seam resolution must be brighter-wins (np.maximum): expected canvas_a[0,35]=20, "
+        f"got {canvas_a[0, 35]}"
+    )
+
+    canvas_b = _stitch_scene_tiles(scene_b_tiles)
+    assert canvas_b.shape == (40, 40), (
+        f"expected scene B canvas shape (40, 40), got {canvas_b.shape}"
+    )
+    assert np.all(canvas_b == 99), "scene B canvas must be uniformly 99 (its only tile's value)"
+
+    # (e) Tile-stitch composes with hybrid projection: stitch per (c, z), feed the
+    # resulting channel_stacks into _hybrid_scene_projection UNCHANGED, and assert the
+    # hybrid output is byte-identical to what direct stitching + hybrid math would give.
+    dapi_idx_e = 1   # anchor channel index for this tiny synthetic scene
+    tile_x_positions = [(0, 0), (25, 0)]   # 2 tiles, same layout for both channels/Z
+
+    def _synthetic_tiles(fill_values: list[int]) -> list[tuple[int, int, np.ndarray]]:
+        return [
+            (x, y, np.full((20, 20), v, dtype=np.uint16))
+            for (x, y), v in zip(tile_x_positions, fill_values)
+        ]
+
+    # marker channel (0): 2 Z-planes, distinct fill values per tile per Z.
+    marker_stack_e = [
+        _stitch_scene_tiles(_synthetic_tiles([100, 150])),
+        _stitch_scene_tiles(_synthetic_tiles([300, 250])),
+    ]
+    # anchor/DAPI channel (1): 2 Z-planes, one clearly sharper (higher variance) than the other.
+    rng_e = np.random.default_rng(1)
+    anchor_flat_tiles = _synthetic_tiles([500, 500])
+    anchor_sharp_tile_0 = (0, 0, rng_e.normal(500, 300, size=(20, 20)).astype(np.float32))
+    anchor_sharp_tile_1 = (25, 0, rng_e.normal(500, 300, size=(20, 20)).astype(np.float32))
+    anchor_stack_e = [
+        _stitch_scene_tiles([anchor_sharp_tile_0, anchor_sharp_tile_1]),
+        _stitch_scene_tiles(anchor_flat_tiles),
+    ]
+    channel_stacks_e = [marker_stack_e, anchor_stack_e]
+    out_channels_e, dapi_z_e, _ = _hybrid_scene_projection(channel_stacks_e, dapi_idx_e)
+    assert np.array_equal(out_channels_e[dapi_idx_e], anchor_stack_e[dapi_z_e]), (
+        "tile-stitched anchor output must be byte-identical to the single sharpest stitched plane"
+    )
+    assert np.array_equal(out_channels_e[0], np.max(marker_stack_e, axis=0)), (
+        "tile-stitched marker output must be byte-identical to the full-Z max of stitched planes"
+    )
+
+    # _resolve_isolation_mode: auto/region/tiles decision table.
+    assert _resolve_isolation_mode("auto", []) == "region"
+    assert _resolve_isolation_mode("auto", [(0, 1)]) == "tiles"
+    assert _resolve_isolation_mode("tiles", []) == "tiles"
+    assert _resolve_isolation_mode("tiles", [(0, 1)]) == "tiles"
+    assert _resolve_isolation_mode("region", []) == "region"
+    try:
+        _resolve_isolation_mode("region", [(0, 1)])
+        raise AssertionError("expected SystemExit for --isolate region with overlapping_pairs")
+    except SystemExit:
+        pass
+
     print(
         "\nself-test PASSED: (a) var-of-Laplacian selector picks the known-sharp plane; "
         "(b) hybrid projection emits a single anchor plane (byte-identical to stack[dapi_z]) "
         "and full-Z max-projected markers (byte-identical to np.max(stack, axis=0)); "
         "(c) sharpest-plane selection is independent per scene (different scenes -> "
-        f"different dapi_z: {dapi_z} vs {dapi_z_2})."
+        f"different dapi_z: {dapi_z} vs {dapi_z_2}); "
+        "(d) tile-stitch isolates strictly to one scene's own tiles (neighbor-scene value "
+        "never leaks in), sizes the canvas to that scene's tile-union, and resolves seams "
+        "brighter-wins; (e) tile-stitch output composes with hybrid projection byte-identically; "
+        "_resolve_isolation_mode auto/region/tiles decision table (incl. region+overlap "
+        "SystemExit) verified."
     )
 
 
