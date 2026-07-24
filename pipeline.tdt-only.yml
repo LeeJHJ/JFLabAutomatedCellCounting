@@ -1,0 +1,57 @@
+# pipeline.tdt-only.yml -- TdT-only VALIDATION config (D-17)
+#
+# This is the D-17 acceptance-bar config: the first real exercise of the
+# variable-marker path (D-01) on an incoming TdT-only slice set. It is a
+# schema-identical variant of `pipeline.yml` with exactly ONE non-anchor
+# marker declared (TdT, cytoplasmic) -- Fos is NOT declared at all.
+#
+# Consequence, by construction (not a special case in any downstream
+# consumer -- D-03/D-04):
+#   - Double+ is never emitted: derive_contract() only appends "Double+" to
+#     the class vocabulary when >=2 non-anchor markers are declared (D-03).
+#     With a single marker here, Double+ is structurally absent.
+#   - The per-slice table emits DAPI+ and TdT+ count/density columns ONLY --
+#     there is no Fos+ column and no Fos+/Double+ rows anywhere downstream
+#     (combined CSV, per-region table). Absence is by construction, not NA/
+#     placeholder (see plan prohibitions in 06.1-06-PLAN.md).
+#
+# Deploy convention (same as pipeline.yml, D-14/D-16): copy this file into
+# the validation QuPath project's base dir AS `pipeline.yml` (next to
+# BraiAn.yml), never rename the deployed copy -- the groovy scripts read a
+# fixed filename `pipeline.yml`.
+#
+# Everything else (anchor, exclude_acronyms, k_robust, ring) is unchanged
+# from the canonical `pipeline.yml` -- this file only narrows the `markers`
+# list.
+
+# D-02: same anchor as pipeline.yml -- DAPI segmentation channel, unchanged.
+anchor:
+  name: "DAPI"                # [ASSUMED] seed default -- tunable per slice-set, not locked
+  channel: "DAPI-T4"           # matches server.json / BraiAn.yml channelDetections name exactly
+
+# D-01/D-17: exactly ONE non-anchor marker -- TdT (engram marker, TdTomato),
+# cytosolic, measured on the cytoplasmic expansion ring (CLAUDE.md). No Fos
+# entry here at all -- this is what proves the variable-marker path (D-03).
+markers:
+  - name: "TdT"                 # engram marker (TdTomato) -- cytosolic, cytoplasmic ring (CLAUDE.md)
+    channel: "AF568-T2"         # matches BraiAn.yml classifiers[].channel for the TdT-only slice set
+    compartment: "cytoplasmic"
+
+# D-09: region exclusions, unchanged from pipeline.yml. DG-sg = DG granule
+# cell layer (too dense for per-nucleus segmentation); VS = ventricular
+# systems. (DG-mo/DG-po intentionally stay in -- do not add them here.)
+exclude_acronyms: ["DG-sg", "VS"]
+
+# D-09: robust self-calibrating positive-threshold multiplier, unchanged from
+# pipeline.yml. Threshold = median + k_robust * 1.4826 * MAD on the
+# per-marker background-subtracted measure. [ASSUMED] seed value -- re-sweep
+# on imaging-parameter drift (Phase 7 IMG-01).
+k_robust: 3.0
+
+# D-09: cytoplasmic expansion ring geometry, unchanged from pipeline.yml.
+# gap_um = annular gap left between the nucleus boundary and the inner edge
+# of the measurement ring; width_um = the ring's radial thickness. Used only
+# for markers declared `compartment: cytoplasmic` above (TdT, here).
+ring:
+  gap_um: 1.0
+  width_um: 8.0
