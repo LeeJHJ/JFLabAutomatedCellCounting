@@ -6,9 +6,9 @@ current_phase: 06.1
 current_phase_name: pipeline-generalization-per-region-readout-runbook
 status: executing
 stopped_at: Completed 06.1-05-PLAN.md
-last_updated: "2026-07-24T14:39:40.900Z"
-last_activity: 2026-07-23
-last_activity_desc: Phase 06.1 execution started
+last_updated: "2026-07-24T16:33:37.542Z"
+last_activity: 2026-07-24
+last_activity_desc: "Quick task 260724-h6y: czi_mip.py hybrid DAPI projection"
 progress:
   total_phases: 7
   completed_phases: 2
@@ -61,6 +61,7 @@ Last activity: 2026-07-23 — Phase 06.1 execution started
 | Phase 06.1 P03 | 12min | 3 tasks | 3 files |
 | Phase 06.1 P04 | ~5min | 3 tasks | 5 files |
 | Phase 06.1 P05 | ~20min | 4 tasks | 14 files |
+| Phase quick-260724-h6y P01 | 12min | 2 tasks | 1 files |
 
 ## v1.1 Roadmap Snapshot (created 2026-07-17)
 
@@ -146,6 +147,7 @@ First v1.1 execution step (Phase 5) is scriptable (no GUI dependency); Phases 6-
 | # | Description | Date | Commit | Directory |
 |---|-------------|------|--------|-----------|
 | 260706-kfm | DAPI tissue-mask auto-crop CLI (crop_to_tissue.py) for ABBA elastix scaling | 2026-07-06 | n/a | [260706-kfm-dapi-tissue-mask-auto-crop-cli-crop-to-t](./quick/260706-kfm-dapi-tissue-mask-auto-crop-cli-crop-to-t/) |
+| 260724-h6y | czi_mip.py hybrid DAPI projection — single sharpest Z plane (var-of-Laplacian, per scene) + full-Z marker MIP | 2026-07-24 | 17e2cd8 | [260724-h6y-czi-mip-hybrid-dapi](./quick/260724-h6y-czi-mip-hybrid-dapi/) |
 
 ---
 
@@ -155,7 +157,7 @@ First v1.1 execution step (Phase 5) is scriptable (no GUI dependency); Phases 6-
 
 ## Session Continuity
 
-**Last session:** 2026-07-24T14:39:18.862Z
+**Last session:** 2026-07-24T16:33:17.358Z
 **Stopped at:** Completed 06.1-05-PLAN.md
 **Resume file:** 
 
@@ -193,3 +195,5 @@ None
 - [Phase ?]: 06.1-04: Fos/Double-dependent VAL-01 metrics (ratio, Fos control rate) SKIP rather than report 0/NaN when their marker is structurally absent (D-03/D-04)
 - [Phase 06.1-05]: Completed prior executor's Rule-3 fix: added six 1x1 placeholder screenshot PNGs under docs/assets/ (+ README explaining the stubs) so mkdocs build --strict resolves every screenshot-slot link with zero broken-link warnings
 - [Phase 06.1-05]: run_pipeline.py menu scope kept to exactly the SCRIPTABLE actions the plan named (validate config, aggregate+zero-leak, verify export integrity, show outputs) plus GUI stop items for the three GUI-mediated stages; GUI handlers never call subprocess, structurally guaranteeing no app automation
+- [Phase ?]: 260724-h6y: marker channels use FULL Z stack (not Z0-2 sub-range) to capture 2-4um axial offset between DAPI-sharp plane and marker signal peak
+- [Phase ?]: 260724-h6y: hybrid-projection provenance (dapi_z) embedded as OME-XML comment, not filename, to preserve the _MIP.ome.tiff output-count glob
