@@ -54,9 +54,11 @@ def parse_args() -> argparse.Namespace:
     p = argparse.ArgumentParser(
         formatter_class=argparse.RawDescriptionHelpFormatter, epilog=__doc__
     )
-    p.add_argument("--czi", type=Path, required=True, help="input multi-scene CZI mosaic")
+    p.add_argument("--czi", type=Path, required=False, default=None,
+                   help="input multi-scene CZI mosaic (required unless --self-test)")
     p.add_argument("--outdir", type=Path, required=False, default=None,
-                   help="output directory for the per-scene MIP OME-TIFFs (required unless --check-scenes)")
+                   help="output directory for the per-scene MIP OME-TIFFs "
+                        "(required unless --check-scenes or --self-test)")
     p.add_argument("--channels", nargs="+", default=DEFAULT_CHANNELS,
                    help=f"channel names in physical read order (default {DEFAULT_CHANNELS})")
     p.add_argument("--pixel-um", type=float, default=DEFAULT_PIXEL_UM,
@@ -65,9 +67,14 @@ def parse_args() -> argparse.Namespace:
                    help=f"filename prefix, output pattern <prefix>_s{{N}}_MIP.ome.tiff (default {DEFAULT_ANIMAL_PREFIX})")
     p.add_argument("--check-scenes", action="store_true",
                    help="run only the pre-flight scene-bbox assertion, then exit (no heavy read)")
+    p.add_argument("--self-test", action="store_true",
+                   help="run the built-in synthetic hybrid-projection self-test and exit (no --czi needed)")
     args = p.parse_args()
-    if not args.check_scenes and args.outdir is None:
-        p.error("--outdir is required unless --check-scenes is set")
+    if not args.self_test:
+        if args.czi is None:
+            p.error("--czi is required unless --self-test is set")
+        if not args.check_scenes and args.outdir is None:
+            p.error("--outdir is required unless --check-scenes or --self-test is set")
     return args
 
 
@@ -245,8 +252,79 @@ def _build_ome_xml(
 </OME>"""
 
 
+def _self_test() -> None:
+    """Synthetic, assert-based proof of the hybrid projection -- no CZI needed.
+
+    Proves, via the pure helpers (no CZI read anywhere):
+    (a) `_sharpest_plane_from_stack` picks the known-sharp plane out of a
+        mostly-flat stack.
+    (b) `_hybrid_scene_projection` emits the anchor channel as a single plane
+        (byte-identical to stack[dapi_z]) and every marker channel as a
+        full-Z max projection (byte-identical to np.max(stack, axis=0)).
+    (c) Sharpest-plane selection is independent per scene: two scenes with
+        the sharp plane at different Z indices yield different dapi_z.
+    """
+    print("Running --self-test (synthetic hybrid-projection proof, no CZI)...")
+    rng = np.random.default_rng(0)
+
+    # (a) Sharpest-plane selection: one high-frequency-noise plane among near-constant planes.
+    flat_a = np.full((64, 64), 100.0, dtype=np.float32)
+    flat_b = np.full((64, 64), 100.0, dtype=np.float32)
+    sharp = rng.normal(loc=100.0, scale=500.0, size=(64, 64)).astype(np.float32)
+    known_sharp_z = 1
+    dapi_stack_a = [flat_a, sharp, flat_b]
+    best_z, scores = _sharpest_plane_from_stack(dapi_stack_a)
+    assert best_z == known_sharp_z, (
+        f"expected sharpest plane Z={known_sharp_z}, got Z={best_z} (scores={scores})"
+    )
+    assert len(scores) == len(dapi_stack_a)
+    assert all(isinstance(s, float) for s in scores)
+
+    # (b) Hybrid output: anchor = single plane, markers = full-Z max projection.
+    dapi_idx = 2   # mirrors this rig's physical read order (DAPI last)
+    marker0_stack = [rng.integers(0, 4000, size=(64, 64)).astype(np.uint16) for _ in range(3)]
+    marker1_stack = [rng.integers(0, 4000, size=(64, 64)).astype(np.uint16) for _ in range(3)]
+    channel_stacks = [marker0_stack, marker1_stack, dapi_stack_a]
+    out_channels, dapi_z, dapi_scores_b = _hybrid_scene_projection(channel_stacks, dapi_idx)
+    assert dapi_z == known_sharp_z
+    assert np.array_equal(out_channels[dapi_idx], dapi_stack_a[dapi_z]), (
+        "anchor output must be byte-identical to the single sharpest plane"
+    )
+    assert np.array_equal(out_channels[0], np.max(marker0_stack, axis=0)), (
+        "marker channel 0 output must be byte-identical to the full-Z max projection"
+    )
+    assert np.array_equal(out_channels[1], np.max(marker1_stack, axis=0)), (
+        "marker channel 1 output must be byte-identical to the full-Z max projection"
+    )
+
+    # (c) Per-scene independence: a second scene puts the sharp plane at a DIFFERENT Z.
+    known_sharp_z_2 = 0
+    sharp2 = rng.normal(loc=100.0, scale=500.0, size=(64, 64)).astype(np.float32)
+    flat_c = np.full((64, 64), 100.0, dtype=np.float32)
+    flat_d = np.full((64, 64), 100.0, dtype=np.float32)
+    dapi_stack_b = [sharp2, flat_c, flat_d]
+    channel_stacks_2 = [marker0_stack, marker1_stack, dapi_stack_b]
+    _, dapi_z_2, _ = _hybrid_scene_projection(channel_stacks_2, dapi_idx)
+    assert dapi_z_2 == known_sharp_z_2
+    assert dapi_z_2 != dapi_z, (
+        f"per-scene independence violated: both scenes picked the same dapi_z={dapi_z}"
+    )
+
+    print(
+        "\nself-test PASSED: (a) var-of-Laplacian selector picks the known-sharp plane; "
+        "(b) hybrid projection emits a single anchor plane (byte-identical to stack[dapi_z]) "
+        "and full-Z max-projected markers (byte-identical to np.max(stack, axis=0)); "
+        "(c) sharpest-plane selection is independent per scene (different scenes -> "
+        f"different dapi_z: {dapi_z} vs {dapi_z_2})."
+    )
+
+
 def main() -> None:
     args = parse_args()
+
+    if args.self_test:
+        _self_test()
+        return
 
     print(f"Opening CZI: {args.czi}")
     czi = aicspylibczi.CziFile(str(args.czi))
