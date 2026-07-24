@@ -6,9 +6,9 @@ current_phase: 06.1
 current_phase_name: pipeline-generalization-per-region-readout-runbook
 status: executing
 stopped_at: Completed 06.1-05-PLAN.md
-last_updated: "2026-07-24T16:33:37.542Z"
+last_updated: "2026-07-24T17:41:10.047Z"
 last_activity: 2026-07-24
-last_activity_desc: "Quick task 260724-h6y: czi_mip.py hybrid DAPI projection"
+last_activity_desc: "Quick task 260724-iqn: czi_mip.py multi-scene tile-stitch isolation"
 progress:
   total_phases: 7
   completed_phases: 2
@@ -62,6 +62,7 @@ Last activity: 2026-07-23 — Phase 06.1 execution started
 | Phase 06.1 P04 | ~5min | 3 tasks | 5 files |
 | Phase 06.1 P05 | ~20min | 4 tasks | 14 files |
 | Phase quick-260724-h6y P01 | 12min | 2 tasks | 1 files |
+| Phase quick-260724-iqn P01 | 6min | 2 tasks | 1 files |
 
 ## v1.1 Roadmap Snapshot (created 2026-07-17)
 
@@ -148,6 +149,7 @@ First v1.1 execution step (Phase 5) is scriptable (no GUI dependency); Phases 6-
 |---|-------------|------|--------|-----------|
 | 260706-kfm | DAPI tissue-mask auto-crop CLI (crop_to_tissue.py) for ABBA elastix scaling | 2026-07-06 | n/a | [260706-kfm-dapi-tissue-mask-auto-crop-cli-crop-to-t](./quick/260706-kfm-dapi-tissue-mask-auto-crop-cli-crop-to-t/) |
 | 260724-h6y | czi_mip.py hybrid DAPI projection — single sharpest Z plane (var-of-Laplacian, per scene) + full-Z marker MIP | 2026-07-24 | 17e2cd8 | [260724-h6y-czi-mip-hybrid-dapi](./quick/260724-h6y-czi-mip-hybrid-dapi/) |
+| 260724-iqn | czi_mip.py multi-scene tile-stitch isolation — additive per-scene tile-stitch path + `--isolate {auto,region,tiles}` for overlapping mosaics, region path unchanged for non-overlapping files | 2026-07-24 | 2820928 | [260724-iqn-czi-mip-tile-stitch](./quick/260724-iqn-czi-mip-tile-stitch/) |
 
 ---
 
@@ -197,3 +199,5 @@ None
 - [Phase 06.1-05]: run_pipeline.py menu scope kept to exactly the SCRIPTABLE actions the plan named (validate config, aggregate+zero-leak, verify export integrity, show outputs) plus GUI stop items for the three GUI-mediated stages; GUI handlers never call subprocess, structurally guaranteeing no app automation
 - [Phase ?]: 260724-h6y: marker channels use FULL Z stack (not Z0-2 sub-range) to capture 2-4um axial offset between DAPI-sharp plane and marker signal peak
 - [Phase ?]: 260724-h6y: hybrid-projection provenance (dapi_z) embedded as OME-XML comment, not filename, to preserve the _MIP.ome.tiff output-count glob
+- [Phase ?]: 260724-iqn: tile-stitch canvas sized to each scene's OWN tile-union (min/max of that scene's tile origins), never the full mosaic or reported bbox -- structural isolation guarantee against cross-scene contamination on overlapping mosaics
+- [Phase ?]: 260724-iqn: --isolate auto is default and preserves byte-identical region=bbox behavior for non-overlapping files; --isolate region still refuses (SystemExit) on overlap, tile-stitch is the fallback, never silent
