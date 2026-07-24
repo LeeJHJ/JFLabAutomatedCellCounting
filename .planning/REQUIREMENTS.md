@@ -32,7 +32,7 @@ Derived from Phase 06.1 discuss-phase decisions D-01→D-17 (see `phases/06.1-�
 - [x] **PIPE-03**: The export emits all atlas regions present on the slice (exclusion literals like `["DG-sg","VS"]` moved from source into config), every cell is assigned to exactly one smallest-area leaf (CR-01 rule) and parent rows are the SUM of descendant-leaf counts up the atlas tree — never an independent parent-ROI containment pass — with density reported as cells/mm² (region count ÷ region area_mm²) (D-08–D-11)
 - [x] **PIPE-04**: Each slice produces a self-contained per-region table, and rows are appended to a growing combined CSV in long/tidy format — one row per region×marker: `slice, config_tag, region, hemisphere, is_leaf, marker, class, count, density` — where absent markers produce no rows (no NA, aggregation-ready for BraiAnalyse/pandas) (D-12–D-13)
 - [x] **PIPE-05**: Pipeline config (marker list, anchor, compartments, exclusions) lives in a new sidecar file separate from `BraiAn.yml` and is read by every groovy entry; each scriptable entry fail-loud asserts its preconditions (ABBA ROIs loaded, detections present, image channels match the declared markers) before doing work, guarding the human-in-the-loop GUI seams (D-14–D-15)
-- [ ] **PIPE-06**: The pipeline is captured as a single operator-checklist `RUNBOOK.md` (czi→MIP → ABBA register → BraiAnDetect → classify → export → per-region table, each step marked GUI-vs-scriptable with exact commands + QuPath/ABBA click-paths and the marker-config block documented) backed by per-stage detail docs, and validated end-to-end on the incoming TdT-only slice set — a schema-correct, non-empty per-region table with correctly omitted Fos+/Double+ columns plus a spot bioplausibility sanity check (DAPI+ densities in the ~Phase-2 band) (D-16–D-17)
+- [x] **PIPE-06**: The pipeline is captured as a single operator-checklist `RUNBOOK.md` (czi→MIP → ABBA register → BraiAnDetect → classify → export → per-region table, each step marked GUI-vs-scriptable with exact commands + QuPath/ABBA click-paths and the marker-config block documented) backed by per-stage detail docs, and validated end-to-end on the incoming TdT-only slice set — a schema-correct, non-empty per-region table with correctly omitted Fos+/Double+ columns plus a spot bioplausibility sanity check (DAPI+ densities in the ~Phase-2 band) (D-16–D-17)
 
 ### Classification (continues CLASS-01 from v1.0)
 
@@ -97,7 +97,7 @@ Each requirement maps to exactly one phase. Phases continue from v1.0 (Phases 1-
 | PIPE-03 | Phase 06.1 | Complete |
 | PIPE-04 | Phase 06.1 | Complete |
 | PIPE-05 | Phase 06.1 | Complete |
-| PIPE-06 | Phase 06.1 | Pending |
+| PIPE-06 | Phase 06.1 | Complete |
 | IMG-01 | Phase 7 | Pending |
 | IMG-02 | Phase 7 | Pending |
 | CLASS-02 | Phase 8 | Pending |

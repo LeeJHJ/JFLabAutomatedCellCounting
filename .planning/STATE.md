@@ -5,15 +5,15 @@ milestone_name: First Full-Series Run — LA/BA Amygdala Engram
 current_phase: 06.1
 current_phase_name: pipeline-generalization-per-region-readout-runbook
 status: executing
-stopped_at: Phase 06.1 context gathered
-last_updated: "2026-07-23T21:43:33.437Z"
+stopped_at: Completed 06.1-05-PLAN.md
+last_updated: "2026-07-24T14:36:25.566Z"
 last_activity: 2026-07-23
 last_activity_desc: Phase 06.1 execution started
 progress:
   total_phases: 7
   completed_phases: 2
   total_plans: 14
-  completed_plans: 12
+  completed_plans: 13
   percent: 29
 ---
 
@@ -35,7 +35,7 @@ progress:
 ## Current Position
 
 Phase: 06.1 (pipeline-generalization-per-region-readout-runbook) — EXECUTING
-Plan: 5 of 6
+Plan: 6 of 6
 Status: Ready to execute
 Last activity: 2026-07-23 — Phase 06.1 execution started
 
@@ -60,6 +60,7 @@ Last activity: 2026-07-23 — Phase 06.1 execution started
 | Phase 06.1 P02 | 4min | 3 tasks | 6 files |
 | Phase 06.1 P03 | 12min | 3 tasks | 3 files |
 | Phase 06.1 P04 | ~5min | 3 tasks | 5 files |
+| Phase 06.1 P05 | ~20min | 4 tasks | 14 files |
 
 ## v1.1 Roadmap Snapshot (created 2026-07-17)
 
@@ -152,8 +153,8 @@ None. First v1.1 execution step (Phase 5) is scriptable (no GUI dependency); Pha
 
 ## Session Continuity
 
-**Last session:** 2026-07-23T21:42:56.640Z
-**Stopped at:** Phase 06.1 context gathered
+**Last session:** 2026-07-24T14:36:25.559Z
+**Stopped at:** Completed 06.1-05-PLAN.md
 **Resume file:** 
 
 None
@@ -188,3 +189,5 @@ None
 - [Phase ?]: 06.1-03: zero-leak assertion sums only the anchor category's own-bucket counts vs total non-excluded classified detections; unresolved cells (no containing region) counted/reported separately, not silently dropped
 - [Phase ?]: 06.1-04: check-zero-leak re-proves D-10 from the CSV alone, independent of the groovy exporter's own assertion, decoupled from live QuPath data via a --self-test synthetic tree
 - [Phase ?]: 06.1-04: Fos/Double-dependent VAL-01 metrics (ratio, Fos control rate) SKIP rather than report 0/NaN when their marker is structurally absent (D-03/D-04)
+- [Phase 06.1-05]: Completed prior executor's Rule-3 fix: added six 1x1 placeholder screenshot PNGs under docs/assets/ (+ README explaining the stubs) so mkdocs build --strict resolves every screenshot-slot link with zero broken-link warnings
+- [Phase 06.1-05]: run_pipeline.py menu scope kept to exactly the SCRIPTABLE actions the plan named (validate config, aggregate+zero-leak, verify export integrity, show outputs) plus GUI stop items for the three GUI-mediated stages; GUI handlers never call subprocess, structurally guaranteeing no app automation
