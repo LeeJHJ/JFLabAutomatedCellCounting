@@ -1,11 +1,17 @@
 """
-CZI multi-scene mosaic -> per-scene MIP OME-TIFF
+CZI multi-scene mosaic -> per-scene HYBRID MIP OME-TIFF
 
 Reads a tiled Zeiss CZI mosaic that contains multiple scenes (e.g. one CZI
 holding all sections of a series), isolates each scene via its bounding box
 (NOT the S= dimension -- mosaic files reject S=, see Common Pitfalls below),
-stitches tiles, max-projects over Z per channel, and writes one CYX OME-TIFF
-per scene with correct pixel-size metadata embedded.
+stitches tiles, and writes one CYX OME-TIFF per scene with correct
+pixel-size metadata embedded. Per scene, projection is HYBRID: the DAPI/
+anchor channel is a single auto-selected sharpest Z plane (var-of-Laplacian
+focus metric, applied to the already-read stack -- no second CZI read),
+while every marker channel is a full-Z max projection over ALL planes. This
+avoids over-projecting nuclei into blobs / phantom-faint doublets (a plain
+per-channel MIP over-projects DAPI) while still capturing axially-spread
+marker signal (memory `hybrid-imaging-dapi`).
 
 Scene isolation: `get_all_mosaic_scene_bounding_boxes()` returns a
 dict[int, BBox] keyed by 0-based scene index, each BBox carrying (x, y, w, h)
@@ -36,6 +42,7 @@ import aicspylibczi
 import numpy as np
 import tifffile
 from PIL import Image
+from scipy import ndimage as ndi
 
 
 DEFAULT_CHANNELS = ["AF568-T2", "AF488-T3", "DAPI-T4"]
@@ -148,6 +155,41 @@ def _dapi_index(names: list[str]) -> int:
     return len(names) - 1
 
 
+def _sharpest_plane_from_stack(stack: list[np.ndarray]) -> tuple[int, list[float]]:
+    """Pick the sharpest Z plane from an already-read (Y, X) plane list.
+
+    Focus metric is variance-of-Laplacian (matches czi_hybrid_mip.py), computed
+    on a strided-downsampled float32 copy (p[::4, ::4]) to bound memory/CPU --
+    this reuses planes already read for the channel's full stack, so it costs
+    NO second CZI read. Returns (best_z, scores) with scores as plain floats
+    (JSON/print-friendly, no numpy scalar types)."""
+    scores = [float(ndi.laplace(p[::4, ::4].astype(np.float32)).var()) for p in stack]
+    best_z = int(np.argmax(scores))
+    return best_z, scores
+
+
+def _hybrid_scene_projection(
+    channel_stacks: list[list[np.ndarray]], dapi_idx: int
+) -> tuple[list[np.ndarray], int, list[float]]:
+    """Pure per-scene hybrid projection -- no CZI read, unit-testable on synthetic arrays.
+
+    `channel_stacks` is one Z-plane list per physical channel (already read).
+    The anchor channel (`dapi_idx`) becomes a single auto-selected sharpest
+    plane (var-of-Laplacian). Every other (marker) channel becomes a full-Z
+    max projection over ALL its planes (deliberately the full stack, not a
+    Z0-2 sub-range, to capture the observed 2-4 um axial offset between the
+    DAPI-sharp plane and marker signal peak). Physical channel order is
+    preserved in `out_channels`."""
+    dapi_z, dapi_scores = _sharpest_plane_from_stack(channel_stacks[dapi_idx])
+    out_channels: list[np.ndarray] = [None] * len(channel_stacks)
+    for c, stack in enumerate(channel_stacks):
+        if c == dapi_idx:
+            out_channels[c] = stack[dapi_z]
+        else:
+            out_channels[c] = np.max(stack, axis=0)
+    return out_channels, dapi_z, dapi_scores
+
+
 def _scene_identity_record(scene_idx: int, N: int, bbox, M: int, dims: tuple[int, int]) -> None:
     """Print one identity line carrying BOTH the 0-based scene key and the 1-based
     s{N} label (D-05 off-by-one guard), plus bbox, tile count M, and dims. Makes NO
@@ -171,15 +213,26 @@ def _save_identity_thumbnail(dapi_plane: np.ndarray, out_path: Path) -> None:
     Image.fromarray(thumb).save(str(out_path))
 
 
-def _build_ome_xml(names: list[str], x: int, y: int, pixel_um: float, image_name: str) -> str:
+def _build_ome_xml(
+    names: list[str], x: int, y: int, pixel_um: float, image_name: str, dapi_z: int
+) -> str:
     chans = "\n".join(
         f'      <Channel ID="Channel:0:{i}" Name="{n}" SamplesPerPixel="1"/>'
         for i, n in enumerate(names)
+    )
+    # Hybrid-projection provenance (T-h6y-01): BioFormats ignores XML comments,
+    # so this does not affect the PhysicalSizeX round-trip assertion -- it's a
+    # human/audit-readable record embedded in the file itself without touching
+    # the filename suffix.
+    provenance = (
+        f"<!-- hybrid-projection: anchor channel single plane Z={dapi_z}; "
+        f"marker channels full-Z max-projection -->"
     )
     return f"""<?xml version="1.0" encoding="UTF-8"?>
 <OME xmlns="http://www.openmicroscopy.org/Schemas/OME/2016-06"
      xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
      xsi:schemaLocation="http://www.openmicroscopy.org/Schemas/OME/2016-06 http://www.openmicroscopy.org/Schemas/OME/2016-06/ome.xsd">
+  {provenance}
   <Image ID="Image:0" Name="{image_name}">
     <Pixels ID="Pixels:0" Type="uint16" DimensionOrder="XYZCT"
             SizeX="{x}" SizeY="{y}" SizeZ="1" SizeC="{len(names)}" SizeT="1"
@@ -223,8 +276,8 @@ def main() -> None:
         print(f"Processing scene {scene_idx} -> s{N}  "
               f"bbox=(x={b.x}, y={b.y}, w={b.w}, h={b.h})")
 
-        print(f"  Generating MIP for scene {scene_idx} (s{N})...")
-        mip_channels = []
+        print(f"  Generating hybrid projection for scene {scene_idx} (s{N})...")
+        channel_stacks = []
         for c in range(n_c):
             print(f"    Channel {c}/{n_c - 1}: reading {n_z} z-planes...", flush=True)
             stack = []
@@ -232,28 +285,34 @@ def main() -> None:
                 plane = czi.read_mosaic(region=region, C=c, Z=z, scale_factor=1.0)
                 stack.append(plane.squeeze())   # remove all size-1 dims -> (Y, X)
                 print(f"      z={z} shape={plane.shape} dtype={plane.dtype}", flush=True)
-            mip_c = np.max(stack, axis=0)   # (Y, X)
-            mip_channels.append(mip_c)
-            print(f"    Channel {c} MIP done. Shape: {mip_c.shape}", flush=True)
+            channel_stacks.append(stack)
+            print(f"    Channel {c} read done ({n_z} planes).", flush=True)
 
-        mip = np.stack(mip_channels, axis=0)   # (C, Y, X)
+        out_channels, dapi_z, dapi_scores = _hybrid_scene_projection(channel_stacks, dapi_idx)
+        score_str = ", ".join(f"Z{z}={s:.3g}" for z, s in enumerate(dapi_scores))
+        print(f"    anchor channel {dapi_idx} ({args.channels[dapi_idx]}) focus (var-of-Laplacian) "
+              f"by Z: {score_str}")
+        print(f"    scene {scene_idx} (s{N}): sharpest anchor plane -> Z={dapi_z} "
+              f"(markers full-Z max-projected)", flush=True)
+
+        mip = np.stack(out_channels, axis=0)   # (C, Y, X)
         C, Y, X = mip.shape
         if (Y, X) != (b.h, b.w):
             raise SystemExit(
                 f"Scene {scene_idx}: MIP shape (Y,X)=({Y},{X}) != scene bbox (h,w)=({b.h},{b.w})"
             )
-        print(f"  Scene {scene_idx} (s{N}) MIP shape: {mip.shape}  dtype: {mip.dtype}")
+        print(f"  Scene {scene_idx} (s{N}) hybrid MIP shape: {mip.shape}  dtype: {mip.dtype}")
 
         # ── Scene-identity artifact (CONV-02, D-01/D-02/D-05) ────────────────
-        # Reuse the DAPI channel's already-computed MIP plane -- no extra CZI read.
+        # Reuse the anchor channel's already-computed single sharpest plane -- no extra CZI read.
         M = _scene_tile_count(dims_all, scene_keys, scene_idx)
         _scene_identity_record(scene_idx, N, b, M, (b.h, b.w))
         thumb_path = args.outdir / f"{args.animal_prefix}_s{N}_identity.png"
-        _save_identity_thumbnail(mip_channels[dapi_idx], thumb_path)
+        _save_identity_thumbnail(out_channels[dapi_idx], thumb_path)
         print(f"  Identity thumbnail: {thumb_path}")
 
         image_name = f"{args.animal_prefix}_s{N}"
-        ome_xml = _build_ome_xml(args.channels, X, Y, args.pixel_um, image_name)
+        ome_xml = _build_ome_xml(args.channels, X, Y, args.pixel_um, image_name, dapi_z)
         out_path = args.outdir / f"{args.animal_prefix}_s{N}_MIP.ome.tiff"
         print(f"  Writing {out_path} ...")
         tifffile.imwrite(
