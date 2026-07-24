@@ -500,11 +500,38 @@ def _save_identity_thumbnail(dapi_plane: np.ndarray, out_path: Path) -> None:
     Image.fromarray(thumb).save(str(out_path))
 
 
+def _ome_color(name: str) -> int:
+    """OME signed-int32 RGBA display Color for a channel, by case-insensitive
+    substring match on `name`: DAPI -> blue; AF568/TDT/TDTOMATO -> red
+    (TdTomato is cytosolic, encodes engram); AF488/FOS -> green (Fos, recall);
+    otherwise white.
+
+    Packed as (r<<24)|(g<<16)|(b<<8)|a with a=255 (fully opaque), then
+    converted to a SIGNED int32 (OME's Color attribute is xsd:int) by
+    subtracting 2**32 when the packed value is >= 2**31. Yields
+    blue=65535, green=16711935, red=-16776961, white=-1."""
+    n = name.upper()
+    if "DAPI" in n:
+        r, g, b = 0, 0, 255
+    elif "AF568" in n or "TDTOMATO" in n or "TDT" in n:
+        r, g, b = 255, 0, 0
+    elif "AF488" in n or "FOS" in n:
+        r, g, b = 0, 255, 0
+    else:
+        r, g, b = 255, 255, 255
+    a = 255
+    packed = (r << 24) | (g << 16) | (b << 8) | a
+    if packed >= 2**31:
+        packed -= 2**32
+    return packed
+
+
 def _build_ome_xml(
     names: list[str], x: int, y: int, pixel_um: float, image_name: str, dapi_z: int
 ) -> str:
     chans = "\n".join(
-        f'      <Channel ID="Channel:0:{i}" Name="{n}" SamplesPerPixel="1"/>'
+        f'      <Channel ID="Channel:0:{i}" Name="{n}" SamplesPerPixel="1" '
+        f'Color="{_ome_color(n)}"/>'
         for i, n in enumerate(names)
     )
     # Hybrid-projection provenance (T-h6y-01): BioFormats ignores XML comments,
@@ -748,6 +775,30 @@ def _self_test() -> None:
         "covered with strictly positive values"
     )
 
+    # (i) OME-XML per-channel display colors: DAPI -> blue, AF568/TdTomato -> red,
+    # AF488/Fos -> green.
+    assert _ome_color("DAPI-T4") == 65535, f"DAPI must map to blue (65535), got {_ome_color('DAPI-T4')}"
+    assert _ome_color("AF568-T2") == -16776961, (
+        f"AF568/TdTomato must map to red (-16776961), got {_ome_color('AF568-T2')}"
+    )
+    assert _ome_color("AF488-T3") == 16711935, (
+        f"AF488/Fos must map to green (16711935), got {_ome_color('AF488-T3')}"
+    )
+    ome_xml_i = _build_ome_xml(
+        ["AF568-T2", "AF488-T3", "DAPI-T4"], 100, 100, 0.69, "self-test-image", 0
+    )
+    n_color_attrs = ome_xml_i.count('Color="')
+    assert n_color_attrs == 3, (
+        f"expected a Color attribute on every one of the 3 <Channel> elements, "
+        f"found {n_color_attrs}"
+    )
+    assert f'Color="{_ome_color("DAPI-T4")}"' in ome_xml_i, "DAPI channel Color missing/wrong in OME-XML"
+    assert f'Color="{_ome_color("AF568-T2")}"' in ome_xml_i, "AF568 channel Color missing/wrong in OME-XML"
+    assert f'Color="{_ome_color("AF488-T3")}"' in ome_xml_i, "AF488 channel Color missing/wrong in OME-XML"
+    assert 'PhysicalSizeX="0.69"' in ome_xml_i, (
+        "PhysicalSizeX round-trip must still pass -- Color is an additive attribute"
+    )
+
     # _resolve_isolation_mode: auto/region/tiles decision table.
     assert _resolve_isolation_mode("auto", []) == "region"
     assert _resolve_isolation_mode("auto", [(0, 1)]) == "tiles"
@@ -774,6 +825,8 @@ def _self_test() -> None:
         f"(boundary/interior ratio {ratio_before:.3f} -> {ratio_after:.3f}); "
         "(g) feathered blending ramps smoothly across a seam (no hard brighter-wins step); "
         "(h) cross-scene isolation re-proven under the feathered blend path; "
+        "(i) OME channel colors -- DAPI->blue, AF568->red, AF488->green -- with "
+        "PhysicalSizeX round-trip intact; "
         "_resolve_isolation_mode auto/region/tiles decision table (incl. region+overlap "
         "SystemExit) verified."
     )
