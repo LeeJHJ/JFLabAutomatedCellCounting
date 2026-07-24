@@ -67,6 +67,11 @@ def parse_args() -> argparse.Namespace:
                    help=f"filename prefix, output pattern <prefix>_s{{N}}_MIP.ome.tiff (default {DEFAULT_ANIMAL_PREFIX})")
     p.add_argument("--check-scenes", action="store_true",
                    help="run only the pre-flight scene-bbox assertion, then exit (no heavy read)")
+    p.add_argument("--isolate", choices=["auto", "region", "tiles"], default="auto",
+                   help="scene isolation mode: auto = region when scene bboxes are "
+                        "non-overlapping, tiles when they overlap (default); "
+                        "region = force read_mosaic(region=bbox) (refuses on overlap); "
+                        "tiles = force per-scene tile-stitch (always safe on overlap)")
     p.add_argument("--self-test", action="store_true",
                    help="run the built-in synthetic hybrid-projection self-test and exit (no --czi needed)")
     args = p.parse_args()
@@ -123,13 +128,117 @@ def _scene_tile_count(dims_all, scene_keys: list[int], scene_idx: int) -> int:
     return _extent(d, "M")
 
 
-def _preflight_scenes(czi: aicspylibczi.CziFile) -> dict:
-    """Retrieve per-scene bounding boxes, print identity, assert pairwise non-overlap.
+def _stitch_scene_tiles(tiles: list[tuple[int, int, np.ndarray]]) -> np.ndarray:
+    """Stitch ONE scene's tiles into a single (Y, X) canvas, sized to that
+    scene's OWN tile-union (never the full mosaic).
 
-    Returns the bboxes dict (0-based scene index -> BBox), keyed exactly as
-    returned by aicspylibczi -- do NOT derive scene count from
-    get_dims_shape()[0]['S'] (silently wrong / returns 1 on multi-scene files
-    with inconsistent per-scene shape -- Pitfall 2).
+    `tiles` is a list of (x, y, data) where x/y are the tile's GLOBAL mosaic
+    top-left pixel coordinates and `data` is the tile's squeezed (Y, X) array.
+    Because only THIS scene's tiles are ever passed in, no neighbor-scene
+    pixel can enter the canvas -- this is the isolation guarantee that fixes
+    the cross-scene contamination bug that afflicts region=bbox reads on
+    tightly-packed / overlapping mosaics.
+
+    Canvas origin/extent are derived from the tiles themselves (min x/y,
+    max x+w/y+h), NOT from the scene bbox -- the tile-union geometry can
+    legitimately differ slightly from the reported scene bbox.
+
+    Where two of this scene's OWN tiles overlap at a shared seam (normal ZEN
+    intra-scene mosaic stitching overlap), the seam is resolved brighter-wins
+    via `np.maximum` -- safe for MIP / cell-counting use (never darkens
+    signal, and any single real photon count survives at the seam).
+    """
+    origin_x = min(x for x, y, data in tiles)
+    origin_y = min(y for x, y, data in tiles)
+    ext_x = max(x + data.shape[1] for x, y, data in tiles) - origin_x
+    ext_y = max(y + data.shape[0] for x, y, data in tiles) - origin_y
+    canvas = np.zeros((ext_y, ext_x), dtype=tiles[0][2].dtype)
+    for x, y, data in tiles:
+        ry, rx = y - origin_y, x - origin_x
+        h, w = data.shape
+        dst = canvas[ry:ry + h, rx:rx + w]
+        np.maximum(dst, data, out=dst)
+    return canvas
+
+
+def _scene_tile_geometry(czi: aicspylibczi.CziFile, scene_idx: int, n_tiles: int) -> list[tuple[int, int]]:
+    """Per-tile (x, y) GLOBAL top-left origins for one scene, via the
+    single-tile `get_mosaic_tile_bounding_box(S=, M=, C=0, Z=0)` call.
+
+    Deliberately does NOT use `get_all_mosaic_tile_bounding_boxes()` -- that
+    call was observed to hang on the 33 GB M3 file. The reference C=0/Z=0
+    plane is used because tile layout is invariant across C/Z within a ZEN
+    mosaic scene, so one lookup per tile (not per tile per C per Z) suffices.
+    """
+    origins = []
+    for m in range(n_tiles):
+        box = czi.get_mosaic_tile_bounding_box(S=scene_idx, M=m, C=0, Z=0)
+        origins.append((box.x, box.y))
+    return origins
+
+
+def _read_channel_stacks_tiles(
+    czi: aicspylibczi.CziFile, scene_idx: int, n_tiles: int,
+    tile_boxes: list[tuple[int, int]], n_c: int, n_z: int,
+) -> list[list[np.ndarray]]:
+    """Read one scene's channel stacks via per-tile reads + `_stitch_scene_tiles`,
+    returning the SAME `channel_stacks` structure `_read_channel_stacks_region`
+    produces (one list-of-(Y,X)-planes per physical channel) so it drops
+    straight into `_hybrid_scene_projection` unchanged.
+
+    Reads are scoped to THIS scene's S= and this scene's own M= tiles only --
+    no neighbor-scene pixel is ever read, let alone stitched in.
+    """
+    channel_stacks: list[list[np.ndarray]] = []
+    for c in range(n_c):
+        print(f"    Channel {c}/{n_c - 1}: reading {n_z} z-planes ({n_tiles} tiles each, tile-stitch)...", flush=True)
+        stack = []
+        for z in range(n_z):
+            tiles = []
+            for m in range(n_tiles):
+                x, y = tile_boxes[m]
+                raw, _dims = czi.read_image(S=scene_idx, M=m, C=c, Z=z)
+                data = raw.squeeze()
+                tiles.append((x, y, data))
+            stitched = _stitch_scene_tiles(tiles)
+            stack.append(stitched)
+            print(f"      z={z} shape={stitched.shape} dtype={stitched.dtype} (stitched from {n_tiles} tiles)", flush=True)
+        channel_stacks.append(stack)
+        print(f"    Channel {c} read done ({n_z} planes).", flush=True)
+    return channel_stacks
+
+
+def _read_channel_stacks_region(czi: aicspylibczi.CziFile, region: tuple[int, int, int, int], n_c: int, n_z: int) -> list[list[np.ndarray]]:
+    """Read one scene's channel stacks via `read_mosaic(region=bbox)` -- the
+    original (pre-tile-stitch) region-isolation path. Behavior is
+    byte-identical to prior behavior: same call, same loop order, same
+    per-plane print idiom."""
+    channel_stacks: list[list[np.ndarray]] = []
+    for c in range(n_c):
+        print(f"    Channel {c}/{n_c - 1}: reading {n_z} z-planes...", flush=True)
+        stack = []
+        for z in range(n_z):
+            plane = czi.read_mosaic(region=region, C=c, Z=z, scale_factor=1.0)
+            stack.append(plane.squeeze())   # remove all size-1 dims -> (Y, X)
+            print(f"      z={z} shape={plane.shape} dtype={plane.dtype}", flush=True)
+        channel_stacks.append(stack)
+        print(f"    Channel {c} read done ({n_z} planes).", flush=True)
+    return channel_stacks
+
+
+def _preflight_scenes(czi: aicspylibczi.CziFile) -> tuple[dict, list[tuple[int, int]]]:
+    """Retrieve per-scene bounding boxes, print identity, DETECT (do not abort on)
+    pairwise overlap.
+
+    Returns (bboxes, overlapping_pairs). bboxes is the dict (0-based scene
+    index -> BBox), keyed exactly as returned by aicspylibczi -- do NOT derive
+    scene count from get_dims_shape()[0]['S'] (silently wrong / returns 1 on
+    multi-scene files with inconsistent per-scene shape -- Pitfall 2).
+    overlapping_pairs is a list of (scene_key_i, scene_key_j) pairs whose
+    bboxes overlap -- tightly-packed mosaics with real tissue in the
+    overlapping strip make region=bbox isolation unsafe for those scenes;
+    the caller resolves an isolation mode (region vs tile-stitch) from this
+    list rather than aborting here.
     """
     bboxes = czi.get_all_mosaic_scene_bounding_boxes()
     n_scenes = len(bboxes)
@@ -139,18 +248,48 @@ def _preflight_scenes(czi: aicspylibczi.CziFile) -> dict:
         print(f"  scene_key={scene_idx} (0-based)  bbox=(x={b.x}, y={b.y}, w={b.w}, h={b.h})")
 
     scene_ids = sorted(bboxes)
+    overlapping_pairs: list[tuple[int, int]] = []
     for i in range(len(scene_ids)):
         for j in range(i + 1, len(scene_ids)):
             a, b = bboxes[scene_ids[i]], bboxes[scene_ids[j]]
             if _bboxes_overlap(a, b):
-                raise SystemExit(
-                    f"FATAL: scene {scene_ids[i]} and scene {scene_ids[j]} bounding boxes "
-                    f"overlap -- region-based scene isolation is unsafe on this file"
+                overlapping_pairs.append((scene_ids[i], scene_ids[j]))
+                print(
+                    f"  OVERLAP: scene {scene_ids[i]} and scene {scene_ids[j]} bounding "
+                    f"boxes overlap -- region-based isolation is unsafe for this pair"
                 )
     if n_scenes < 2:
         raise SystemExit(f"Expected a multi-scene CZI (>=2 scenes), found {n_scenes}")
-    print(f"  All {n_scenes} scene bboxes pairwise non-overlapping -- PASS")
-    return bboxes
+    if overlapping_pairs:
+        print(f"  {len(overlapping_pairs)} overlapping scene-bbox pair(s) found")
+    else:
+        print(f"  All {n_scenes} scene bboxes pairwise non-overlapping -- PASS")
+    return bboxes, overlapping_pairs
+
+
+def _resolve_isolation_mode(requested: str, overlapping_pairs: list[tuple[int, int]]) -> str:
+    """Resolve the effective per-scene isolation mode ("region" or "tiles").
+
+    requested == "region": refuse (SystemExit) if any scene bboxes overlap --
+        this PRESERVES the original safety guard that used to live inline in
+        _preflight_scenes; region=bbox reads would splice one scene's tissue
+        into another's crop.
+    requested == "tiles": always tile-stitch, regardless of overlap.
+    requested == "auto" (default): tiles when any pair overlaps, else region
+        (byte-identical to the original, pre-tile-stitch behavior).
+    """
+    if requested == "region":
+        if overlapping_pairs:
+            raise SystemExit(
+                f"FATAL: --isolate region requested but {len(overlapping_pairs)} scene-bbox "
+                f"pair(s) overlap ({overlapping_pairs}) -- region-based scene isolation is "
+                f"unsafe on this file. Use --isolate auto or --isolate tiles."
+            )
+        return "region"
+    if requested == "tiles":
+        return "tiles"
+    # auto
+    return "tiles" if overlapping_pairs else "region"
 
 
 def _dapi_index(names: list[str]) -> int:
@@ -334,7 +473,10 @@ def main() -> None:
     n_z = _extent(dim0, "Z")
     print(f"  Channels={n_c}  Z-planes={n_z}")
 
-    bboxes = _preflight_scenes(czi)
+    bboxes, overlapping_pairs = _preflight_scenes(czi)
+    mode = _resolve_isolation_mode(args.isolate, overlapping_pairs)
+    print(f"Isolation mode resolved: {mode} (requested={args.isolate}, "
+          f"overlapping_pairs={len(overlapping_pairs)})")
     if args.check_scenes:
         return
 
@@ -354,17 +496,21 @@ def main() -> None:
         print(f"Processing scene {scene_idx} -> s{N}  "
               f"bbox=(x={b.x}, y={b.y}, w={b.w}, h={b.h})")
 
-        print(f"  Generating hybrid projection for scene {scene_idx} (s{N})...")
-        channel_stacks = []
-        for c in range(n_c):
-            print(f"    Channel {c}/{n_c - 1}: reading {n_z} z-planes...", flush=True)
-            stack = []
-            for z in range(n_z):
-                plane = czi.read_mosaic(region=region, C=c, Z=z, scale_factor=1.0)
-                stack.append(plane.squeeze())   # remove all size-1 dims -> (Y, X)
-                print(f"      z={z} shape={plane.shape} dtype={plane.dtype}", flush=True)
-            channel_stacks.append(stack)
-            print(f"    Channel {c} read done ({n_z} planes).", flush=True)
+        print(f"  Generating hybrid projection for scene {scene_idx} (s{N}) via {mode}...")
+        n_tiles = _scene_tile_count(dims_all, scene_keys, scene_idx)
+        if mode == "tiles":
+            if n_tiles == -1:
+                raise SystemExit(
+                    f"FATAL: scene {scene_idx}: tile-stitch isolation requires a reliable "
+                    f"per-scene tile count, but _scene_tile_count returned -1 (unknown). "
+                    f"Refusing to proceed silently -- investigate get_dims_shape() shape "
+                    f"for this file, or fall back to --isolate region if bboxes don't overlap."
+                )
+            tile_boxes = _scene_tile_geometry(czi, scene_idx, n_tiles)
+            channel_stacks = _read_channel_stacks_tiles(czi, scene_idx, n_tiles, tile_boxes, n_c, n_z)
+        else:
+            channel_stacks = _read_channel_stacks_region(czi, region, n_c, n_z)
+        print(f"  scene {scene_idx} (s{N}) isolated via {mode}", flush=True)
 
         out_channels, dapi_z, dapi_scores = _hybrid_scene_projection(channel_stacks, dapi_idx)
         score_str = ", ".join(f"Z{z}={s:.3g}" for z, s in enumerate(dapi_scores))
@@ -375,10 +521,15 @@ def main() -> None:
 
         mip = np.stack(out_channels, axis=0)   # (C, Y, X)
         C, Y, X = mip.shape
-        if (Y, X) != (b.h, b.w):
-            raise SystemExit(
-                f"Scene {scene_idx}: MIP shape (Y,X)=({Y},{X}) != scene bbox (h,w)=({b.h},{b.w})"
-            )
+        if mode == "region":
+            if (Y, X) != (b.h, b.w):
+                raise SystemExit(
+                    f"Scene {scene_idx}: MIP shape (Y,X)=({Y},{X}) != scene bbox (h,w)=({b.h},{b.w})"
+                )
+        else:
+            print(f"  Scene {scene_idx} (s{N}) tile-stitch geometry: stitched (Y,X)=({Y},{X}) "
+                  f"vs scene bbox (h,w)=({b.h},{b.w}) -- tile-union extent legitimately "
+                  f"differs from the bbox, not an error")
         print(f"  Scene {scene_idx} (s{N}) hybrid MIP shape: {mip.shape}  dtype: {mip.dtype}")
 
         # ── Scene-identity artifact (CONV-02, D-01/D-02/D-05) ────────────────
