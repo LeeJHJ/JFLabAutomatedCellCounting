@@ -417,12 +417,12 @@ ownCounts.each { ann, counts ->
 // this single check proves no cell was silently lost or double-counted
 // anywhere in the rollup.
 int sumAnchorOwn = (ownCounts.values().collect { it[anchorName] }.sum()) ?: 0
-if (sumAnchorOwn != nClassified) {
-    println "ERROR: zero-leak FAILED -- summed leaf ${anchorName} counts (${sumAnchorOwn}) != total classified non-excluded detections (${nClassified})."
-    println "       (${nUnresolved} unresolved detection(s) with no containing region account for part of any gap.)"
-    throw new RuntimeException("D-10 zero-leak assertion failed: ${sumAnchorOwn} != ${nClassified}")
+if (sumAnchorOwn + nUnresolved != nClassified) {
+    println "ERROR: zero-leak FAILED -- summed leaf ${anchorName} counts (${sumAnchorOwn}) + unresolved (${nUnresolved}) != total classified non-excluded detections (${nClassified})."
+    println "       (a genuine leak/double-count: the discrepancy exceeds the ${nUnresolved} unresolved detection(s) with no containing atlas region.)"
+    throw new RuntimeException("D-10 zero-leak assertion failed: ${sumAnchorOwn} + ${nUnresolved} != ${nClassified}")
 }
-println "zero-leak PASS: summed leaf ${anchorName} counts = ${sumAnchorOwn} == total classified non-excluded detections = ${nClassified}"
+println "zero-leak PASS: leaf ${anchorName} counts (${sumAnchorOwn}) + unresolved (${nUnresolved}) == total classified non-excluded detections (${nClassified})"
 
 // ── per-slice wide region table (D-11: density = count / area_mm2) ─────────
 // One row per region annotation (leaves AND parent rollups); is_leaf is the
