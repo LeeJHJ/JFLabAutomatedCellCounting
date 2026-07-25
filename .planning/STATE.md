@@ -152,6 +152,7 @@ First v1.1 execution step (Phase 5) is scriptable (no GUI dependency); Phases 6-
 | 260724-h6y | czi_mip.py hybrid DAPI projection — single sharpest Z plane (var-of-Laplacian, per scene) + full-Z marker MIP | 2026-07-24 | 17e2cd8 | [260724-h6y-czi-mip-hybrid-dapi](./quick/260724-h6y-czi-mip-hybrid-dapi/) |
 | 260724-iqn | czi_mip.py multi-scene tile-stitch isolation — additive per-scene tile-stitch path + `--isolate {auto,region,tiles}` for overlapping mosaics, region path unchanged for non-overlapping files | 2026-07-24 | 2820928 | [260724-iqn-czi-mip-tile-stitch](./quick/260724-iqn-czi-mip-tile-stitch/) |
 | 260724-kmj | czi_mip.py flat-field shading correction + feathered overlap blending in tile-stitch path (fixes periodic DAPI grid) + OME per-channel display colors (DAPI blue, AF568/TdT red, AF488/Fos green); region path byte-unchanged | 2026-07-24 | 00b6261 | [260724-kmj-flatfield-blend](./quick/260724-kmj-flatfield-blend/) |
+| 260724-fast | fix(03_export): D-10 zero-leak assertion reconciles unresolved detections (cell centroid outside all atlas regions) — `sumAnchorOwn + nUnresolved == nClassified`; found on wBA1-2_2-1 s5 (off-by-1); propagated to deploy copies | 2026-07-24 | e712989 | — |
 
 ---
 
