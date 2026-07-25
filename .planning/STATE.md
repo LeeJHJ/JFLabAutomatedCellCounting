@@ -6,7 +6,7 @@ current_phase: 06.1
 current_phase_name: pipeline-generalization-per-region-readout-runbook
 status: verifying
 stopped_at: Completed 06.1-05-PLAN.md
-last_updated: "2026-07-24T19:08:41.564Z"
+last_updated: "2026-07-25T21:18:08.767Z"
 last_activity: 2026-07-23
 last_activity_desc: Phase 06.1 execution started
 progress:
@@ -64,6 +64,7 @@ Last activity: 2026-07-23 — Phase 06.1 execution started
 | Phase quick-260724-h6y P01 | 12min | 2 tasks | 1 files |
 | Phase quick-260724-iqn P01 | 6min | 2 tasks | 1 files |
 | Phase quick-260724-kmj P01 | 7min | 2 tasks | 1 files |
+| Phase quick-260725-npx P01 | 18min | 2 tasks | 1 files |
 
 ## v1.1 Roadmap Snapshot (created 2026-07-17)
 
@@ -162,7 +163,7 @@ First v1.1 execution step (Phase 5) is scriptable (no GUI dependency); Phases 6-
 
 ## Session Continuity
 
-**Last session:** 2026-07-24T19:07:17.338Z
+**Last session:** 2026-07-25T21:17:28.949Z
 **Stopped at:** Completed 06.1-05-PLAN.md
 **Resume file:** 
 
@@ -206,3 +207,4 @@ None
 - [Phase ?]: 260724-iqn: --isolate auto is default and preserves byte-identical region=bbox behavior for non-overlapping files; --isolate region still refuses (SystemExit) on overlap, tile-stitch is the fallback, never silent
 - [Phase quick-260724-kmj]: 260724-kmj: flat-field/feather changes confined strictly to the tile-stitch path; _read_channel_stacks_region and read_mosaic left byte-unchanged (verified against pre-task baseline)
 - [Phase quick-260724-kmj]: 260724-kmj: DEFAULT_FEATHER_MARGIN=130 and DEFAULT_SHADING_SMOOTH_SIGMA=5.0 are module-level operator-tunable constants, not CLI flags
+- [Phase ?]: 260725-npx: k_sweep_readout.py reproduces 02_detect_classify.groovy's robust cut exactly (median+k*1.4826*MAD, >=); region-level threshold always uses the section-level threshold, never re-derived per region
