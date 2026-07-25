@@ -316,17 +316,112 @@ def print_region_table(section_stats: dict[str, dict[str, SectionMarkerStats]],
 def write_tidy_csv(section_stats: dict[str, dict[str, SectionMarkerStats]],
                     region_groups: dict[str, set[str]] | None, k_set: list[float],
                     out_path: Path) -> None:
-    """[Task 2 will implement] Write the long/tidy k-sweep table: section,region,marker,
-    k,threshold,count,pct -- one row per (section x region x marker x k)."""
-    raise NotImplementedError("--out body is implemented in Task 2")
+    """Write the long/tidy k-sweep table: section,region,marker,k,threshold,count,pct
+    -- one row per (section x region x marker x k). Whole-section rows use the literal
+    region value '__section__' so section-level and region-level rows coexist in one
+    tidy file."""
+    rows = []
+    for sl, markers in section_stats.items():
+        for marker, st in markers.items():
+            for k in k_set:
+                thr = _threshold_at_k(st, k)
+                cnt = _count_at_k(st, k)
+                pct = (100.0 * cnt / st.n_classifiable) if st.n_classifiable else 0.0
+                rows.append({"section": sl, "region": "__section__", "marker": marker,
+                             "k": k, "threshold": thr, "count": cnt, "pct": pct})
+            if region_groups:
+                for group_name, acronyms in region_groups.items():
+                    bg_in, _mask = region_stats_for_group(st, acronyms)
+                    denom = int(bg_in.size)
+                    for k in k_set:
+                        thr = _threshold_at_k(st, k)
+                        cnt = int((bg_in >= thr).sum()) if denom else 0
+                        pct = 100.0 * cnt / denom if denom else 0.0
+                        rows.append({"section": sl, "region": group_name, "marker": marker,
+                                     "k": k, "threshold": thr, "count": cnt, "pct": pct})
+    df_out = pd.DataFrame(rows, columns=["section", "region", "marker", "k", "threshold", "count", "pct"])
+    out_path.parent.mkdir(parents=True, exist_ok=True)
+    df_out.to_csv(out_path, index=False)
+    print(f"wrote -> {out_path}")
 
 
 def write_figure(section_stats: dict[str, dict[str, SectionMarkerStats]],
                   region_groups: dict[str, set[str]], k_set: list[float],
                   marker_names: list[str], anchor_name: str, fig_path: Path) -> None:
-    """[Task 2 will implement] Two-panel grouped-bar figure: (A) marker+ count,
-    (B) marker+ as % of anchor."""
-    raise NotImplementedError("--figure body is implemented in Task 2")
+    """Two-panel grouped-bar figure: (A) marker+ count, (B) marker+ as % of anchor.
+    Grouped bars across sections for the requested --regions groups; bar height =
+    count at the MIDDLE k of the swept set; whiskers span strict (largest k, fewest
+    positives) <-> lenient (smallest k, most positives)."""
+    if not region_groups:
+        sys.exit("ERROR: --figure requires --regions (the figure is a per-region grouped bar chart).")
+
+    sections = list(section_stats.keys())
+    if not sections:
+        sys.exit("ERROR: no sections to plot.")
+    k_sorted = sorted(k_set)
+    k_lo, k_hi = k_sorted[0], k_sorted[-1]
+    k_mid = k_sorted[len(k_sorted) // 2]
+
+    # first declared non-anchor marker actually present anywhere in the data.
+    present_markers = {m for markers in section_stats.values() for m in markers}
+    marker = next((m for m in marker_names if m in present_markers), None)
+    if marker is None:
+        sys.exit("ERROR: no marker data available to plot.")
+    if len(present_markers) > 1:
+        print(f"  note: multiple markers present ({sorted(present_markers)}); "
+              f"figure plots marker={marker!r} only (config-lite: one figure per run).")
+
+    x = np.arange(len(sections))
+    n_groups = len(region_groups)
+    width = 0.8 / max(n_groups, 1)
+    palette = plt.get_cmap("tab10").colors
+
+    fig, (axA, axB) = plt.subplots(1, 2, figsize=(13.5, 5.2))
+    for i, (group_name, acronyms) in enumerate(region_groups.items()):
+        mid_vals, lo_vals, hi_vals, denom_vals = [], [], [], []
+        for sl in sections:
+            st = section_stats[sl].get(marker)
+            if st is None:
+                mid_vals.append(0.0); lo_vals.append(0.0); hi_vals.append(0.0); denom_vals.append(0)
+                continue
+            bg_in, _mask = region_stats_for_group(st, acronyms)
+            denom = int(bg_in.size)
+            def _cnt(k: float) -> int:
+                thr = _threshold_at_k(st, k)
+                return int((bg_in >= thr).sum()) if denom else 0
+            mid_vals.append(_cnt(k_mid)); lo_vals.append(_cnt(k_hi)); hi_vals.append(_cnt(k_lo))
+            denom_vals.append(denom)
+        mid_arr = np.array(mid_vals, dtype=float)
+        lo_arr = np.array(lo_vals, dtype=float)   # strict end (largest k -> fewest positives)
+        hi_arr = np.array(hi_vals, dtype=float)   # lenient end (smallest k -> most positives)
+        denom_arr = np.array(denom_vals, dtype=float)
+        off = (i - (n_groups - 1) / 2.0) * width
+        color = palette[i % len(palette)]
+        axA.bar(x + off, mid_arr, width, color=color, label=group_name,
+                yerr=[mid_arr - lo_arr, hi_arr - mid_arr], capsize=3, error_kw=dict(lw=1, ecolor="#333"))
+        safe_denom = np.where(denom_arr == 0, 1, denom_arr)
+        pmid = 100.0 * mid_arr / safe_denom
+        plo = 100.0 * lo_arr / safe_denom
+        phi = 100.0 * hi_arr / safe_denom
+        axB.bar(x + off, pmid, width, color=color, label=group_name,
+                yerr=[pmid - plo, phi - pmid], capsize=3, error_kw=dict(lw=1, ecolor="#333"))
+
+    for ax, ttl, yl in [(axA, f"{marker}+ cell count", f"{marker}+ cells"),
+                        (axB, f"{marker}+ as % of {anchor_name} (reactivation fraction)",
+                         f"% {marker}+ / {anchor_name}")]:
+        ax.set_title(ttl, fontsize=11, weight="bold")
+        ax.set_ylabel(yl)
+        ax.set_xticks(x)
+        ax.set_xticklabels(sections, rotation=20, ha="right", fontsize=8)
+        ax.grid(axis="y", alpha=0.25)
+        ax.legend(title="region", fontsize=9)
+    fig.suptitle(f"k-sweep region readout (bar = k{k_mid:g}, whiskers = k{k_hi:g}↔k{k_lo:g})",
+                 fontsize=12, weight="bold")
+    fig.tight_layout(rect=[0, 0, 1, 0.95])
+    fig_path.parent.mkdir(parents=True, exist_ok=True)
+    fig.savefig(fig_path, dpi=130, bbox_inches="tight")
+    plt.close(fig)
+    print(f"figure -> {fig_path}")
 
 
 # ---------------------------------------------------------------------------
