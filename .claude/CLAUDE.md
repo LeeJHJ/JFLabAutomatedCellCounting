@@ -12,7 +12,7 @@ End-to-end TRAP2 cell classification pipeline for the first real section run: M3
 
 - **CPU-only**: No CUDA on this box (Intel UHD 630 iGPU only) — all detection runs on i9-9900K cores
 - **Version pins**: QuPath v0.6.0 (BIOP catalog), elastix 5.2.0 (ABBA requirement) — do not bump
-- **Colocalization rule**: Nucleus-anchored only — detect DAPI nuclei, cytoplasmic ring for TdTomato, nuclear compartment for Fos; no proximity/overlap heuristics
+- **Colocalization rule**: Nucleus-anchored only — detect DAPI nuclei, whole-cell (nucleus + ring, area-weighted) for TdTomato — operator domain call 2026-07-25; cytoplasmic ring still available for strictly-cytosolic markers — nuclear compartment for Fos; no proximity/overlap heuristics
 - **Coordinate units**: Export in microns, not pixels — QuPath pixel calibration must be verified against OME-XML `PhysicalSizeX`
 - **Stats convention**: Aggregate to animal level before any group comparison; no pseudoreplication on section- or cell-level n
 - **No git installed**: Planning docs tracked locally only; git init blocked until git is installed

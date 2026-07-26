@@ -30,12 +30,14 @@ anchor:
   channel: "DAPI-T4"           # matches server.json / BraiAn.yml channelDetections name exactly
 
 # D-01/D-17: exactly ONE non-anchor marker -- TdT (engram marker, TdTomato),
-# cytosolic, measured on the cytoplasmic expansion ring (CLAUDE.md). No Fos
-# entry here at all -- this is what proves the variable-marker path (D-03).
+# measured whole-cell (nucleus + cytoplasmic ring, area-weighted mean;
+# CLAUDE.md, revised 2026-07-25 -- operator confirmed TdTomato fills the whole
+# cell). No Fos entry here at all -- this is what proves the variable-marker
+# path (D-03).
 markers:
-  - name: "TdT"                 # engram marker (TdTomato) -- cytosolic, cytoplasmic ring (CLAUDE.md)
+  - name: "TdT"                 # engram marker (TdTomato) -- whole-cell, area-weighted (CLAUDE.md, revised 2026-07-25)
     channel: "AF568-T2"         # matches BraiAn.yml classifiers[].channel for the TdT-only slice set
-    compartment: "cytoplasmic"
+    compartment: "whole-cell"
 
 # D-09: region exclusions, unchanged from pipeline.yml. DG-sg = DG granule
 # cell layer (too dense for per-nucleus segmentation); VS = ventricular
