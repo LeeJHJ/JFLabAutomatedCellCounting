@@ -29,7 +29,8 @@
  * CLASSIFICATION (nucleus-anchored, no proximity/overlap — CLAUDE.md, locked):
  * for each declared marker, `<marker>+` iff its bg-sub measure on its
  * declared compartment (nuclear -> nucleus ROI, cytoplasmic -> expanded
- * cell/cytoplasm ROI) is >= that marker's re-derived threshold. Compound
+ * cell/cytoplasm ROI, whole-cell -> whole-cell/Cell area-weighted ROI) is >=
+ * that marker's re-derived threshold. Compound
  * class per nucleus: `Double+` (only when >=2 markers declared AND >=2
  * positive) / `<marker>+` (exactly one positive) / `Negative`. This is the
  * exact classify_markers.groovy core (base for this script, now retired —
@@ -56,8 +57,8 @@
  * BACKGROUND-ROBUST MEASURE (D-04): before classification, every detection
  * gains a compartment-agnostic local-background-subtracted measurement for
  * EACH declared marker -- "<CompartmentLabel>: <channel> mean (bg-sub)"
- * (nuclear markers: ring built outside the nucleus ROI; cytoplasmic markers:
- * ring built outside the expanded cell/cytoplasm ROI). This fixes the
+ * (nuclear markers: ring built outside the nucleus ROI; cytoplasmic/whole-cell
+ * markers: ring built outside the expanded cell/cytoplasm ROI). This fixes the
  * original SSp-autofluorescence false-positive bug without introducing a
  * nucleus:cytoplasm contrast ratio (that alternative is forbidden by D-04 --
  * it does not generalize to a future PNN pericellular-annulus compartment).
@@ -208,8 +209,8 @@ if (markers.isEmpty())     missingKeys << "markers (empty or missing)"
 markers.eachWithIndex { m, idx ->
     if (m.channel == null)     missingKeys << "markers[${idx}].channel (name=${m.name})"
     if (m.compartment == null) missingKeys << "markers[${idx}].compartment (name=${m.name})"
-    else if (!(m.compartment in ["nuclear", "cytoplasmic"]))
-        missingKeys << "markers[${idx}].compartment invalid value '${m.compartment}' (name=${m.name}; must be nuclear or cytoplasmic)"
+    else if (!(m.compartment in ["nuclear", "cytoplasmic", "whole-cell"]))
+        missingKeys << "markers[${idx}].compartment invalid value '${m.compartment}' (name=${m.name}; must be nuclear, cytoplasmic, or whole-cell)"
 }
 if (kRobust == null) missingKeys << "k_robust"
 if (gapUm == null)   missingKeys << "ring.gap_um"
@@ -223,7 +224,12 @@ println "pipeline.yml loaded: anchor=${anchorName}/${anchorChannel}  markers=${m
         "exclude_acronyms=${excludeAcronyms}  k_robust=${kRobust}  ring(gap_um=${gapUm}, width_um=${widthUm})"
 
 // nuclear -> Nucleus, cytoplasmic -> Cytoplasm (06.1-01 contract, locked).
-def COMPARTMENT_LABELS = [nuclear: "Nucleus", cytoplasmic: "Cytoplasm"]
+// whole-cell -> Cell (added w88, 2026-07-25): QuPath's area-weighted whole-cell
+// mean over ALL cell pixels (nucleus + cytoplasm), for markers whose signal
+// fills the whole cell (e.g. TdTomato, operator-confirmed domain call) rather
+// than being strictly cytosolic. The "whole-cell" key is hyphenated and MUST
+// stay quoted in this Groovy map literal.
+def COMPARTMENT_LABELS = [nuclear: "Nucleus", cytoplasmic: "Cytoplasm", "whole-cell": "Cell"]
 // D-03: Double+ is structurally possible only when >=2 non-anchor markers are declared.
 boolean emitDouble = markers.size() >= 2
 
@@ -358,6 +364,29 @@ def localBackgroundSubtractedMean = { baseRoi, String channelName, selfDetection
         bgGeomFailures++
         return Double.NaN
     }
+}
+
+// ── D-15 guard 4: whole-cell markers require QuPath's Cell-compartment mean ──
+// Without this guard, a missing "Cell: <channel> mean" key resolves rawKey ->
+// null -> NaN -> every cell Negative for that marker -- the exact silent
+// failure the A5/A5b self-checks warn about. Fail-loud (abort) is chosen over
+// any Nucleus-area+Cytoplasm-area fallback, per the codebase's D-15 convention.
+// Runs at TOP SCRIPT SCOPE (not inside dets.each) so `return` aborts the whole
+// run rather than silently skipping one detection.
+def wholeCellMarkers = markers.findAll { it.compartment == "whole-cell" }
+if (!wholeCellMarkers.isEmpty()) {
+    def sampleKeys = dets.first().getMeasurements().keySet()   // dets already guaranteed non-empty by guard 2
+    def missingCellKeys = wholeCellMarkers.findAll { !sampleKeys.contains("Cell: ${it.channel} mean") }
+            .collect { "Cell: ${it.channel} mean" }
+    if (!missingCellKeys.isEmpty()) {
+        println "ERROR: whole-cell marker(s) declared in pipeline.yml but missing QuPath's Cell-compartment measurement key(s): ${missingCellKeys}"
+        println "       BraiAnDetect must emit the Cell-compartment mean for whole-cell markers to work --"
+        println "       re-run detection with makeMeasurements including BOTH nuclei AND a cell expansion so the Cell compartment exists."
+        println "       Actual measurement keys present on this entry's detections: ${sampleKeys}"
+        println "       Aborting."
+        return
+    }
+    println "Whole-cell guard OK: Cell-compartment mean present for ${wholeCellMarkers.collect { it.name }}."
 }
 
 println "Computing local-background-subtracted measures (D-04) for ${dets.size()} detections x ${markers.size()} marker(s)..."
