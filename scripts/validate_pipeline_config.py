@@ -5,7 +5,8 @@ Reads the sidecar pipeline config (D-14, `pipeline.yml`) and, from that config a
 derives the SHARED CONTRACT every downstream groovy/python consumer must conform to:
 
   1. the per-marker background-subtracted measurement-key string
-     (``"<compartment-label>: <channel> mean (bg-sub)"``) each classifier will write/read;
+     (``"<compartment-label>: <channel> mean (bg-sub)"``) each classifier will write/read
+     (compartment-label is Nucleus/Cytoplasm/Cell for nuclear/cytoplasmic/whole-cell);
   2. the PathClass vocabulary (``"<marker>+"`` per declared non-anchor marker, plus
      ``"Double+"`` ONLY when >=2 non-anchor markers are declared -- D-03);
   3. the per-slice table column set, built purely by iterating the declared markers
@@ -36,10 +37,12 @@ _FORBIDDEN_DETECTION_KEYS = (
     "histogramThreshold", "cellExpansionMicrons",
 )
 
-_VALID_COMPARTMENTS = ("nuclear", "cytoplasmic")
+_VALID_COMPARTMENTS = ("nuclear", "cytoplasmic", "whole-cell")
 
-# nuclear -> Nucleus, cytoplasmic -> Cytoplasm (D-01 spec.md compartment semantics).
-_COMPARTMENT_LABELS = {"nuclear": "Nucleus", "cytoplasmic": "Cytoplasm"}
+# nuclear -> Nucleus, cytoplasmic -> Cytoplasm, whole-cell -> Cell (area-weighted
+# whole-cell mean over nucleus + cytoplasm; added w88, 2026-07-25, operator
+# domain call for TdTomato) -- D-01 spec.md compartment semantics.
+_COMPARTMENT_LABELS = {"nuclear": "Nucleus", "cytoplasmic": "Cytoplasm", "whole-cell": "Cell"}
 
 
 class ConfigError(SystemExit):
@@ -221,12 +224,14 @@ def _build_synthetic_config(tmpdir: Path, marker_names_channels_compartments: li
 
 
 def self_test() -> bool:
-    """Construct two synthetic configs and assert the D-03/D-04 variable-marker contract.
+    """Construct synthetic configs and assert the D-03/D-04 variable-marker contract.
 
     (1) TdT-only (single non-anchor marker) -> Double+ NOT in vocabulary, no Fos column.
     (2) Fos+TdT (two non-anchor markers)     -> Double+ IS in vocabulary, both columns present.
+    (3) TdT whole-cell (single non-anchor marker, compartment=whole-cell) -> measurement
+        key resolves to "Cell: AF568-T2 mean (bg-sub)" (w88, 2026-07-25).
 
-    Returns True if both assertions pass, False otherwise (never raises).
+    Returns True if all assertions pass, False otherwise (never raises).
     """
     ok = True
     with tempfile.TemporaryDirectory() as tmp:
@@ -260,12 +265,27 @@ def self_test() -> bool:
                   f"{both_contract['columns']}")
             ok = False
 
+        # (3) TdT whole-cell -- w88, 2026-07-25: TdTomato fills the whole cell,
+        # so the derived measurement key must resolve to the Cell-compartment
+        # (area-weighted whole-cell) mean, not Cytoplasm.
+        whole_cell_path = _build_synthetic_config(
+            tmpdir, [("TdT", "AF568-T2", "whole-cell")])
+        whole_cell_config = load_config(whole_cell_path)
+        whole_cell_contract = derive_contract(whole_cell_config)
+        expected_key = "Cell: AF568-T2 mean (bg-sub)"
+        if whole_cell_contract["measurement_keys"].get("TdT") != expected_key:
+            print("SELF-TEST FAIL: whole-cell TdT config measurement key = "
+                  f"{whole_cell_contract['measurement_keys'].get('TdT')!r}, expected {expected_key!r}")
+            ok = False
+
         if ok:
             print("SELF-TEST PASSED:")
-            print("  TdT-only  -> vocabulary =", tdt_only_contract["class_vocabulary"],
+            print("  TdT-only    -> vocabulary =", tdt_only_contract["class_vocabulary"],
                   "| columns =", tdt_only_contract["columns"])
-            print("  Fos+TdT   -> vocabulary =", both_contract["class_vocabulary"],
+            print("  Fos+TdT     -> vocabulary =", both_contract["class_vocabulary"],
                   "| columns =", both_contract["columns"])
+            print("  TdT whole-cell -> measurement key =",
+                  whole_cell_contract["measurement_keys"]["TdT"])
 
     return ok
 
