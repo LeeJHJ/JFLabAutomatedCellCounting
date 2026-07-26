@@ -6,7 +6,7 @@ current_phase: 06.1
 current_phase_name: pipeline-generalization-per-region-readout-runbook
 status: verifying
 stopped_at: Completed 06.1-05-PLAN.md
-last_updated: "2026-07-25T21:18:08.767Z"
+last_updated: "2026-07-26T03:26:53.337Z"
 last_activity: 2026-07-23
 last_activity_desc: Phase 06.1 execution started
 progress:
@@ -65,6 +65,7 @@ Last activity: 2026-07-23 — Phase 06.1 execution started
 | Phase quick-260724-iqn P01 | 6min | 2 tasks | 1 files |
 | Phase quick-260724-kmj P01 | 7min | 2 tasks | 1 files |
 | Phase quick-260725-npx P01 | 18min | 2 tasks | 1 files |
+| Phase quick-260725-w88 P01 | 15min | 3 tasks | 12 files |
 
 ## v1.1 Roadmap Snapshot (created 2026-07-17)
 
@@ -98,7 +99,7 @@ Items acknowledged and deferred at v1.0 milestone close on 2026-07-17:
 |----------|-----------|--------|
 | ~~No Affine+Spline in ABBA~~ → **works with Nissl (Ch0)** | Original (2026-06-23): elastix degrades without a tissue mask. **REVISED 2026-07-20 (operator, wBA1-3):** root cause was substantially the **wrong atlas fixed channel** — Label Borders (Ch2) is a region-outline line-drawing with no DAPI-intensity correspondence. With atlas **Nissl (Ch0)** as the fixed channel, in-GUI elastix Affine+Spline works. Working pipeline: DeepSlice → single global slicing angle (X=−8.6/Y=3.9, locked) → elastix Affine(Nissl Ch0 // DAPI Ch2) → elastix Spline(15 pts) → BigWarp "Edit last registration" refine (~40 min total / ~8 min per section for all 5). | **Superseded** (Phase 6 REG-04/05) |
 | Channel order override in czi_mip.py | aicspylibczi reads in wrong order vs metadata; always pass `--channels "TdTomato-AF568" "Fos-AF488" "DAPI"` | Locked |
-| Cytoplasmic expansion ring for TdTomato | TdTomato is cytosolic; measure in cytoplasmic compartment to avoid mis-counting | Locked (validated Phase 3 — bg-sub AF568-T2 cytoplasmic measure) |
+| TdTomato measured whole-cell (nucleus + ring, area-weighted; QuPath `Cell: <ch> mean`) | Operator domain call 2026-07-25: TdTomato fills the whole cell in this line/prep, so ring-only measurement under-counts it; revises the earlier CLAUDE.md "cytoplasmic-ring-only, non-negotiable" wording. Cytoplasmic-ring compartment remains available (config option) for any future strictly-cytosolic marker. | Revised 2026-07-25 — whole-cell, operator domain call (quick-260725-w88) |
 | DeepSlice → manual angle → export only | Minimal steps producing correct overlay | Locked |
 | Nucleus-anchored colocalization only | No proximity/overlap heuristics | Locked |
 | Export in microns not pixels | CCFv3 is in microns; pixel export produces wrong atlas positions | Locked |
@@ -163,7 +164,7 @@ First v1.1 execution step (Phase 5) is scriptable (no GUI dependency); Phases 6-
 
 ## Session Continuity
 
-**Last session:** 2026-07-25T21:17:28.949Z
+**Last session:** 2026-07-26T03:26:06.514Z
 **Stopped at:** Completed 06.1-05-PLAN.md
 **Resume file:** 
 
@@ -208,3 +209,4 @@ None
 - [Phase quick-260724-kmj]: 260724-kmj: flat-field/feather changes confined strictly to the tile-stitch path; _read_channel_stacks_region and read_mosaic left byte-unchanged (verified against pre-task baseline)
 - [Phase quick-260724-kmj]: 260724-kmj: DEFAULT_FEATHER_MARGIN=130 and DEFAULT_SHADING_SMOOTH_SIGMA=5.0 are module-level operator-tunable constants, not CLI flags
 - [Phase ?]: 260725-npx: k_sweep_readout.py reproduces 02_detect_classify.groovy's robust cut exactly (median+k*1.4826*MAD, >=); region-level threshold always uses the section-level threshold, never re-derived per region
+- [Phase ?]: 260725-w88: TdT switched to whole-cell compartment (area-weighted QuPath Cell: mean) per operator domain call 2026-07-25; cytoplasmic ring remains available for strictly-cytosolic markers; D-15 guard 4 added to fail loud on a missing Cell-compartment key
