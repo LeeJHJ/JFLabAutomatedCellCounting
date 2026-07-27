@@ -376,8 +376,14 @@ def localBackgroundSubtractedMean = { baseRoi, String channelName, selfDetection
 def wholeCellMarkers = markers.findAll { it.compartment == "whole-cell" }
 if (!wholeCellMarkers.isEmpty()) {
     def sampleKeys = dets.first().getMeasurements().keySet()   // dets already guaranteed non-empty by guard 2
-    def missingCellKeys = wholeCellMarkers.findAll { !sampleKeys.contains("Cell: ${it.channel} mean") }
-            .collect { "Cell: ${it.channel} mean" }
+    // Build the Cell keys as real Strings (.toString()): a Groovy GString is NOT equal
+    // to the equivalent String inside a Set<String> (different hashCode/equals), so
+    // Set.contains(gstring) returns false even when the key IS present -- the same
+    // coercion the measurement loop does via `String rawKey = "..."`. Without it the
+    // guard false-positives and aborts on a perfectly good "Cell: <ch> mean" key.
+    def missingCellKeys = wholeCellMarkers
+            .collect { "Cell: ${it.channel} mean".toString() }
+            .findAll { !sampleKeys.contains(it) }
     if (!missingCellKeys.isEmpty()) {
         println "ERROR: whole-cell marker(s) declared in pipeline.yml but missing QuPath's Cell-compartment measurement key(s): ${missingCellKeys}"
         println "       BraiAnDetect must emit the Cell-compartment mean for whole-cell markers to work --"
