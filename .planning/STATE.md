@@ -156,6 +156,7 @@ First v1.1 execution step (Phase 5) is scriptable (no GUI dependency); Phases 6-
 | 260724-kmj | czi_mip.py flat-field shading correction + feathered overlap blending in tile-stitch path (fixes periodic DAPI grid) + OME per-channel display colors (DAPI blue, AF568/TdT red, AF488/Fos green); region path byte-unchanged | 2026-07-24 | 00b6261 | [260724-kmj-flatfield-blend](./quick/260724-kmj-flatfield-blend/) |
 | 260724-fast | fix(03_export): D-10 zero-leak assertion reconciles unresolved detections (cell centroid outside all atlas regions) — `sumAnchorOwn + nUnresolved == nClassified`; found on wBA1-2_2-1 s5 (off-by-1); propagated to deploy copies | 2026-07-24 | e712989 | — |
 | 260725-fast | fix(02_classify): coerce whole-cell guard key to String (GString!=String in Set.contains) — was false-aborting on a valid `Cell: AF568-T2 mean`; propagated to deploy copies | 2026-07-25 | 7c1d7eb | — |
+| 260725-fast2 | fix(03_export): accept whole-cell compartment (validator + COMPARTMENT_LABELS) — 260725-w88 rollout missed 03; propagated | 2026-07-25 | c40cb95 | — |
 
 ---
 
