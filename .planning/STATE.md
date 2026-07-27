@@ -2,19 +2,19 @@
 gsd_state_version: 1.0
 milestone: v1.1
 milestone_name: First Full-Series Run — LA/BA Amygdala Engram
-current_phase: 06.1
-current_phase_name: pipeline-generalization-per-region-readout-runbook
+current_phase: 07
+current_phase_name: New 4-Plane / Lower-Laser Params
 status: verifying
 stopped_at: Completed 06.1-05-PLAN.md
-last_updated: "2026-07-26T03:26:53.337Z"
-last_activity: 2026-07-23
-last_activity_desc: Phase 06.1 execution started
+last_updated: "2026-07-27T19:00:29.438Z"
+last_activity: 2026-07-27
+last_activity_desc: Phase 06.1 complete, transitioned to Phase 07
 progress:
   total_phases: 7
-  completed_phases: 2
+  completed_phases: 3
   total_plans: 14
-  completed_plans: 13
-  percent: 29
+  completed_plans: 14
+  percent: 43
 ---
 
 # Project State: M3 Section Pipeline — TRAP2 / Airyscan
@@ -34,10 +34,10 @@ progress:
 
 ## Current Position
 
-Phase: 06.1 (pipeline-generalization-per-region-readout-runbook) — EXECUTING
-Plan: 6 of 6
+Phase: 07 — Imaging Re-Validation (New 4-Plane / Lower-Laser Params)
+Plan: Not started
 Status: Phase complete — ready for verification
-Last activity: 2026-07-23 — Phase 06.1 execution started
+Last activity: 2026-07-27 — Phase 06.1 complete, transitioned to Phase 07
 
 ## Performance Metrics
 
