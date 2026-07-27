@@ -164,8 +164,8 @@ if (markers.isEmpty())     missingKeys << "markers (empty or missing)"
 markers.eachWithIndex { m, idx ->
     if (m.channel == null)     missingKeys << "markers[${idx}].channel (name=${m.name})"
     if (m.compartment == null) missingKeys << "markers[${idx}].compartment (name=${m.name})"
-    else if (!(m.compartment in ["nuclear", "cytoplasmic"]))
-        missingKeys << "markers[${idx}].compartment invalid value '${m.compartment}' (name=${m.name}; must be nuclear or cytoplasmic)"
+    else if (!(m.compartment in ["nuclear", "cytoplasmic", "whole-cell"]))
+        missingKeys << "markers[${idx}].compartment invalid value '${m.compartment}' (name=${m.name}; must be nuclear, cytoplasmic, or whole-cell)"
 }
 if (kRobust == null) missingKeys << "k_robust"
 if (gapUm == null)   missingKeys << "ring.gap_um"
@@ -179,7 +179,7 @@ println "pipeline.yml loaded: anchor=${anchorName}/${anchorChannel}  markers=${m
         "exclude_acronyms=${excludeAcronyms}  k_robust=${kRobust}  ring(gap_um=${gapUm}, width_um=${widthUm})"
 
 // nuclear -> Nucleus, cytoplasmic -> Cytoplasm (06.1-01 contract, locked).
-def COMPARTMENT_LABELS = [nuclear: "Nucleus", cytoplasmic: "Cytoplasm"]
+def COMPARTMENT_LABELS = [nuclear: "Nucleus", cytoplasmic: "Cytoplasm", "whole-cell": "Cell"]
 // D-03: Double+ is structurally possible only when >=2 non-anchor markers are declared.
 boolean emitDouble = markers.size() >= 2
 
