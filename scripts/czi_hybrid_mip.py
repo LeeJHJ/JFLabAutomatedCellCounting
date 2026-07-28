@@ -18,7 +18,7 @@ physical data as TdTomato(AF568)=0, Fos(AF488)=1, DAPI=2 -- NOT the metadata ord
 (see feedback_channel_order). Defaults below follow the physical read order.
 
 Usage:
-  conda run -n braian python3 czi_hybrid_mip.py \
+  conda run -n braian python3 scripts/czi_hybrid_mip.py \
       --czi "in.czi" --out "out.ome.tiff" \
       --dapi-plane auto --marker-planes 0-2 --crop 15770x10240
 """

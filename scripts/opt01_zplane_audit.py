@@ -12,7 +12,7 @@ Measures (does not hardcode, per D-06) the facts feeding 04-IMAGING-NOTES.md:
 
 Metadata-only CZI read (no pixel/tile load) — completes in seconds even on a ~9 GB file.
 
-Usage (from the Analysis root, braian env):
+Usage (from the repository root, braian env):
   conda run -n braian python3 scripts/opt01_zplane_audit.py
   conda run -n braian python3 scripts/opt01_zplane_audit.py --czi "/path/to/other.czi"
 """
@@ -25,14 +25,14 @@ from pathlib import Path
 import aicspylibczi
 import pandas as pd
 
-DEFAULT_CZI = Path("Automated Cell Counting/M3 Hippocampus 20x 062026.czi")
-DEFAULT_MIP = Path("M3 Hippocampus 20x 062226/M3_20x_MIP_Z1-3.ome.tiff")
+DEFAULT_CZI = Path("data/raw/M3_Hippocampus_20x_062026.czi")
+DEFAULT_MIP = Path("data/projects/m3-hippocampus-20x-062226/M3_20x_MIP_Z1-3.ome.tiff")
 DEFAULT_REGION_3PLANE = Path(
-    "M3 Hippocampus 20x 062926 3 plane/results/"
+    "data/projects/m3-hippocampus-20x-062926-3-plane/results/"
     "M3_20x_MIP_Z1-3.ome.tiff - czi_to_mip_regions.tsv"
 )
 DEFAULT_REGION_HYBRID = Path(
-    "M3 Hippocampus 20x 062926 3 plane/results/"
+    "data/projects/m3-hippocampus-20x-062926-3-plane/results/"
     "M3_20x_hybrid_dapiZ2_mipZ0-2.ome.tiff - Analysis_hybrid_regions.tsv"
 )
 

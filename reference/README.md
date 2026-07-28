@@ -13,7 +13,7 @@ replacement for the rough `500–2000 /mm²` D-05 seed range.
    encodes the exact detection params (sigma / threshold / area limits / expansion),
    read straight from `BraiAn.yml`.
 
-2. **Whenever you want the reference (braian env, from the Analysis root):**
+2. **Whenever you want the reference (braian env, from the repository root):**
    ```bash
    conda run -n braian python scripts/build_dapi_reference.py            # per-region mean±SD/CV
    conda run -n braian python scripts/build_dapi_reference.py --leaf-only

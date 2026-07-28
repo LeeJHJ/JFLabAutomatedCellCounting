@@ -25,6 +25,10 @@
 # NOTE: this is per-project output, NOT the top-level reference/ accumulator (which IS tracked).
 **/results/
 **/regions_to_exclude/
+results/
+data/raw/
+**/logs/
+*.log
 
 # ── Python ──
 __pycache__/
@@ -32,6 +36,7 @@ __pycache__/
 .ipynb_checkpoints/
 .venv/
 *.egg-info/
+*.tmp
 
 # ── OS / editor cruft ──
 .DS_Store

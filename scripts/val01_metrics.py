@@ -22,11 +22,11 @@ All four metrics are printed to stdout in a labeled block, each against its
 VAL-01 target band, so Plan 04-03 can transcribe them into 04-VALIDATION.md.
 This script does NOT assert pass/fail (D-01: findings record, not a gate).
 
-Usage (from the Analysis root, braian env):
+Usage (from the repository root, braian env):
   conda run -n braian python scripts/val01_metrics.py
   conda run -n braian python scripts/val01_metrics.py \\
-      --percell-tsv "M3 Hippocampus 20x 062926 3 plane/results/val01_percell_export.tsv" \\
-      --region-tsv "M3 Hippocampus 20x 062926 3 plane/results/val01_region_area.tsv" \\
+      --percell-tsv "data/projects/m3-hippocampus-20x-062926-3-plane/results/val01_percell_export.tsv" \\
+      --region-tsv "data/projects/m3-hippocampus-20x-062926-3-plane/results/val01_region_area.tsv" \\
       --out results/val01_metrics.json
 """
 from __future__ import annotations
@@ -40,8 +40,12 @@ import numpy as np
 import pandas as pd
 from scipy.stats import skew
 
-DEFAULT_PERCELL_TSV = Path("M3 Hippocampus 20x 062926 3 plane/results/val01_percell_export.tsv")
-DEFAULT_REGION_TSV = Path("M3 Hippocampus 20x 062926 3 plane/results/val01_region_area.tsv")
+DEFAULT_PERCELL_TSV = Path(
+    "data/projects/m3-hippocampus-20x-062926-3-plane/results/val01_percell_export.tsv"
+)
+DEFAULT_REGION_TSV = Path(
+    "data/projects/m3-hippocampus-20x-062926-3-plane/results/val01_region_area.tsv"
+)
 
 RATIO_TARGET = (0.10, 0.40)
 DENSITY_TARGET = (500.0, 2000.0)
