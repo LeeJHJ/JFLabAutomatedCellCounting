@@ -192,6 +192,158 @@ def detection_params(project_dir: Path) -> dict:
 
 
 # ---------------------------------------------------------------------------
+# QuPath headless plumbing (the EXPENSIVE half -- built here, run by the notebook)
+# ---------------------------------------------------------------------------
+QUPATH_BIN = Path("/home/jflab/section-pipeline/tools/QuPath/bin/QuPath")
+
+
+def project_image_names(project_dir: Path) -> list[str]:
+    """Image entry names from project.qpproj, in entryID order. These are the exact
+    strings QuPath's `--image` expects."""
+    import json
+    doc = json.loads((Path(project_dir) / "project.qpproj").read_text())
+    imgs = doc.get("images") or []
+    return [i["imageName"] for i in sorted(imgs, key=lambda i: i.get("entryID", 0))
+            if i.get("imageName")]
+
+
+def qupath_command(project_dir: Path, script: str | Path, image: str | None = None,
+                   save: bool = True, qupath_bin: Path = QUPATH_BIN,
+                   args: list[str] | None = None) -> list[str]:
+    """Build the headless QuPath invocation.
+
+    `--image` restricts the run to ONE entry (omit it and QuPath runs the script
+    over every image in the project). `--save` is required to persist detections
+    back into data.qpdata -- without it a 30-minute detection pass is discarded.
+    A bare script name resolves against <project>/scripts/.
+    """
+    script_path = Path(script)
+    if not script_path.is_absolute():
+        script_path = Path(project_dir) / "scripts" / script_path
+    cmd = [str(qupath_bin), "script", "-p", str(Path(project_dir) / "project.qpproj")]
+    if image:
+        cmd += ["-i", image]
+    if save:
+        cmd.append("-s")
+    for a in args or []:
+        cmd += ["-a", a]
+    cmd.append(str(script_path))
+    return cmd
+
+
+def shell_quote(cmd: list[str]) -> str:
+    import shlex
+    return " ".join(shlex.quote(c) for c in cmd)
+
+
+def run_qupath(cmd: list[str], dry_run: bool = True, log_path: Path | None = None,
+               timeout_s: int = 7200) -> int:
+    """Run (or, by default, merely PRINT) a headless QuPath command.
+
+    dry_run defaults to True on purpose: detection is ~30 min/slice, so the cockpit
+    never launches a JVM as a side effect of running a cell. Flip it deliberately.
+    Returns the exit code, or -1 when dry-run.
+    """
+    import subprocess
+    print(("DRY RUN -- would execute:\n  " if dry_run else "RUNNING:\n  ") + shell_quote(cmd))
+    if dry_run:
+        return -1
+    proc = subprocess.run(cmd, capture_output=True, text=True, timeout=timeout_s)
+    out = (proc.stdout or "") + (proc.stderr or "")
+    if log_path:
+        Path(log_path).parent.mkdir(parents=True, exist_ok=True)
+        Path(log_path).write_text(out)
+        print(f"  log -> {log_path}  ({len(out.splitlines())} lines)")
+    tail = out.splitlines()[-25:]
+    print("  " + "\n  ".join(tail) if tail else "  (no output)")
+    print(f"  exit={proc.returncode}")
+    return proc.returncode
+
+
+# ---------------------------------------------------------------------------
+# BraiAn.yml parameter locking
+# ---------------------------------------------------------------------------
+def _yaml_scalar(val) -> str:
+    if isinstance(val, bool):
+        return "true" if val else "false"
+    if isinstance(val, float) and val.is_integer():
+        return f"{val:.1f}"
+    return str(val)
+
+
+def lock_detection_params(project_dir: Path, params: dict,
+                          backup: bool = True) -> tuple[Path, Path | None]:
+    """Write tuned detection params into BraiAn.yml, backing the file up first.
+    Returns (braian_yml, backup_path).
+
+    Edits values IN PLACE line by line rather than round-tripping through
+    yaml.safe_dump, because BraiAn.yml carries extensive comments recording WHY each
+    number is what it is (the sigmaMicrons entry alone documents the whole wBA-vs-M3
+    tuning call). A dump-based rewrite would silently delete all of that; here the
+    indentation and any trailing `# comment` on the edited line are preserved.
+
+    `histogramThreshold.<key>` dotted keys address the nested block. A key that is
+    missing, or that matches more than one line, raises -- a param that appears to
+    lock but does not would quietly invalidate the calibrate-then-scale premise.
+    Every write is verified by re-parsing the file.
+    """
+    import re
+    from datetime import datetime
+
+    path = Path(project_dir) / "BraiAn.yml"
+    original = path.read_text()
+
+    doc = yaml.safe_load(original) or {}
+    chans = doc.get("channelDetections") or []
+    if not chans:
+        raise ValueError(f"{path}: channelDetections is empty")
+    known = set(chans[0].get("parameters") or {})
+    hist_known = set((chans[0].get("parameters") or {}).get("histogramThreshold") or {})
+
+    for key in params:
+        if key.startswith("histogramThreshold."):
+            leaf = key.split(".", 1)[1]
+            if leaf not in hist_known:
+                raise KeyError(f"unknown histogramThreshold key '{leaf}'; "
+                               f"known: {sorted(hist_known)}")
+        elif key not in known:
+            raise KeyError(f"unknown detection param '{key}'; known: {sorted(known)}")
+
+    lines = original.splitlines(keepends=True)
+    for key, val in params.items():
+        leaf = key.split(".", 1)[1] if key.startswith("histogramThreshold.") else key
+        pat = re.compile(rf"^(?P<indent>\s*){re.escape(leaf)}:(?P<gap>[ \t]*)"
+                         r"(?P<val>[^#\n]*?)(?P<comment>[ \t]*#.*)?(?P<eol>\r?\n?)$")
+        hits = [i for i, ln in enumerate(lines) if pat.match(ln)]
+        if len(hits) != 1:
+            raise KeyError(f"'{leaf}' matched {len(hits)} lines in {path} "
+                           f"(need exactly 1) -- edit by hand")
+        m = pat.match(lines[hits[0]])
+        lines[hits[0]] = (f"{m['indent']}{leaf}:{m['gap'] or ' '}{_yaml_scalar(val)}"
+                          f"{m['comment'] or ''}{m['eol'] or chr(10)}")
+
+    updated = "".join(lines)
+
+    # Verify BEFORE touching the real file: a bad edit must not land at all.
+    check = yaml.safe_load(updated) or {}
+    cparams = ((check.get("channelDetections") or [{}])[0].get("parameters") or {})
+    for key, val in params.items():
+        got = (cparams.get("histogramThreshold", {}).get(key.split(".", 1)[1])
+               if key.startswith("histogramThreshold.") else cparams.get(key))
+        if got != val and float(got if got is not None else "nan") != float(val):
+            raise ValueError(f"lock verification failed for '{key}': wrote {val!r}, "
+                             f"re-parsed {got!r}")
+
+    bak = None
+    if backup:
+        stamp = datetime.now().strftime("%Y%m%d-%H%M%S")
+        bak = path.parent / f"{path.name}.bak-{stamp}"
+        bak.write_text(original)
+    path.write_text(updated)
+    return path, bak
+
+
+# ---------------------------------------------------------------------------
 # Slice discovery
 # ---------------------------------------------------------------------------
 @dataclass
@@ -237,6 +389,32 @@ def find_slices(project_dir: Path, results_dir: Path | None = None) -> list[Slic
 # ---------------------------------------------------------------------------
 # Table loading
 # ---------------------------------------------------------------------------
+def region_table_status(project_dir: Path, results_dir: Path | None = None) -> dict:
+    """Report whether the consolidated `*__region_table.tsv` exports that
+    cockpit_regions.build_readout() consumes are present.
+
+    Older projects were exported before 03_export_region_table.groovy was
+    consolidated and carry only `*__region_area.tsv`, which holds areas but NO
+    per-category counts -- it is not a substitute. Rather than let build_readout
+    raise deep inside a notebook cell, callers check this first and surface the
+    exact re-export command.
+    """
+    rdir = Path(results_dir) if results_dir else Path(project_dir) / "results"
+    tables = sorted(rdir.glob("*__region_table.tsv")) if rdir.is_dir() else []
+    areas = sorted(rdir.glob("*region_area.tsv")) if rdir.is_dir() else []
+    return {
+        "ready": bool(tables),
+        "region_tables": tables,
+        "region_area_only": bool(areas) and not tables,
+        "hint": ("" if tables else
+                 "No *__region_table.tsv found"
+                 + (" (only the older *__region_area.tsv, which has areas but no counts)"
+                    if areas else "")
+                 + ". Re-export with 03_export_region_table.groovy: "
+                 + shell_quote(qupath_command(project_dir, "03_export_region_table.groovy"))),
+    }
+
+
 def load_regions_tsv(path: Path, anchor_ch: str) -> pd.DataFrame:
     """Normalise regions.tsv into: acronym, hemisphere, classification, area_mm2,
     count, density (per mm^2). One row per (region, hemisphere) exactly as QuPath
@@ -771,6 +949,45 @@ def _self_test() -> None:
         res_p = {r.name: r for r in run_all_gates(partial, proj)}
         check(res_p["nucleus_area_peak_um2"].status == NA, "missing percell -> N/A not crash")
         check(res_p["white_matter_density"].status in (PASS, FLAG), "regions gate still evaluated")
+
+        print("\n[9] headless command construction")
+        cmd = qupath_command(proj, "run_braian_detection.groovy", image="syn_s1")
+        check(cmd[1] == "script" and "-i" in cmd and "syn_s1" in cmd, "single-image cmd uses -i")
+        check("-s" in cmd, "cmd passes --save (else a 30-min pass is discarded)")
+        check(cmd[-1].endswith("scripts/run_braian_detection.groovy"),
+              "bare script name resolves under <project>/scripts")
+        check("-i" not in qupath_command(proj, "x.groovy"), "project-wide cmd omits -i")
+        check(run_qupath(cmd, dry_run=True) == -1, "dry_run prints instead of launching a JVM")
+
+        print("\n[10] lock_detection_params preserves comments and verifies the write")
+        (proj / "BraiAn.yml").write_text(
+            "classForDetections: allen_mouse_10um_java\n"
+            "channelDetections:\n"
+            "  - name: DAPI-T4\n"
+            "    parameters:\n"
+            "      sigmaMicrons: 2.0   # KEEP ME: documents the wBA-vs-M3 tuning call\n"
+            "      minAreaMicrons: 20.0\n"
+            "      maxAreaMicrons: 250.0\n"
+            "      histogramThreshold:\n"
+            "        nPeak: 2\n")
+        _p, bakp = lock_detection_params(
+            proj, {"sigmaMicrons": 2.5, "minAreaMicrons": 25.0,
+                   "histogramThreshold.nPeak": 3})
+        txt = (proj / "BraiAn.yml").read_text()
+        check("KEEP ME" in txt, "trailing comment survives the edit")
+        after = detection_params(proj)
+        check(after["sigmaMicrons"] == 2.5, f"sigmaMicrons locked (got {after['sigmaMicrons']})")
+        check(after["minAreaMicrons"] == 25.0, "minAreaMicrons locked")
+        check(after["histogramThreshold.nPeak"] == 3, "nested histogramThreshold key locked")
+        check(after["maxAreaMicrons"] == 250.0, "untouched param unchanged")
+        check(bakp is not None and bakp.exists(), "backup written before edit")
+        check("sigmaMicrons: 2.0" in bakp.read_text(), "backup holds the pre-edit value")
+
+        try:
+            lock_detection_params(proj, {"sigmaMicronz": 1.0})
+            check(False, "typo'd param must raise")
+        except KeyError:
+            check(True, "typo'd param raises instead of silently no-op'ing")
 
     print("\n" + ("ALL SELF-TESTS PASSED" if not failures
                   else f"{len(failures)} SELF-TEST FAILURE(S):\n  - " + "\n  - ".join(failures)))
