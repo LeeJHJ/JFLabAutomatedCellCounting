@@ -1,0 +1,12 @@
+# Regions of interest for the region-of-interest readout CSV.
+# One Allen acronym per line, any hierarchy level. '#' starts a comment.
+# Mirrors the regions_to_exclude/ convention.
+
+# Amygdala engram nuclei (leaf level)
+LA
+BLA
+BMA
+
+# Hippocampus (summary + leaf level -- exercises roll-up)
+HPF
+CA1
