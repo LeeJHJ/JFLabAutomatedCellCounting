@@ -72,7 +72,19 @@ class GateThresholds:
     `replace(DEFAULT_THRESHOLDS, white_matter_ratio_max=0.5)`."""
 
     # Nucleus area histogram peak (um^2).
-    area_peak_min: float = 50.0
+    #
+    # Lower bound widened 50.0 -> 25.0 (operator domain call, 2026-07-28). The old
+    # 50-150 band came from M3, whose over-projected DAPI merged and inflated nuclei;
+    # it never matched what the images actually showed. wBA's thin Z-stacks deblend
+    # properly, so nuclei genuinely measure smaller -- the wBA peak of 27-32 um^2
+    # (~5.9-6.4 um equivalent diameter) is real, not fragmentation. Operator reports
+    # never having trusted 50-150 for this prep.
+    #
+    # As equivalent circular diameters: 25 um^2 ~ 5.6 um, 150 um^2 ~ 13.8 um. The floor
+    # still catches genuine over-splitting -- fragmented nuclei land well below it
+    # (the self-test's over-split fixture peaks at 17.5 um^2 ~ 4.7 um and still FLAGs).
+    # Re-tighten if imaging moves back to thicker Z / heavier projection.
+    area_peak_min: float = 25.0
     area_peak_max: float = 150.0
     area_bin_width: float = 5.0
 
