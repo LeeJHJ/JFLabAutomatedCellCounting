@@ -1,0 +1,74 @@
+# BraiAn.yml -- qupath-extension-braian (BraiAnDetect) v1.1.0 config
+# M3 Hipp1 072326, 7 scenes, 4-plane hybrid MIP (DAPI single-plane + marker MIP).
+# Channels: DAPI-T4 (anchor) + AF568-T2 (TdTomato) + AF488-T3 (Fos). MULTI-MARKER.
+#
+# Adapted for this slice-set from:
+#   - M3 Hippocampus 20x 062926 3 plane/BraiAn.yml  (hippocampal DG+CA1 tuning
+#     -> sigma/area/cellExpansion seeds below are the HIPPOCAMPAL seeds, more
+#     relevant here than the wBA amygdala tuning);
+#   - wBA1-2_2-1-tdt-only 072026 project/BraiAn.yml  (the 0.46 um / empty-
+#     classifiers deployment pattern for the new imaging).
+#
+# TWO changes vs the 062926 hippocampal config:
+#   1. requestedPixelSizeMicrons 0.6905355 -> 0.460357  (NEW imaging: this
+#      project's server.json PhysicalSizeX is 0.460357 um/px, 20x 4-plane hybrid
+#      MIP -- must match exactly or BraiAnDetect resamples and nucleus areas
+#      come out wrong).
+#   2. classifiers block EMPTIED. Detection here is DAPI-anchored ONLY (single
+#      channelDetections on DAPI-T4); marker classification (Fos nuclear, TdT
+#      whole-cell, Double+) is done downstream by the config-driven
+#      02_detect_classify.groovy (reads pipeline.yml, robust median +
+#      k*1.4826*MAD per marker) -- NOT by BraiAn.yml's fixed-threshold
+#      classifier JSONs. run_braian_detection.groovy does DETECTION +
+#      per-channel makeMeasurements only; 02_detect_classify.groovy classifies.
+#
+# sigma / area / threshold / cellExpansion below are in MICRONS
+# (pixel-size-independent) and carry as STARTING SEEDS from the 062926
+# hippocampal tuning. This run IS the imaging re-validation for the new
+# 4-plane/0.46 um params, so per CLAUDE.md TUNE ON ONE SECTION FIRST (delete
+# detections -> edit here -> re-run run_braian_detection.groovy ->
+# qc_detection_gates.groovy) against the D-05 gates (nucleus-area peak
+# 50-150 um^2; DAPI density 500-2000/mm^2) before scaling to all 7 sections.
+
+# Confine detection to the ABBA atlas Root annotation (brain outline, class
+# "allen_mouse_10um_java") instead of the full image rectangle -- else
+# ChannelDetections watersheds background into hundreds of thousands of
+# spurious "nuclei". Load ABBA ROIs (01_load_abba_rois.groovy) BEFORE detecting.
+classForDetections: "allen_mouse_10um_java"
+
+detectionsCheck:
+  apply: false
+  controlChannel: null
+
+channelDetections:
+  - name: "DAPI-T4"                          # nuclear anchor -- matches server.json channel name exactly
+    parameters:
+      requestedPixelSizeMicrons: 0.460357    # THIS project's PhysicalSizeX (0.46 um/px, 20x 4-plane hybrid MIP) -- no resampling
+      backgroundRadiusMicrons: 10
+      backgroundByReconstruction: true
+      medianRadiusMicrons: 0.0
+      sigmaMicrons: 2.0                      # hippocampal seed (062926 entry-1): 2.0 over-split (dense, area 30-40); 3.0 merged/missed larger cortical nuclei; 2.5 balances split vs completeness. Re-confirm one-per-nucleus on one section (new imaging).
+      minAreaMicrons: 20.0                   # seed -- tune per D-05 (peak 50-150 um^2)
+      maxAreaMicrons: 250.0                  # seed -- keeps DG/large-nuclei upper tail from being clipped (062926 raised from 150)
+      # --- ABSOLUTE threshold (one-section tuning, 2026-07-28) ---
+      # find_threshold() sweep on THIS section: background floor (nPeak=1) = 162;
+      # the ONLY 2nd histogram peak = 2268 (bright nuclei), flat 2165-2268 across
+      # prominence 50-500. There is NO distinct dim-nuclei peak, so histogramThreshold
+      # could only give 162 (background -> floods noise) or ~2268 (bright only -> drops
+      # every dim nucleus, the under-detection seen on-screen). Absolute cuts in the valley.
+      # DIAL: LOWER -> catches dimmer nuclei (toward background 162); RAISE -> fewer/brighter (toward 2268).
+      # LANDED 700 on this section (operator visual, 2026-07-28): 400 was a bit hot; 700 clean here.
+      # NOTE: 700 is less sensitive than 400 -> DIMMER slices are the under-detection risk on batch.
+      threshold: 700
+      # Series-scalable path (re-enable by deleting `threshold:` above and uncommenting):
+      #histogramThreshold:
+      #  resolutionLevel: 0
+      #  smoothWindowSize: 15
+      #  peakProminence: 100
+      #  nPeak: 2
+      watershedPostProcess: true
+      cellExpansionMicrons: 5.0              # creates the Cell/Cytoplasm compartment the TdT (AF568-T2) whole-cell bg-sub measure reads; tune DG bleed if needed
+      includeNuclei: true
+      smoothBoundaries: true
+      makeMeasurements: true                 # REQUIRED -- produces the Nucleus:/Cell: per-channel means that 02_detect_classify.groovy background-subtracts + thresholds
+    classifiers: []                          # intentionally empty -- see header note (2); 02_detect_classify.groovy does the config-driven classification from pipeline.yml

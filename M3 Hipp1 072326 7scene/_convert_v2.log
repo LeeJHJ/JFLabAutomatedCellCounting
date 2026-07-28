@@ -1,0 +1,250 @@
+START 2026-07-24T19:10:06Z (flat-field + feather re-convert)
+Opening CZI: /run/media/jflab/Joseph HD/Morphine/M3 Hippocampus 1 072326 7 scenes/M3_Hipp1_072326_7Scene_processed.czi
+  Channels=3  Z-planes=4
+Pre-flight: 7 scenes found (get_all_mosaic_scene_bounding_boxes)
+  scene_key=0 (0-based)  bbox=(x=154601, y=96350, w=22248, h=13953)
+  scene_key=1 (0-based)  bbox=(x=108759, y=95973, w=23630, h=15336)
+  scene_key=2 (0-based)  bbox=(x=132026, y=96366, w=23631, h=15336)
+  scene_key=3 (0-based)  bbox=(x=108314, y=109337, w=23631, h=15336)
+  scene_key=4 (0-based)  bbox=(x=153984, y=109486, w=23630, h=15336)
+  scene_key=5 (0-based)  bbox=(x=130742, y=109903, w=23631, h=15336)
+  scene_key=6 (0-based)  bbox=(x=85730, y=110085, w=23630, h=15336)
+  OVERLAP: scene 0 and scene 2 bounding boxes overlap -- region-based isolation is unsafe for this pair
+  OVERLAP: scene 0 and scene 4 bounding boxes overlap -- region-based isolation is unsafe for this pair
+  OVERLAP: scene 1 and scene 2 bounding boxes overlap -- region-based isolation is unsafe for this pair
+  OVERLAP: scene 1 and scene 3 bounding boxes overlap -- region-based isolation is unsafe for this pair
+  OVERLAP: scene 1 and scene 5 bounding boxes overlap -- region-based isolation is unsafe for this pair
+  OVERLAP: scene 1 and scene 6 bounding boxes overlap -- region-based isolation is unsafe for this pair
+  OVERLAP: scene 2 and scene 4 bounding boxes overlap -- region-based isolation is unsafe for this pair
+  OVERLAP: scene 2 and scene 5 bounding boxes overlap -- region-based isolation is unsafe for this pair
+  OVERLAP: scene 3 and scene 5 bounding boxes overlap -- region-based isolation is unsafe for this pair
+  OVERLAP: scene 3 and scene 6 bounding boxes overlap -- region-based isolation is unsafe for this pair
+  OVERLAP: scene 4 and scene 5 bounding boxes overlap -- region-based isolation is unsafe for this pair
+  11 overlapping scene-bbox pair(s) found
+Isolation mode resolved: tiles (requested=auto, overlapping_pairs=11)
+Processing scene 0 -> s1  bbox=(x=154601, y=96350, w=22248, h=13953)
+  Generating hybrid projection for scene 0 (s1) via tiles...
+    Channel 0/2: reading 4 z-planes (150 tiles each, tile-stitch)...
+    Channel 0: estimating flat-field shading from 600 pooled tiles (modal shape (1512, 1512))...
+      z=0 shape=(13953, 22248) dtype=uint16 (stitched from 150 tiles, flat-field + feather)
+      z=1 shape=(13953, 22248) dtype=uint16 (stitched from 150 tiles, flat-field + feather)
+      z=2 shape=(13953, 22248) dtype=uint16 (stitched from 150 tiles, flat-field + feather)
+      z=3 shape=(13953, 22248) dtype=uint16 (stitched from 150 tiles, flat-field + feather)
+    Channel 0 read done (4 planes).
+    Channel 1/2: reading 4 z-planes (150 tiles each, tile-stitch)...
+    Channel 1: estimating flat-field shading from 600 pooled tiles (modal shape (1512, 1512))...
+      z=0 shape=(13953, 22248) dtype=uint16 (stitched from 150 tiles, flat-field + feather)
+      z=1 shape=(13953, 22248) dtype=uint16 (stitched from 150 tiles, flat-field + feather)
+      z=2 shape=(13953, 22248) dtype=uint16 (stitched from 150 tiles, flat-field + feather)
+      z=3 shape=(13953, 22248) dtype=uint16 (stitched from 150 tiles, flat-field + feather)
+    Channel 1 read done (4 planes).
+    Channel 2/2: reading 4 z-planes (150 tiles each, tile-stitch)...
+    Channel 2: estimating flat-field shading from 600 pooled tiles (modal shape (1512, 1512))...
+      z=0 shape=(13953, 22248) dtype=uint16 (stitched from 150 tiles, flat-field + feather)
+      z=1 shape=(13953, 22248) dtype=uint16 (stitched from 150 tiles, flat-field + feather)
+      z=2 shape=(13953, 22248) dtype=uint16 (stitched from 150 tiles, flat-field + feather)
+      z=3 shape=(13953, 22248) dtype=uint16 (stitched from 150 tiles, flat-field + feather)
+    Channel 2 read done (4 planes).
+  scene 0 (s1) isolated via tiles
+    anchor channel 2 (DAPI-T4) focus (var-of-Laplacian) by Z: Z0=1.8e+07, Z1=1.76e+07, Z2=1.68e+07, Z3=1.57e+07
+    scene 0 (s1): sharpest anchor plane -> Z=0 (markers full-Z max-projected)
+  Scene 0 (s1) tile-stitch geometry: stitched (Y,X)=(13953,22248) vs scene bbox (h,w)=(13953,22248) -- tile-union extent legitimately differs from the bbox, not an error
+  Scene 0 (s1) hybrid MIP shape: (3, 13953, 22248)  dtype: uint16
+scene_key=0 (0-based)  label=s1 (1-based)  bbox=(x=154601, y=96350, w=22248, h=13953)  M_tiles=150  dims=(13953, 22248)
+  Identity thumbnail: /home/jflab/Analysis/M3 Hipp1 072326 7scene/M3-hipp1_s1_identity.png
+  Writing /home/jflab/Analysis/M3 Hipp1 072326 7scene/M3-hipp1_s1_MIP.ome.tiff ...
+  Done: /home/jflab/Analysis/M3 Hipp1 072326 7scene/M3-hipp1_s1_MIP.ome.tiff
+Processing scene 1 -> s2  bbox=(x=108759, y=95973, w=23630, h=15336)
+  Generating hybrid projection for scene 1 (s2) via tiles...
+    Channel 0/2: reading 4 z-planes (171 tiles each, tile-stitch)...
+    Channel 0: estimating flat-field shading from 684 pooled tiles (modal shape (1512, 1512))...
+      z=0 shape=(15336, 23630) dtype=uint16 (stitched from 171 tiles, flat-field + feather)
+      z=1 shape=(15336, 23630) dtype=uint16 (stitched from 171 tiles, flat-field + feather)
+      z=2 shape=(15336, 23630) dtype=uint16 (stitched from 171 tiles, flat-field + feather)
+      z=3 shape=(15336, 23630) dtype=uint16 (stitched from 171 tiles, flat-field + feather)
+    Channel 0 read done (4 planes).
+    Channel 1/2: reading 4 z-planes (171 tiles each, tile-stitch)...
+    Channel 1: estimating flat-field shading from 684 pooled tiles (modal shape (1512, 1512))...
+      z=0 shape=(15336, 23630) dtype=uint16 (stitched from 171 tiles, flat-field + feather)
+      z=1 shape=(15336, 23630) dtype=uint16 (stitched from 171 tiles, flat-field + feather)
+      z=2 shape=(15336, 23630) dtype=uint16 (stitched from 171 tiles, flat-field + feather)
+      z=3 shape=(15336, 23630) dtype=uint16 (stitched from 171 tiles, flat-field + feather)
+    Channel 1 read done (4 planes).
+    Channel 2/2: reading 4 z-planes (171 tiles each, tile-stitch)...
+    Channel 2: estimating flat-field shading from 684 pooled tiles (modal shape (1512, 1512))...
+      z=0 shape=(15336, 23630) dtype=uint16 (stitched from 171 tiles, flat-field + feather)
+      z=1 shape=(15336, 23630) dtype=uint16 (stitched from 171 tiles, flat-field + feather)
+      z=2 shape=(15336, 23630) dtype=uint16 (stitched from 171 tiles, flat-field + feather)
+      z=3 shape=(15336, 23630) dtype=uint16 (stitched from 171 tiles, flat-field + feather)
+    Channel 2 read done (4 planes).
+  scene 1 (s2) isolated via tiles
+    anchor channel 2 (DAPI-T4) focus (var-of-Laplacian) by Z: Z0=1.13e+07, Z1=1.09e+07, Z2=1.01e+07, Z3=9.1e+06
+    scene 1 (s2): sharpest anchor plane -> Z=0 (markers full-Z max-projected)
+  Scene 1 (s2) tile-stitch geometry: stitched (Y,X)=(15336,23630) vs scene bbox (h,w)=(15336,23630) -- tile-union extent legitimately differs from the bbox, not an error
+  Scene 1 (s2) hybrid MIP shape: (3, 15336, 23630)  dtype: uint16
+scene_key=1 (0-based)  label=s2 (1-based)  bbox=(x=108759, y=95973, w=23630, h=15336)  M_tiles=171  dims=(15336, 23630)
+  Identity thumbnail: /home/jflab/Analysis/M3 Hipp1 072326 7scene/M3-hipp1_s2_identity.png
+  Writing /home/jflab/Analysis/M3 Hipp1 072326 7scene/M3-hipp1_s2_MIP.ome.tiff ...
+  Done: /home/jflab/Analysis/M3 Hipp1 072326 7scene/M3-hipp1_s2_MIP.ome.tiff
+Processing scene 2 -> s3  bbox=(x=132026, y=96366, w=23631, h=15336)
+  Generating hybrid projection for scene 2 (s3) via tiles...
+    Channel 0/2: reading 4 z-planes (168 tiles each, tile-stitch)...
+    Channel 0: estimating flat-field shading from 672 pooled tiles (modal shape (1512, 1512))...
+      z=0 shape=(15336, 23631) dtype=uint16 (stitched from 168 tiles, flat-field + feather)
+      z=1 shape=(15336, 23631) dtype=uint16 (stitched from 168 tiles, flat-field + feather)
+      z=2 shape=(15336, 23631) dtype=uint16 (stitched from 168 tiles, flat-field + feather)
+      z=3 shape=(15336, 23631) dtype=uint16 (stitched from 168 tiles, flat-field + feather)
+    Channel 0 read done (4 planes).
+    Channel 1/2: reading 4 z-planes (168 tiles each, tile-stitch)...
+    Channel 1: estimating flat-field shading from 672 pooled tiles (modal shape (1512, 1512))...
+      z=0 shape=(15336, 23631) dtype=uint16 (stitched from 168 tiles, flat-field + feather)
+      z=1 shape=(15336, 23631) dtype=uint16 (stitched from 168 tiles, flat-field + feather)
+      z=2 shape=(15336, 23631) dtype=uint16 (stitched from 168 tiles, flat-field + feather)
+      z=3 shape=(15336, 23631) dtype=uint16 (stitched from 168 tiles, flat-field + feather)
+    Channel 1 read done (4 planes).
+    Channel 2/2: reading 4 z-planes (168 tiles each, tile-stitch)...
+    Channel 2: estimating flat-field shading from 672 pooled tiles (modal shape (1512, 1512))...
+      z=0 shape=(15336, 23631) dtype=uint16 (stitched from 168 tiles, flat-field + feather)
+      z=1 shape=(15336, 23631) dtype=uint16 (stitched from 168 tiles, flat-field + feather)
+      z=2 shape=(15336, 23631) dtype=uint16 (stitched from 168 tiles, flat-field + feather)
+      z=3 shape=(15336, 23631) dtype=uint16 (stitched from 168 tiles, flat-field + feather)
+    Channel 2 read done (4 planes).
+  scene 2 (s3) isolated via tiles
+    anchor channel 2 (DAPI-T4) focus (var-of-Laplacian) by Z: Z0=1.4e+07, Z1=1.37e+07, Z2=1.31e+07, Z3=1.22e+07
+    scene 2 (s3): sharpest anchor plane -> Z=0 (markers full-Z max-projected)
+  Scene 2 (s3) tile-stitch geometry: stitched (Y,X)=(15336,23631) vs scene bbox (h,w)=(15336,23631) -- tile-union extent legitimately differs from the bbox, not an error
+  Scene 2 (s3) hybrid MIP shape: (3, 15336, 23631)  dtype: uint16
+scene_key=2 (0-based)  label=s3 (1-based)  bbox=(x=132026, y=96366, w=23631, h=15336)  M_tiles=168  dims=(15336, 23631)
+  Identity thumbnail: /home/jflab/Analysis/M3 Hipp1 072326 7scene/M3-hipp1_s3_identity.png
+  Writing /home/jflab/Analysis/M3 Hipp1 072326 7scene/M3-hipp1_s3_MIP.ome.tiff ...
+  Done: /home/jflab/Analysis/M3 Hipp1 072326 7scene/M3-hipp1_s3_MIP.ome.tiff
+Processing scene 3 -> s4  bbox=(x=108314, y=109337, w=23631, h=15336)
+  Generating hybrid projection for scene 3 (s4) via tiles...
+    Channel 0/2: reading 4 z-planes (165 tiles each, tile-stitch)...
+    Channel 0: estimating flat-field shading from 660 pooled tiles (modal shape (1512, 1512))...
+      z=0 shape=(15336, 23631) dtype=uint16 (stitched from 165 tiles, flat-field + feather)
+      z=1 shape=(15336, 23631) dtype=uint16 (stitched from 165 tiles, flat-field + feather)
+      z=2 shape=(15336, 23631) dtype=uint16 (stitched from 165 tiles, flat-field + feather)
+      z=3 shape=(15336, 23631) dtype=uint16 (stitched from 165 tiles, flat-field + feather)
+    Channel 0 read done (4 planes).
+    Channel 1/2: reading 4 z-planes (165 tiles each, tile-stitch)...
+    Channel 1: estimating flat-field shading from 660 pooled tiles (modal shape (1512, 1512))...
+      z=0 shape=(15336, 23631) dtype=uint16 (stitched from 165 tiles, flat-field + feather)
+      z=1 shape=(15336, 23631) dtype=uint16 (stitched from 165 tiles, flat-field + feather)
+      z=2 shape=(15336, 23631) dtype=uint16 (stitched from 165 tiles, flat-field + feather)
+      z=3 shape=(15336, 23631) dtype=uint16 (stitched from 165 tiles, flat-field + feather)
+    Channel 1 read done (4 planes).
+    Channel 2/2: reading 4 z-planes (165 tiles each, tile-stitch)...
+    Channel 2: estimating flat-field shading from 660 pooled tiles (modal shape (1512, 1512))...
+      z=0 shape=(15336, 23631) dtype=uint16 (stitched from 165 tiles, flat-field + feather)
+      z=1 shape=(15336, 23631) dtype=uint16 (stitched from 165 tiles, flat-field + feather)
+      z=2 shape=(15336, 23631) dtype=uint16 (stitched from 165 tiles, flat-field + feather)
+      z=3 shape=(15336, 23631) dtype=uint16 (stitched from 165 tiles, flat-field + feather)
+    Channel 2 read done (4 planes).
+  scene 3 (s4) isolated via tiles
+    anchor channel 2 (DAPI-T4) focus (var-of-Laplacian) by Z: Z0=9.2e+06, Z1=9.1e+06, Z2=8.87e+06, Z3=8.42e+06
+    scene 3 (s4): sharpest anchor plane -> Z=0 (markers full-Z max-projected)
+  Scene 3 (s4) tile-stitch geometry: stitched (Y,X)=(15336,23631) vs scene bbox (h,w)=(15336,23631) -- tile-union extent legitimately differs from the bbox, not an error
+  Scene 3 (s4) hybrid MIP shape: (3, 15336, 23631)  dtype: uint16
+scene_key=3 (0-based)  label=s4 (1-based)  bbox=(x=108314, y=109337, w=23631, h=15336)  M_tiles=165  dims=(15336, 23631)
+  Identity thumbnail: /home/jflab/Analysis/M3 Hipp1 072326 7scene/M3-hipp1_s4_identity.png
+  Writing /home/jflab/Analysis/M3 Hipp1 072326 7scene/M3-hipp1_s4_MIP.ome.tiff ...
+  Done: /home/jflab/Analysis/M3 Hipp1 072326 7scene/M3-hipp1_s4_MIP.ome.tiff
+Processing scene 4 -> s5  bbox=(x=153984, y=109486, w=23630, h=15336)
+  Generating hybrid projection for scene 4 (s5) via tiles...
+    Channel 0/2: reading 4 z-planes (162 tiles each, tile-stitch)...
+    Channel 0: estimating flat-field shading from 648 pooled tiles (modal shape (1512, 1512))...
+      z=0 shape=(15336, 23630) dtype=uint16 (stitched from 162 tiles, flat-field + feather)
+      z=1 shape=(15336, 23630) dtype=uint16 (stitched from 162 tiles, flat-field + feather)
+      z=2 shape=(15336, 23630) dtype=uint16 (stitched from 162 tiles, flat-field + feather)
+      z=3 shape=(15336, 23630) dtype=uint16 (stitched from 162 tiles, flat-field + feather)
+    Channel 0 read done (4 planes).
+    Channel 1/2: reading 4 z-planes (162 tiles each, tile-stitch)...
+    Channel 1: estimating flat-field shading from 648 pooled tiles (modal shape (1512, 1512))...
+      z=0 shape=(15336, 23630) dtype=uint16 (stitched from 162 tiles, flat-field + feather)
+      z=1 shape=(15336, 23630) dtype=uint16 (stitched from 162 tiles, flat-field + feather)
+      z=2 shape=(15336, 23630) dtype=uint16 (stitched from 162 tiles, flat-field + feather)
+      z=3 shape=(15336, 23630) dtype=uint16 (stitched from 162 tiles, flat-field + feather)
+    Channel 1 read done (4 planes).
+    Channel 2/2: reading 4 z-planes (162 tiles each, tile-stitch)...
+    Channel 2: estimating flat-field shading from 648 pooled tiles (modal shape (1512, 1512))...
+      z=0 shape=(15336, 23630) dtype=uint16 (stitched from 162 tiles, flat-field + feather)
+      z=1 shape=(15336, 23630) dtype=uint16 (stitched from 162 tiles, flat-field + feather)
+      z=2 shape=(15336, 23630) dtype=uint16 (stitched from 162 tiles, flat-field + feather)
+      z=3 shape=(15336, 23630) dtype=uint16 (stitched from 162 tiles, flat-field + feather)
+    Channel 2 read done (4 planes).
+  scene 4 (s5) isolated via tiles
+    anchor channel 2 (DAPI-T4) focus (var-of-Laplacian) by Z: Z0=9.86e+06, Z1=9.98e+06, Z2=9.83e+06, Z3=9.44e+06
+    scene 4 (s5): sharpest anchor plane -> Z=1 (markers full-Z max-projected)
+  Scene 4 (s5) tile-stitch geometry: stitched (Y,X)=(15336,23630) vs scene bbox (h,w)=(15336,23630) -- tile-union extent legitimately differs from the bbox, not an error
+  Scene 4 (s5) hybrid MIP shape: (3, 15336, 23630)  dtype: uint16
+scene_key=4 (0-based)  label=s5 (1-based)  bbox=(x=153984, y=109486, w=23630, h=15336)  M_tiles=162  dims=(15336, 23630)
+  Identity thumbnail: /home/jflab/Analysis/M3 Hipp1 072326 7scene/M3-hipp1_s5_identity.png
+  Writing /home/jflab/Analysis/M3 Hipp1 072326 7scene/M3-hipp1_s5_MIP.ome.tiff ...
+  Done: /home/jflab/Analysis/M3 Hipp1 072326 7scene/M3-hipp1_s5_MIP.ome.tiff
+Processing scene 5 -> s6  bbox=(x=130742, y=109903, w=23631, h=15336)
+  Generating hybrid projection for scene 5 (s6) via tiles...
+    Channel 0/2: reading 4 z-planes (162 tiles each, tile-stitch)...
+    Channel 0: estimating flat-field shading from 648 pooled tiles (modal shape (1512, 1512))...
+      z=0 shape=(15336, 23631) dtype=uint16 (stitched from 162 tiles, flat-field + feather)
+      z=1 shape=(15336, 23631) dtype=uint16 (stitched from 162 tiles, flat-field + feather)
+      z=2 shape=(15336, 23631) dtype=uint16 (stitched from 162 tiles, flat-field + feather)
+      z=3 shape=(15336, 23631) dtype=uint16 (stitched from 162 tiles, flat-field + feather)
+    Channel 0 read done (4 planes).
+    Channel 1/2: reading 4 z-planes (162 tiles each, tile-stitch)...
+    Channel 1: estimating flat-field shading from 648 pooled tiles (modal shape (1512, 1512))...
+      z=0 shape=(15336, 23631) dtype=uint16 (stitched from 162 tiles, flat-field + feather)
+      z=1 shape=(15336, 23631) dtype=uint16 (stitched from 162 tiles, flat-field + feather)
+      z=2 shape=(15336, 23631) dtype=uint16 (stitched from 162 tiles, flat-field + feather)
+      z=3 shape=(15336, 23631) dtype=uint16 (stitched from 162 tiles, flat-field + feather)
+    Channel 1 read done (4 planes).
+    Channel 2/2: reading 4 z-planes (162 tiles each, tile-stitch)...
+    Channel 2: estimating flat-field shading from 648 pooled tiles (modal shape (1512, 1512))...
+      z=0 shape=(15336, 23631) dtype=uint16 (stitched from 162 tiles, flat-field + feather)
+      z=1 shape=(15336, 23631) dtype=uint16 (stitched from 162 tiles, flat-field + feather)
+      z=2 shape=(15336, 23631) dtype=uint16 (stitched from 162 tiles, flat-field + feather)
+      z=3 shape=(15336, 23631) dtype=uint16 (stitched from 162 tiles, flat-field + feather)
+    Channel 2 read done (4 planes).
+  scene 5 (s6) isolated via tiles
+    anchor channel 2 (DAPI-T4) focus (var-of-Laplacian) by Z: Z0=1e+07, Z1=9.94e+06, Z2=9.64e+06, Z3=9.04e+06
+    scene 5 (s6): sharpest anchor plane -> Z=0 (markers full-Z max-projected)
+  Scene 5 (s6) tile-stitch geometry: stitched (Y,X)=(15336,23631) vs scene bbox (h,w)=(15336,23631) -- tile-union extent legitimately differs from the bbox, not an error
+  Scene 5 (s6) hybrid MIP shape: (3, 15336, 23631)  dtype: uint16
+scene_key=5 (0-based)  label=s6 (1-based)  bbox=(x=130742, y=109903, w=23631, h=15336)  M_tiles=162  dims=(15336, 23631)
+  Identity thumbnail: /home/jflab/Analysis/M3 Hipp1 072326 7scene/M3-hipp1_s6_identity.png
+  Writing /home/jflab/Analysis/M3 Hipp1 072326 7scene/M3-hipp1_s6_MIP.ome.tiff ...
+  Done: /home/jflab/Analysis/M3 Hipp1 072326 7scene/M3-hipp1_s6_MIP.ome.tiff
+Processing scene 6 -> s7  bbox=(x=85730, y=110085, w=23630, h=15336)
+  Generating hybrid projection for scene 6 (s7) via tiles...
+    Channel 0/2: reading 4 z-planes (165 tiles each, tile-stitch)...
+    Channel 0: estimating flat-field shading from 660 pooled tiles (modal shape (1512, 1512))...
+      z=0 shape=(15336, 23630) dtype=uint16 (stitched from 165 tiles, flat-field + feather)
+      z=1 shape=(15336, 23630) dtype=uint16 (stitched from 165 tiles, flat-field + feather)
+      z=2 shape=(15336, 23630) dtype=uint16 (stitched from 165 tiles, flat-field + feather)
+      z=3 shape=(15336, 23630) dtype=uint16 (stitched from 165 tiles, flat-field + feather)
+    Channel 0 read done (4 planes).
+    Channel 1/2: reading 4 z-planes (165 tiles each, tile-stitch)...
+    Channel 1: estimating flat-field shading from 660 pooled tiles (modal shape (1512, 1512))...
+      z=0 shape=(15336, 23630) dtype=uint16 (stitched from 165 tiles, flat-field + feather)
+      z=1 shape=(15336, 23630) dtype=uint16 (stitched from 165 tiles, flat-field + feather)
+      z=2 shape=(15336, 23630) dtype=uint16 (stitched from 165 tiles, flat-field + feather)
+      z=3 shape=(15336, 23630) dtype=uint16 (stitched from 165 tiles, flat-field + feather)
+    Channel 1 read done (4 planes).
+    Channel 2/2: reading 4 z-planes (165 tiles each, tile-stitch)...
+    Channel 2: estimating flat-field shading from 660 pooled tiles (modal shape (1512, 1512))...
+      z=0 shape=(15336, 23630) dtype=uint16 (stitched from 165 tiles, flat-field + feather)
+      z=1 shape=(15336, 23630) dtype=uint16 (stitched from 165 tiles, flat-field + feather)
+      z=2 shape=(15336, 23630) dtype=uint16 (stitched from 165 tiles, flat-field + feather)
+      z=3 shape=(15336, 23630) dtype=uint16 (stitched from 165 tiles, flat-field + feather)
+    Channel 2 read done (4 planes).
+  scene 6 (s7) isolated via tiles
+    anchor channel 2 (DAPI-T4) focus (var-of-Laplacian) by Z: Z0=8.39e+06, Z1=8.3e+06, Z2=7.94e+06, Z3=7.25e+06
+    scene 6 (s7): sharpest anchor plane -> Z=0 (markers full-Z max-projected)
+  Scene 6 (s7) tile-stitch geometry: stitched (Y,X)=(15336,23630) vs scene bbox (h,w)=(15336,23630) -- tile-union extent legitimately differs from the bbox, not an error
+  Scene 6 (s7) hybrid MIP shape: (3, 15336, 23630)  dtype: uint16
+scene_key=6 (0-based)  label=s7 (1-based)  bbox=(x=85730, y=110085, w=23630, h=15336)  M_tiles=165  dims=(15336, 23630)
+  Identity thumbnail: /home/jflab/Analysis/M3 Hipp1 072326 7scene/M3-hipp1_s7_identity.png
+  Writing /home/jflab/Analysis/M3 Hipp1 072326 7scene/M3-hipp1_s7_MIP.ome.tiff ...
+  Done: /home/jflab/Analysis/M3 Hipp1 072326 7scene/M3-hipp1_s7_MIP.ome.tiff
+All 7 scenes converted -> 7 MIP OME-TIFFs written to /home/jflab/Analysis/M3 Hipp1 072326 7scene
+DONE 2026-07-24T20:00:38Z exit=0

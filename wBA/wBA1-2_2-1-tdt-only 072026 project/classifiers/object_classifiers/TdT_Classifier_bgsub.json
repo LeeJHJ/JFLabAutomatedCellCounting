@@ -1,0 +1,17 @@
+{
+  "object_classifier_type": "SimpleClassifier",
+  "function": {
+    "classifier_fun": "ClassifyByMeasurementFunction",
+    "measurement": "Cell: AF568-T2 mean (bg-sub)",
+    "pathClassBelow": "Negative",
+    "pathClassEquals": "Positive",
+    "pathClassAbove": "Positive",
+    "threshold": 658.9369348999023
+  },
+  "pathClasses": [
+    "Negative",
+    "Positive"
+  ],
+  "filter": "DETECTIONS_ALL",
+  "note": "D-05: threshold re-derived by 02_detect_classify.groovy via the robust self-calibrating cut (background median + k*1.4826*MAD, k_robust\u003d3.0, from pipeline.yml) on the (bg-sub) measure at Mon Jul 27 14:36:41 EDT 2026."
+}

@@ -1,0 +1,77 @@
+# pipeline.yml -- sidecar pipeline config (D-14)
+#
+# Declares the VARIABLE marker set (D-01), the detection/segmentation ANCHOR
+# channel (D-02 -- config-declared, never hardwired to DAPI), region
+# exclusions and tuning literals migrated out of scripts/02_detect_classify.groovy
+# (D-09), and the ring geometry used for cytoplasmic-compartment measurement.
+#
+# This file is SEPARATE from BraiAn.yml (D-14): BraiAn.yml stays
+# BraiAnDetect's detection-params file (sigma/minArea/maxArea/histogramThreshold/
+# cellExpansionMicrons/etc.) -- this file MUST NOT contain any of those keys.
+# pipeline.yml is a pipeline/marker-set concern, read by the classify/export
+# groovy scripts (02_detect_classify.groovy, the consolidated export) alongside
+# BraiAn.yml, not instead of it.
+#
+# Compartment semantics (project rule, CLAUDE.md -- nucleus-anchored
+# colocalization only; REVISED 2026-07-25, w88): a marker declared
+# `compartment: nuclear` is measured on the segmented DAPI nucleus itself
+# (e.g. Fos, which is a nuclear/recall marker); a marker declared
+# `compartment: cytoplasmic` is measured on the cytoplasmic expansion RING
+# built outward from that same nucleus (for markers whose signal is strictly
+# cytosolic); a marker declared `compartment: whole-cell` is measured on the
+# WHOLE CELL (nucleus + cytoplasmic ring), QuPath's area-weighted whole-cell
+# mean -- for markers whose signal fills the whole cell (TdTomato here,
+# operator-confirmed domain observation 2026-07-25: measuring it on the ring
+# alone under-counts it). The compartment is declared here, per marker, but
+# the wiring (nuclear -> Nucleus, cytoplasmic -> Cytoplasm ring, whole-cell ->
+# Cell area-weighted) is fixed code, not configurable -- this file only says
+# WHICH marker gets WHICH treatment. cytoplasmic remains available and fully
+# working for any future strictly-cytosolic marker.
+#
+# Double+ auto-derivation (D-03): "Double+" is emitted ONLY when >=2
+# non-anchor markers are declared below. On a single-marker (e.g. TdT-only)
+# config, Double+ is simply never produced -- no Fos rows/columns appear
+# anywhere downstream. This is enforced by scripts/validate_pipeline_config.py
+# and by every consumer iterating `markers` rather than assuming a fixed pair.
+
+# D-02: the channel used for nucleus/cell segmentation (BraiAnDetect's
+# channelDetections anchor in BraiAn.yml). Declared here so every groovy/python
+# consumer reads it from one place instead of assuming "DAPI" by name.
+anchor:
+  name: "DAPI"                # [ASSUMED] seed default -- tunable per slice-set, not locked
+  channel: "DAPI-T4"           # matches server.json / BraiAn.yml channelDetections name exactly
+
+# D-01: name -> channel -> compartment. Declare ONE entry per non-anchor
+# marker present on this slice-set. Order does not matter; compartment MUST
+# be exactly "nuclear", "cytoplasmic", or "whole-cell".
+#
+# Seed values below mirror the current wBA1-3 working set (BraiAn.yml
+# classifiers block) -- [ASSUMED] seed, tunable per slice-set, not locked.
+markers:
+  - name: "Fos"                 # recall marker -- nuclear compartment (CLAUDE.md)
+    channel: "AF488-T3"         # matches BraiAn.yml classifiers[0].channel
+    compartment: "nuclear"
+  - name: "TdT"                 # engram marker (TdTomato) -- fills the whole cell, whole-cell area-weighted mean (CLAUDE.md, revised 2026-07-25, operator domain call)
+    channel: "AF568-T2"         # matches BraiAn.yml classifiers[1].channel
+    compartment: "whole-cell"
+
+# D-09: region exclusions migrated out of the EXCLUDE_ACRONYMS literal
+# (scripts/02_detect_classify.groovy line 92). DG-sg = DG granule cell layer
+# (too dense for per-nucleus segmentation); VS = ventricular systems.
+# (DG-mo/DG-po intentionally stay in -- do not add them here.)
+exclude_acronyms: ["DG-sg", "VS"]
+
+# D-09: robust self-calibrating positive-threshold multiplier, migrated from
+# the K_ROBUST literal (scripts/02_detect_classify.groovy line 286). Threshold
+# = median + k_robust * 1.4826 * MAD on the per-marker background-subtracted
+# measure. [ASSUMED] seed value -- re-sweep on imaging-parameter drift (Phase 7 IMG-01).
+k_robust: 3.0
+
+# D-09: cytoplasmic expansion ring geometry, migrated from the GAP_UM /
+# RING_WIDTH_UM literals (scripts/02_detect_classify.groovy lines 143-144).
+# gap_um = the annular gap left between the nucleus boundary and the inner
+# edge of the measurement ring; width_um = the ring's radial thickness. Used
+# only for markers declared `compartment: cytoplasmic` above.
+ring:
+  gap_um: 1.0
+  width_um: 8.0

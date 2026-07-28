@@ -3,7 +3,7 @@
   "createTimestamp": 1784590824044,
   "modifyTimestamp": 1784590824044,
   "uri": "file:/home/jflab/Analysis/wBA%201-3%202-1%20072026/wBA_1-3_2-1_072026/project.qpproj",
-  "lastID": 5,
+  "lastID": 8,
   "images": [
     {
       "serverBuilder": {
@@ -127,7 +127,7 @@
         }
       },
       "entryID": 1,
-      "randomizedName": "4a5de25d-a0d1-4165-ba48-4cd09b45b82d",
+      "randomizedName": "6709c6c7-99f0-4684-a19c-923fa47d48ab",
       "imageName": "wBA1-3_s5_MIP.ome.tiff - wBA1-3_s5",
       "metadata": {},
       "tags": []
@@ -254,7 +254,7 @@
         }
       },
       "entryID": 2,
-      "randomizedName": "ce8f0bf6-e26b-406b-a4ac-37c5e289ddd8",
+      "randomizedName": "02ba9cbc-4b07-4f35-9731-b5d996d20312",
       "imageName": "wBA1-3_s4_MIP.ome.tiff - wBA1-3_s4",
       "metadata": {},
       "tags": []
@@ -381,7 +381,7 @@
         }
       },
       "entryID": 3,
-      "randomizedName": "2eabcf68-59bc-431e-88e9-9ffc1f02592d",
+      "randomizedName": "dd179c88-1df6-47b7-a06e-31c43da405be",
       "imageName": "wBA1-3_s3_MIP.ome.tiff - wBA1-3_s3",
       "metadata": {},
       "tags": []
@@ -508,7 +508,7 @@
         }
       },
       "entryID": 4,
-      "randomizedName": "d579761a-77c0-46ce-bd74-71befafc50c7",
+      "randomizedName": "9582789a-ae51-456a-bb0c-0253586b12b9",
       "imageName": "wBA1-3_s2_MIP.ome.tiff - wBA1-3_s2",
       "metadata": {},
       "tags": []
@@ -635,8 +635,386 @@
         }
       },
       "entryID": 5,
-      "randomizedName": "48639925-6af5-4a85-841b-d3e4b110ccb9",
+      "randomizedName": "d28867e3-9e8e-42d1-a3aa-b79216f33498",
       "imageName": "wBA1-3_s1_MIP.ome.tiff - wBA1-3_s1",
+      "metadata": {},
+      "tags": []
+    },
+    {
+      "serverBuilder": {
+        "builderType": "pyramidize",
+        "builder": {
+          "builderType": "uri",
+          "providerClassName": "qupath.lib.images.servers.bioformats.BioFormatsServerBuilder",
+          "uri": "file:/home/jflab/Analysis/wBA/wBA1-2_2-1%20tdt-only%20072026/wBA1-2_2-1_s2_MIP.ome.tiff",
+          "args": [
+            "--series",
+            "0"
+          ],
+          "metadata": {
+            "name": "wBA1-2_2-1_s2_MIP.ome.tiff - wBA1-2_2-1_s2",
+            "width": 22248,
+            "height": 16718,
+            "sizeZ": 1,
+            "sizeT": 1,
+            "channelType": "DEFAULT",
+            "isRGB": false,
+            "pixelType": "UINT16",
+            "levels": [
+              {
+                "downsample": 1.0,
+                "width": 22248,
+                "height": 16718
+              }
+            ],
+            "channels": [
+              {
+                "name": "AF568-T2",
+                "color": -65536
+              },
+              {
+                "name": "DAPI-T4",
+                "color": -16711936
+              }
+            ],
+            "pixelCalibration": {
+              "pixelWidth": {
+                "value": 0.460357,
+                "unit": "µm"
+              },
+              "pixelHeight": {
+                "value": 0.460357,
+                "unit": "µm"
+              },
+              "zSpacing": {
+                "value": 1.0,
+                "unit": "z-slice"
+              },
+              "timeUnit": "SECONDS",
+              "timepoints": []
+            },
+            "preferredTileWidth": 22248,
+            "preferredTileHeight": 16718
+          }
+        },
+        "metadata": {
+          "name": "wBA1-2_2-1_s2_MIP.ome.tiff - wBA1-2_2-1_s2",
+          "width": 22248,
+          "height": 16718,
+          "sizeZ": 1,
+          "sizeT": 1,
+          "channelType": "DEFAULT",
+          "isRGB": false,
+          "pixelType": "UINT16",
+          "levels": [
+            {
+              "downsample": 1.0,
+              "width": 22248,
+              "height": 16718
+            },
+            {
+              "downsample": 4.0,
+              "width": 5562,
+              "height": 4179
+            },
+            {
+              "downsample": 16.0,
+              "width": 1390,
+              "height": 1044
+            },
+            {
+              "downsample": 64.0,
+              "width": 347,
+              "height": 261
+            }
+          ],
+          "channels": [
+            {
+              "name": "AF568-T2",
+              "color": -65536
+            },
+            {
+              "name": "DAPI-T4",
+              "color": -16711936
+            }
+          ],
+          "pixelCalibration": {
+            "pixelWidth": {
+              "value": 0.460357,
+              "unit": "µm"
+            },
+            "pixelHeight": {
+              "value": 0.460357,
+              "unit": "µm"
+            },
+            "zSpacing": {
+              "value": 1.0,
+              "unit": "z-slice"
+            },
+            "timeUnit": "SECONDS",
+            "timepoints": []
+          },
+          "preferredTileWidth": 256,
+          "preferredTileHeight": 256
+        }
+      },
+      "entryID": 6,
+      "randomizedName": "63a164f7-b46c-4a0d-aa03-77b59809a8cf",
+      "imageName": "wBA1-2_2-1_s2_MIP.ome.tiff - wBA1-2_2-1_s2",
+      "metadata": {},
+      "tags": []
+    },
+    {
+      "serverBuilder": {
+        "builderType": "pyramidize",
+        "builder": {
+          "builderType": "uri",
+          "providerClassName": "qupath.lib.images.servers.bioformats.BioFormatsServerBuilder",
+          "uri": "file:/home/jflab/Analysis/M3%20Hipp1%20072326%207scene/M3-hipp1_s5_MIP.ome.tiff",
+          "args": [
+            "--series",
+            "0"
+          ],
+          "metadata": {
+            "name": "M3-hipp1_s5_MIP.ome.tiff - M3-hipp1_s5",
+            "width": 23630,
+            "height": 15336,
+            "sizeZ": 1,
+            "sizeT": 1,
+            "channelType": "DEFAULT",
+            "isRGB": false,
+            "pixelType": "UINT16",
+            "levels": [
+              {
+                "downsample": 1.0,
+                "width": 23630,
+                "height": 15336
+              }
+            ],
+            "channels": [
+              {
+                "name": "AF568-T2",
+                "color": -65536
+              },
+              {
+                "name": "AF488-T3",
+                "color": -16711936
+              },
+              {
+                "name": "DAPI-T4",
+                "color": -16776961
+              }
+            ],
+            "pixelCalibration": {
+              "pixelWidth": {
+                "value": 0.460357,
+                "unit": "µm"
+              },
+              "pixelHeight": {
+                "value": 0.460357,
+                "unit": "µm"
+              },
+              "zSpacing": {
+                "value": 1.0,
+                "unit": "z-slice"
+              },
+              "timeUnit": "SECONDS",
+              "timepoints": []
+            },
+            "preferredTileWidth": 512,
+            "preferredTileHeight": 512
+          }
+        },
+        "metadata": {
+          "name": "M3-hipp1_s5_MIP.ome.tiff - M3-hipp1_s5",
+          "width": 23630,
+          "height": 15336,
+          "sizeZ": 1,
+          "sizeT": 1,
+          "channelType": "DEFAULT",
+          "isRGB": false,
+          "pixelType": "UINT16",
+          "levels": [
+            {
+              "downsample": 1.0,
+              "width": 23630,
+              "height": 15336
+            },
+            {
+              "downsample": 4.0,
+              "width": 5907,
+              "height": 3834
+            },
+            {
+              "downsample": 16.0,
+              "width": 1476,
+              "height": 958
+            }
+          ],
+          "channels": [
+            {
+              "name": "AF568-T2",
+              "color": -65536
+            },
+            {
+              "name": "AF488-T3",
+              "color": -16711936
+            },
+            {
+              "name": "DAPI-T4",
+              "color": -16776961
+            }
+          ],
+          "pixelCalibration": {
+            "pixelWidth": {
+              "value": 0.460357,
+              "unit": "µm"
+            },
+            "pixelHeight": {
+              "value": 0.460357,
+              "unit": "µm"
+            },
+            "zSpacing": {
+              "value": 1.0,
+              "unit": "z-slice"
+            },
+            "timeUnit": "SECONDS",
+            "timepoints": []
+          },
+          "preferredTileWidth": 512,
+          "preferredTileHeight": 512
+        }
+      },
+      "entryID": 7,
+      "randomizedName": "e41f6c34-c574-4f4e-974a-eba8dcbbfa1e",
+      "imageName": "M3-hipp1_s5_MIP.ome.tiff - M3-hipp1_s5",
+      "metadata": {},
+      "tags": []
+    },
+    {
+      "serverBuilder": {
+        "builderType": "pyramidize",
+        "builder": {
+          "builderType": "uri",
+          "providerClassName": "qupath.lib.images.servers.bioformats.BioFormatsServerBuilder",
+          "uri": "file:/home/jflab/Analysis/M3%20Hipp1%20072326%207scene/M3-hipp1_s5_MIP.ome.tiff",
+          "args": [
+            "--series",
+            "0"
+          ],
+          "metadata": {
+            "name": "M3-hipp1_s5_MIP.ome.tiff - M3-hipp1_s5",
+            "width": 23630,
+            "height": 15336,
+            "sizeZ": 1,
+            "sizeT": 1,
+            "channelType": "DEFAULT",
+            "isRGB": false,
+            "pixelType": "UINT16",
+            "levels": [
+              {
+                "downsample": 1.0,
+                "width": 23630,
+                "height": 15336
+              }
+            ],
+            "channels": [
+              {
+                "name": "AF568-T2",
+                "color": -65536
+              },
+              {
+                "name": "AF488-T3",
+                "color": -16711936
+              },
+              {
+                "name": "DAPI-T4",
+                "color": -16776961
+              }
+            ],
+            "pixelCalibration": {
+              "pixelWidth": {
+                "value": 0.460357,
+                "unit": "µm"
+              },
+              "pixelHeight": {
+                "value": 0.460357,
+                "unit": "µm"
+              },
+              "zSpacing": {
+                "value": 1.0,
+                "unit": "z-slice"
+              },
+              "timeUnit": "SECONDS",
+              "timepoints": []
+            },
+            "preferredTileWidth": 512,
+            "preferredTileHeight": 512
+          }
+        },
+        "metadata": {
+          "name": "M3-hipp1_s5_MIP.ome.tiff - M3-hipp1_s5",
+          "width": 23630,
+          "height": 15336,
+          "sizeZ": 1,
+          "sizeT": 1,
+          "channelType": "DEFAULT",
+          "isRGB": false,
+          "pixelType": "UINT16",
+          "levels": [
+            {
+              "downsample": 1.0,
+              "width": 23630,
+              "height": 15336
+            },
+            {
+              "downsample": 4.0,
+              "width": 5907,
+              "height": 3834
+            },
+            {
+              "downsample": 16.0,
+              "width": 1476,
+              "height": 958
+            }
+          ],
+          "channels": [
+            {
+              "name": "AF568-T2",
+              "color": -65536
+            },
+            {
+              "name": "AF488-T3",
+              "color": -16711936
+            },
+            {
+              "name": "DAPI-T4",
+              "color": -16776961
+            }
+          ],
+          "pixelCalibration": {
+            "pixelWidth": {
+              "value": 0.460357,
+              "unit": "µm"
+            },
+            "pixelHeight": {
+              "value": 0.460357,
+              "unit": "µm"
+            },
+            "zSpacing": {
+              "value": 1.0,
+              "unit": "z-slice"
+            },
+            "timeUnit": "SECONDS",
+            "timepoints": []
+          },
+          "preferredTileWidth": 512,
+          "preferredTileHeight": 512
+        }
+      },
+      "entryID": 8,
+      "randomizedName": "43af9c14-a09e-4ee4-8584-9da3dd076107",
+      "imageName": "M3-hipp1_s5_MIP.ome.tiff - M3-hipp1_s5",
       "metadata": {},
       "tags": []
     }

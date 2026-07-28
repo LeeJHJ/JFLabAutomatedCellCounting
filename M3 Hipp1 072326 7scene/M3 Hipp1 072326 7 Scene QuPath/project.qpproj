@@ -1,9 +1,9 @@
 {
   "version": "0.6.0",
-  "createTimestamp": 1784590824044,
-  "modifyTimestamp": 1784590824044,
-  "uri": "file:/home/jflab/Analysis/wBA%201-3%202-1%20072026/wBA_1-3_2-1_072026/project.qpproj",
-  "lastID": 8,
+  "createTimestamp": 1785179875823,
+  "modifyTimestamp": 1785179875823,
+  "uri": "file:/home/jflab/Analysis/M3%20Hipp1%20072326%207scene/M3%20Hipp1%20072326%207%20Scene%20QuPath/project.qpproj",
+  "lastID": 7,
   "images": [
     {
       "serverBuilder": {
@@ -11,15 +11,15 @@
         "builder": {
           "builderType": "uri",
           "providerClassName": "qupath.lib.images.servers.bioformats.BioFormatsServerBuilder",
-          "uri": "file:/home/jflab/Analysis/Automated%20Cell%20Counting/wBA%20Sungmo/wBA1-3_s5_MIP.ome.tiff",
+          "uri": "file:/home/jflab/Analysis/M3%20Hipp1%20072326%207scene/M3-hipp1_s7_MIP.ome.tiff",
           "args": [
             "--series",
             "0"
           ],
           "metadata": {
-            "name": "wBA1-3_s5_MIP.ome.tiff - wBA1-3_s5",
-            "width": 14824,
-            "height": 11138,
+            "name": "M3-hipp1_s7_MIP.ome.tiff - M3-hipp1_s7",
+            "width": 23630,
+            "height": 15336,
             "sizeZ": 1,
             "sizeT": 1,
             "channelType": "DEFAULT",
@@ -28,8 +28,8 @@
             "levels": [
               {
                 "downsample": 1.0,
-                "width": 14824,
-                "height": 11138
+                "width": 23630,
+                "height": 15336
               }
             ],
             "channels": [
@@ -48,11 +48,11 @@
             ],
             "pixelCalibration": {
               "pixelWidth": {
-                "value": 0.6905355,
+                "value": 0.460357,
                 "unit": "µm"
               },
               "pixelHeight": {
-                "value": 0.6905355,
+                "value": 0.460357,
                 "unit": "µm"
               },
               "zSpacing": {
@@ -62,14 +62,14 @@
               "timeUnit": "SECONDS",
               "timepoints": []
             },
-            "preferredTileWidth": 14824,
-            "preferredTileHeight": 11138
+            "preferredTileWidth": 512,
+            "preferredTileHeight": 512
           }
         },
         "metadata": {
-          "name": "wBA1-3_s5_MIP.ome.tiff - wBA1-3_s5",
-          "width": 14824,
-          "height": 11138,
+          "name": "M3-hipp1_s7_MIP.ome.tiff - M3-hipp1_s7",
+          "width": 23630,
+          "height": 15336,
           "sizeZ": 1,
           "sizeT": 1,
           "channelType": "DEFAULT",
@@ -78,18 +78,18 @@
           "levels": [
             {
               "downsample": 1.0,
-              "width": 14824,
-              "height": 11138
+              "width": 23630,
+              "height": 15336
             },
             {
               "downsample": 4.0,
-              "width": 3706,
-              "height": 2784
+              "width": 5907,
+              "height": 3834
             },
             {
               "downsample": 16.0,
-              "width": 926,
-              "height": 696
+              "width": 1476,
+              "height": 958
             }
           ],
           "channels": [
@@ -108,11 +108,11 @@
           ],
           "pixelCalibration": {
             "pixelWidth": {
-              "value": 0.6905355,
+              "value": 0.460357,
               "unit": "µm"
             },
             "pixelHeight": {
-              "value": 0.6905355,
+              "value": 0.460357,
               "unit": "µm"
             },
             "zSpacing": {
@@ -122,13 +122,13 @@
             "timeUnit": "SECONDS",
             "timepoints": []
           },
-          "preferredTileWidth": 256,
-          "preferredTileHeight": 256
+          "preferredTileWidth": 512,
+          "preferredTileHeight": 512
         }
       },
       "entryID": 1,
-      "randomizedName": "6709c6c7-99f0-4684-a19c-923fa47d48ab",
-      "imageName": "wBA1-3_s5_MIP.ome.tiff - wBA1-3_s5",
+      "randomizedName": "f89bad6e-ed8a-4bd0-ab0e-e2746f165043",
+      "imageName": "M3-hipp1_s7_MIP.ome.tiff - M3-hipp1_s7",
       "metadata": {},
       "tags": []
     },
@@ -138,15 +138,15 @@
         "builder": {
           "builderType": "uri",
           "providerClassName": "qupath.lib.images.servers.bioformats.BioFormatsServerBuilder",
-          "uri": "file:/home/jflab/Analysis/Automated%20Cell%20Counting/wBA%20Sungmo/wBA1-3_s4_MIP.ome.tiff",
+          "uri": "file:/home/jflab/Analysis/M3%20Hipp1%20072326%207scene/M3-hipp1_s6_MIP.ome.tiff",
           "args": [
             "--series",
             "0"
           ],
           "metadata": {
-            "name": "wBA1-3_s4_MIP.ome.tiff - wBA1-3_s4",
-            "width": 13903,
-            "height": 10216,
+            "name": "M3-hipp1_s6_MIP.ome.tiff - M3-hipp1_s6",
+            "width": 23631,
+            "height": 15336,
             "sizeZ": 1,
             "sizeT": 1,
             "channelType": "DEFAULT",
@@ -155,8 +155,8 @@
             "levels": [
               {
                 "downsample": 1.0,
-                "width": 13903,
-                "height": 10216
+                "width": 23631,
+                "height": 15336
               }
             ],
             "channels": [
@@ -175,11 +175,11 @@
             ],
             "pixelCalibration": {
               "pixelWidth": {
-                "value": 0.6905355,
+                "value": 0.460357,
                 "unit": "µm"
               },
               "pixelHeight": {
-                "value": 0.6905355,
+                "value": 0.460357,
                 "unit": "µm"
               },
               "zSpacing": {
@@ -189,14 +189,14 @@
               "timeUnit": "SECONDS",
               "timepoints": []
             },
-            "preferredTileWidth": 13903,
-            "preferredTileHeight": 10216
+            "preferredTileWidth": 512,
+            "preferredTileHeight": 512
           }
         },
         "metadata": {
-          "name": "wBA1-3_s4_MIP.ome.tiff - wBA1-3_s4",
-          "width": 13903,
-          "height": 10216,
+          "name": "M3-hipp1_s6_MIP.ome.tiff - M3-hipp1_s6",
+          "width": 23631,
+          "height": 15336,
           "sizeZ": 1,
           "sizeT": 1,
           "channelType": "DEFAULT",
@@ -205,18 +205,18 @@
           "levels": [
             {
               "downsample": 1.0,
-              "width": 13903,
-              "height": 10216
+              "width": 23631,
+              "height": 15336
             },
             {
               "downsample": 4.0,
-              "width": 3475,
-              "height": 2554
+              "width": 5907,
+              "height": 3834
             },
             {
               "downsample": 16.0,
-              "width": 868,
-              "height": 638
+              "width": 1476,
+              "height": 958
             }
           ],
           "channels": [
@@ -235,11 +235,11 @@
           ],
           "pixelCalibration": {
             "pixelWidth": {
-              "value": 0.6905355,
+              "value": 0.460357,
               "unit": "µm"
             },
             "pixelHeight": {
-              "value": 0.6905355,
+              "value": 0.460357,
               "unit": "µm"
             },
             "zSpacing": {
@@ -249,13 +249,13 @@
             "timeUnit": "SECONDS",
             "timepoints": []
           },
-          "preferredTileWidth": 256,
-          "preferredTileHeight": 256
+          "preferredTileWidth": 512,
+          "preferredTileHeight": 512
         }
       },
       "entryID": 2,
-      "randomizedName": "02ba9cbc-4b07-4f35-9731-b5d996d20312",
-      "imageName": "wBA1-3_s4_MIP.ome.tiff - wBA1-3_s4",
+      "randomizedName": "44dcd673-96ce-45eb-8e44-8632200ffe97",
+      "imageName": "M3-hipp1_s6_MIP.ome.tiff - M3-hipp1_s6",
       "metadata": {},
       "tags": []
     },
@@ -265,15 +265,15 @@
         "builder": {
           "builderType": "uri",
           "providerClassName": "qupath.lib.images.servers.bioformats.BioFormatsServerBuilder",
-          "uri": "file:/home/jflab/Analysis/Automated%20Cell%20Counting/wBA%20Sungmo/wBA1-3_s3_MIP.ome.tiff",
+          "uri": "file:/home/jflab/Analysis/M3%20Hipp1%20072326%207scene/M3-hipp1_s5_MIP.ome.tiff",
           "args": [
             "--series",
             "0"
           ],
           "metadata": {
-            "name": "wBA1-3_s3_MIP.ome.tiff - wBA1-3_s3",
-            "width": 14824,
-            "height": 10216,
+            "name": "M3-hipp1_s5_MIP.ome.tiff - M3-hipp1_s5",
+            "width": 23630,
+            "height": 15336,
             "sizeZ": 1,
             "sizeT": 1,
             "channelType": "DEFAULT",
@@ -282,8 +282,8 @@
             "levels": [
               {
                 "downsample": 1.0,
-                "width": 14824,
-                "height": 10216
+                "width": 23630,
+                "height": 15336
               }
             ],
             "channels": [
@@ -302,11 +302,11 @@
             ],
             "pixelCalibration": {
               "pixelWidth": {
-                "value": 0.6905355,
+                "value": 0.460357,
                 "unit": "µm"
               },
               "pixelHeight": {
-                "value": 0.6905355,
+                "value": 0.460357,
                 "unit": "µm"
               },
               "zSpacing": {
@@ -316,14 +316,14 @@
               "timeUnit": "SECONDS",
               "timepoints": []
             },
-            "preferredTileWidth": 14824,
-            "preferredTileHeight": 10216
+            "preferredTileWidth": 512,
+            "preferredTileHeight": 512
           }
         },
         "metadata": {
-          "name": "wBA1-3_s3_MIP.ome.tiff - wBA1-3_s3",
-          "width": 14824,
-          "height": 10216,
+          "name": "M3-hipp1_s5_MIP.ome.tiff - M3-hipp1_s5",
+          "width": 23630,
+          "height": 15336,
           "sizeZ": 1,
           "sizeT": 1,
           "channelType": "DEFAULT",
@@ -332,18 +332,18 @@
           "levels": [
             {
               "downsample": 1.0,
-              "width": 14824,
-              "height": 10216
+              "width": 23630,
+              "height": 15336
             },
             {
               "downsample": 4.0,
-              "width": 3706,
-              "height": 2554
+              "width": 5907,
+              "height": 3834
             },
             {
               "downsample": 16.0,
-              "width": 926,
-              "height": 638
+              "width": 1476,
+              "height": 958
             }
           ],
           "channels": [
@@ -362,11 +362,11 @@
           ],
           "pixelCalibration": {
             "pixelWidth": {
-              "value": 0.6905355,
+              "value": 0.460357,
               "unit": "µm"
             },
             "pixelHeight": {
-              "value": 0.6905355,
+              "value": 0.460357,
               "unit": "µm"
             },
             "zSpacing": {
@@ -376,13 +376,13 @@
             "timeUnit": "SECONDS",
             "timepoints": []
           },
-          "preferredTileWidth": 256,
-          "preferredTileHeight": 256
+          "preferredTileWidth": 512,
+          "preferredTileHeight": 512
         }
       },
       "entryID": 3,
-      "randomizedName": "dd179c88-1df6-47b7-a06e-31c43da405be",
-      "imageName": "wBA1-3_s3_MIP.ome.tiff - wBA1-3_s3",
+      "randomizedName": "2fad2429-0bbc-4847-92b7-f0ef462ebd13",
+      "imageName": "M3-hipp1_s5_MIP.ome.tiff - M3-hipp1_s5",
       "metadata": {},
       "tags": []
     },
@@ -392,15 +392,15 @@
         "builder": {
           "builderType": "uri",
           "providerClassName": "qupath.lib.images.servers.bioformats.BioFormatsServerBuilder",
-          "uri": "file:/home/jflab/Analysis/Automated%20Cell%20Counting/wBA%20Sungmo/wBA1-3_s2_MIP.ome.tiff",
+          "uri": "file:/home/jflab/Analysis/M3%20Hipp1%20072326%207scene/M3-hipp1_s4_MIP.ome.tiff",
           "args": [
             "--series",
             "0"
           ],
           "metadata": {
-            "name": "wBA1-3_s2_MIP.ome.tiff - wBA1-3_s2",
-            "width": 13903,
-            "height": 10216,
+            "name": "M3-hipp1_s4_MIP.ome.tiff - M3-hipp1_s4",
+            "width": 23631,
+            "height": 15336,
             "sizeZ": 1,
             "sizeT": 1,
             "channelType": "DEFAULT",
@@ -409,8 +409,8 @@
             "levels": [
               {
                 "downsample": 1.0,
-                "width": 13903,
-                "height": 10216
+                "width": 23631,
+                "height": 15336
               }
             ],
             "channels": [
@@ -429,11 +429,11 @@
             ],
             "pixelCalibration": {
               "pixelWidth": {
-                "value": 0.6905355,
+                "value": 0.460357,
                 "unit": "µm"
               },
               "pixelHeight": {
-                "value": 0.6905355,
+                "value": 0.460357,
                 "unit": "µm"
               },
               "zSpacing": {
@@ -443,14 +443,14 @@
               "timeUnit": "SECONDS",
               "timepoints": []
             },
-            "preferredTileWidth": 13903,
-            "preferredTileHeight": 10216
+            "preferredTileWidth": 512,
+            "preferredTileHeight": 512
           }
         },
         "metadata": {
-          "name": "wBA1-3_s2_MIP.ome.tiff - wBA1-3_s2",
-          "width": 13903,
-          "height": 10216,
+          "name": "M3-hipp1_s4_MIP.ome.tiff - M3-hipp1_s4",
+          "width": 23631,
+          "height": 15336,
           "sizeZ": 1,
           "sizeT": 1,
           "channelType": "DEFAULT",
@@ -459,18 +459,18 @@
           "levels": [
             {
               "downsample": 1.0,
-              "width": 13903,
-              "height": 10216
+              "width": 23631,
+              "height": 15336
             },
             {
               "downsample": 4.0,
-              "width": 3475,
-              "height": 2554
+              "width": 5907,
+              "height": 3834
             },
             {
               "downsample": 16.0,
-              "width": 868,
-              "height": 638
+              "width": 1476,
+              "height": 958
             }
           ],
           "channels": [
@@ -489,11 +489,11 @@
           ],
           "pixelCalibration": {
             "pixelWidth": {
-              "value": 0.6905355,
+              "value": 0.460357,
               "unit": "µm"
             },
             "pixelHeight": {
-              "value": 0.6905355,
+              "value": 0.460357,
               "unit": "µm"
             },
             "zSpacing": {
@@ -503,13 +503,13 @@
             "timeUnit": "SECONDS",
             "timepoints": []
           },
-          "preferredTileWidth": 256,
-          "preferredTileHeight": 256
+          "preferredTileWidth": 512,
+          "preferredTileHeight": 512
         }
       },
       "entryID": 4,
-      "randomizedName": "9582789a-ae51-456a-bb0c-0253586b12b9",
-      "imageName": "wBA1-3_s2_MIP.ome.tiff - wBA1-3_s2",
+      "randomizedName": "08e599de-7bc3-4aca-a4e0-51ced36d8823",
+      "imageName": "M3-hipp1_s4_MIP.ome.tiff - M3-hipp1_s4",
       "metadata": {},
       "tags": []
     },
@@ -519,15 +519,15 @@
         "builder": {
           "builderType": "uri",
           "providerClassName": "qupath.lib.images.servers.bioformats.BioFormatsServerBuilder",
-          "uri": "file:/home/jflab/Analysis/Automated%20Cell%20Counting/wBA%20Sungmo/wBA1-3_s1_MIP.ome.tiff",
+          "uri": "file:/home/jflab/Analysis/M3%20Hipp1%20072326%207scene/M3-hipp1_s3_MIP.ome.tiff",
           "args": [
             "--series",
             "0"
           ],
           "metadata": {
-            "name": "wBA1-3_s1_MIP.ome.tiff - wBA1-3_s1",
-            "width": 13902,
-            "height": 9295,
+            "name": "M3-hipp1_s3_MIP.ome.tiff - M3-hipp1_s3",
+            "width": 23631,
+            "height": 15336,
             "sizeZ": 1,
             "sizeT": 1,
             "channelType": "DEFAULT",
@@ -536,8 +536,8 @@
             "levels": [
               {
                 "downsample": 1.0,
-                "width": 13902,
-                "height": 9295
+                "width": 23631,
+                "height": 15336
               }
             ],
             "channels": [
@@ -556,11 +556,11 @@
             ],
             "pixelCalibration": {
               "pixelWidth": {
-                "value": 0.6905355,
+                "value": 0.460357,
                 "unit": "µm"
               },
               "pixelHeight": {
-                "value": 0.6905355,
+                "value": 0.460357,
                 "unit": "µm"
               },
               "zSpacing": {
@@ -570,14 +570,14 @@
               "timeUnit": "SECONDS",
               "timepoints": []
             },
-            "preferredTileWidth": 13902,
-            "preferredTileHeight": 9295
+            "preferredTileWidth": 512,
+            "preferredTileHeight": 512
           }
         },
         "metadata": {
-          "name": "wBA1-3_s1_MIP.ome.tiff - wBA1-3_s1",
-          "width": 13902,
-          "height": 9295,
+          "name": "M3-hipp1_s3_MIP.ome.tiff - M3-hipp1_s3",
+          "width": 23631,
+          "height": 15336,
           "sizeZ": 1,
           "sizeT": 1,
           "channelType": "DEFAULT",
@@ -586,18 +586,18 @@
           "levels": [
             {
               "downsample": 1.0,
-              "width": 13902,
-              "height": 9295
+              "width": 23631,
+              "height": 15336
             },
             {
               "downsample": 4.0,
-              "width": 3475,
-              "height": 2323
+              "width": 5907,
+              "height": 3834
             },
             {
               "downsample": 16.0,
-              "width": 868,
-              "height": 580
+              "width": 1476,
+              "height": 958
             }
           ],
           "channels": [
@@ -616,11 +616,11 @@
           ],
           "pixelCalibration": {
             "pixelWidth": {
-              "value": 0.6905355,
+              "value": 0.460357,
               "unit": "µm"
             },
             "pixelHeight": {
-              "value": 0.6905355,
+              "value": 0.460357,
               "unit": "µm"
             },
             "zSpacing": {
@@ -630,13 +630,13 @@
             "timeUnit": "SECONDS",
             "timepoints": []
           },
-          "preferredTileWidth": 256,
-          "preferredTileHeight": 256
+          "preferredTileWidth": 512,
+          "preferredTileHeight": 512
         }
       },
       "entryID": 5,
-      "randomizedName": "d28867e3-9e8e-42d1-a3aa-b79216f33498",
-      "imageName": "wBA1-3_s1_MIP.ome.tiff - wBA1-3_s1",
+      "randomizedName": "f82948fd-b86e-4fa6-a2fe-8fb7945c59d2",
+      "imageName": "M3-hipp1_s3_MIP.ome.tiff - M3-hipp1_s3",
       "metadata": {},
       "tags": []
     },
@@ -646,15 +646,142 @@
         "builder": {
           "builderType": "uri",
           "providerClassName": "qupath.lib.images.servers.bioformats.BioFormatsServerBuilder",
-          "uri": "file:/home/jflab/Analysis/wBA/wBA1-2_2-1%20tdt-only%20072026/wBA1-2_2-1_s2_MIP.ome.tiff",
+          "uri": "file:/home/jflab/Analysis/M3%20Hipp1%20072326%207scene/M3-hipp1_s2_MIP.ome.tiff",
           "args": [
             "--series",
             "0"
           ],
           "metadata": {
-            "name": "wBA1-2_2-1_s2_MIP.ome.tiff - wBA1-2_2-1_s2",
+            "name": "M3-hipp1_s2_MIP.ome.tiff - M3-hipp1_s2",
+            "width": 23630,
+            "height": 15336,
+            "sizeZ": 1,
+            "sizeT": 1,
+            "channelType": "DEFAULT",
+            "isRGB": false,
+            "pixelType": "UINT16",
+            "levels": [
+              {
+                "downsample": 1.0,
+                "width": 23630,
+                "height": 15336
+              }
+            ],
+            "channels": [
+              {
+                "name": "AF568-T2",
+                "color": -65536
+              },
+              {
+                "name": "AF488-T3",
+                "color": -16711936
+              },
+              {
+                "name": "DAPI-T4",
+                "color": -16776961
+              }
+            ],
+            "pixelCalibration": {
+              "pixelWidth": {
+                "value": 0.460357,
+                "unit": "µm"
+              },
+              "pixelHeight": {
+                "value": 0.460357,
+                "unit": "µm"
+              },
+              "zSpacing": {
+                "value": 1.0,
+                "unit": "z-slice"
+              },
+              "timeUnit": "SECONDS",
+              "timepoints": []
+            },
+            "preferredTileWidth": 512,
+            "preferredTileHeight": 512
+          }
+        },
+        "metadata": {
+          "name": "M3-hipp1_s2_MIP.ome.tiff - M3-hipp1_s2",
+          "width": 23630,
+          "height": 15336,
+          "sizeZ": 1,
+          "sizeT": 1,
+          "channelType": "DEFAULT",
+          "isRGB": false,
+          "pixelType": "UINT16",
+          "levels": [
+            {
+              "downsample": 1.0,
+              "width": 23630,
+              "height": 15336
+            },
+            {
+              "downsample": 4.0,
+              "width": 5907,
+              "height": 3834
+            },
+            {
+              "downsample": 16.0,
+              "width": 1476,
+              "height": 958
+            }
+          ],
+          "channels": [
+            {
+              "name": "AF568-T2",
+              "color": -65536
+            },
+            {
+              "name": "AF488-T3",
+              "color": -16711936
+            },
+            {
+              "name": "DAPI-T4",
+              "color": -16776961
+            }
+          ],
+          "pixelCalibration": {
+            "pixelWidth": {
+              "value": 0.460357,
+              "unit": "µm"
+            },
+            "pixelHeight": {
+              "value": 0.460357,
+              "unit": "µm"
+            },
+            "zSpacing": {
+              "value": 1.0,
+              "unit": "z-slice"
+            },
+            "timeUnit": "SECONDS",
+            "timepoints": []
+          },
+          "preferredTileWidth": 512,
+          "preferredTileHeight": 512
+        }
+      },
+      "entryID": 6,
+      "randomizedName": "e513b713-c3a7-45e1-803d-c43f440f4488",
+      "imageName": "M3-hipp1_s2_MIP.ome.tiff - M3-hipp1_s2",
+      "metadata": {},
+      "tags": []
+    },
+    {
+      "serverBuilder": {
+        "builderType": "pyramidize",
+        "builder": {
+          "builderType": "uri",
+          "providerClassName": "qupath.lib.images.servers.bioformats.BioFormatsServerBuilder",
+          "uri": "file:/home/jflab/Analysis/M3%20Hipp1%20072326%207scene/M3-hipp1_s1_MIP.ome.tiff",
+          "args": [
+            "--series",
+            "0"
+          ],
+          "metadata": {
+            "name": "M3-hipp1_s1_MIP.ome.tiff - M3-hipp1_s1",
             "width": 22248,
-            "height": 16718,
+            "height": 13953,
             "sizeZ": 1,
             "sizeT": 1,
             "channelType": "DEFAULT",
@@ -664,7 +791,7 @@
               {
                 "downsample": 1.0,
                 "width": 22248,
-                "height": 16718
+                "height": 13953
               }
             ],
             "channels": [
@@ -673,8 +800,12 @@
                 "color": -65536
               },
               {
-                "name": "DAPI-T4",
+                "name": "AF488-T3",
                 "color": -16711936
+              },
+              {
+                "name": "DAPI-T4",
+                "color": -16776961
               }
             ],
             "pixelCalibration": {
@@ -694,13 +825,13 @@
               "timepoints": []
             },
             "preferredTileWidth": 22248,
-            "preferredTileHeight": 16718
+            "preferredTileHeight": 13953
           }
         },
         "metadata": {
-          "name": "wBA1-2_2-1_s2_MIP.ome.tiff - wBA1-2_2-1_s2",
+          "name": "M3-hipp1_s1_MIP.ome.tiff - M3-hipp1_s1",
           "width": 22248,
-          "height": 16718,
+          "height": 13953,
           "sizeZ": 1,
           "sizeT": 1,
           "channelType": "DEFAULT",
@@ -710,22 +841,22 @@
             {
               "downsample": 1.0,
               "width": 22248,
-              "height": 16718
+              "height": 13953
             },
             {
               "downsample": 4.0,
               "width": 5562,
-              "height": 4179
+              "height": 3488
             },
             {
               "downsample": 16.0,
               "width": 1390,
-              "height": 1044
+              "height": 872
             },
             {
               "downsample": 64.0,
               "width": 347,
-              "height": 261
+              "height": 218
             }
           ],
           "channels": [
@@ -734,8 +865,12 @@
               "color": -65536
             },
             {
-              "name": "DAPI-T4",
+              "name": "AF488-T3",
               "color": -16711936
+            },
+            {
+              "name": "DAPI-T4",
+              "color": -16776961
             }
           ],
           "pixelCalibration": {
@@ -758,263 +893,9 @@
           "preferredTileHeight": 256
         }
       },
-      "entryID": 6,
-      "randomizedName": "63a164f7-b46c-4a0d-aa03-77b59809a8cf",
-      "imageName": "wBA1-2_2-1_s2_MIP.ome.tiff - wBA1-2_2-1_s2",
-      "metadata": {},
-      "tags": []
-    },
-    {
-      "serverBuilder": {
-        "builderType": "pyramidize",
-        "builder": {
-          "builderType": "uri",
-          "providerClassName": "qupath.lib.images.servers.bioformats.BioFormatsServerBuilder",
-          "uri": "file:/home/jflab/Analysis/M3%20Hipp1%20072326%207scene/M3-hipp1_s5_MIP.ome.tiff",
-          "args": [
-            "--series",
-            "0"
-          ],
-          "metadata": {
-            "name": "M3-hipp1_s5_MIP.ome.tiff - M3-hipp1_s5",
-            "width": 23630,
-            "height": 15336,
-            "sizeZ": 1,
-            "sizeT": 1,
-            "channelType": "DEFAULT",
-            "isRGB": false,
-            "pixelType": "UINT16",
-            "levels": [
-              {
-                "downsample": 1.0,
-                "width": 23630,
-                "height": 15336
-              }
-            ],
-            "channels": [
-              {
-                "name": "AF568-T2",
-                "color": -65536
-              },
-              {
-                "name": "AF488-T3",
-                "color": -16711936
-              },
-              {
-                "name": "DAPI-T4",
-                "color": -16776961
-              }
-            ],
-            "pixelCalibration": {
-              "pixelWidth": {
-                "value": 0.460357,
-                "unit": "µm"
-              },
-              "pixelHeight": {
-                "value": 0.460357,
-                "unit": "µm"
-              },
-              "zSpacing": {
-                "value": 1.0,
-                "unit": "z-slice"
-              },
-              "timeUnit": "SECONDS",
-              "timepoints": []
-            },
-            "preferredTileWidth": 512,
-            "preferredTileHeight": 512
-          }
-        },
-        "metadata": {
-          "name": "M3-hipp1_s5_MIP.ome.tiff - M3-hipp1_s5",
-          "width": 23630,
-          "height": 15336,
-          "sizeZ": 1,
-          "sizeT": 1,
-          "channelType": "DEFAULT",
-          "isRGB": false,
-          "pixelType": "UINT16",
-          "levels": [
-            {
-              "downsample": 1.0,
-              "width": 23630,
-              "height": 15336
-            },
-            {
-              "downsample": 4.0,
-              "width": 5907,
-              "height": 3834
-            },
-            {
-              "downsample": 16.0,
-              "width": 1476,
-              "height": 958
-            }
-          ],
-          "channels": [
-            {
-              "name": "AF568-T2",
-              "color": -65536
-            },
-            {
-              "name": "AF488-T3",
-              "color": -16711936
-            },
-            {
-              "name": "DAPI-T4",
-              "color": -16776961
-            }
-          ],
-          "pixelCalibration": {
-            "pixelWidth": {
-              "value": 0.460357,
-              "unit": "µm"
-            },
-            "pixelHeight": {
-              "value": 0.460357,
-              "unit": "µm"
-            },
-            "zSpacing": {
-              "value": 1.0,
-              "unit": "z-slice"
-            },
-            "timeUnit": "SECONDS",
-            "timepoints": []
-          },
-          "preferredTileWidth": 512,
-          "preferredTileHeight": 512
-        }
-      },
       "entryID": 7,
-      "randomizedName": "e41f6c34-c574-4f4e-974a-eba8dcbbfa1e",
-      "imageName": "M3-hipp1_s5_MIP.ome.tiff - M3-hipp1_s5",
-      "metadata": {},
-      "tags": []
-    },
-    {
-      "serverBuilder": {
-        "builderType": "pyramidize",
-        "builder": {
-          "builderType": "uri",
-          "providerClassName": "qupath.lib.images.servers.bioformats.BioFormatsServerBuilder",
-          "uri": "file:/home/jflab/Analysis/M3%20Hipp1%20072326%207scene/M3-hipp1_s5_MIP.ome.tiff",
-          "args": [
-            "--series",
-            "0"
-          ],
-          "metadata": {
-            "name": "M3-hipp1_s5_MIP.ome.tiff - M3-hipp1_s5",
-            "width": 23630,
-            "height": 15336,
-            "sizeZ": 1,
-            "sizeT": 1,
-            "channelType": "DEFAULT",
-            "isRGB": false,
-            "pixelType": "UINT16",
-            "levels": [
-              {
-                "downsample": 1.0,
-                "width": 23630,
-                "height": 15336
-              }
-            ],
-            "channels": [
-              {
-                "name": "AF568-T2",
-                "color": -65536
-              },
-              {
-                "name": "AF488-T3",
-                "color": -16711936
-              },
-              {
-                "name": "DAPI-T4",
-                "color": -16776961
-              }
-            ],
-            "pixelCalibration": {
-              "pixelWidth": {
-                "value": 0.460357,
-                "unit": "µm"
-              },
-              "pixelHeight": {
-                "value": 0.460357,
-                "unit": "µm"
-              },
-              "zSpacing": {
-                "value": 1.0,
-                "unit": "z-slice"
-              },
-              "timeUnit": "SECONDS",
-              "timepoints": []
-            },
-            "preferredTileWidth": 512,
-            "preferredTileHeight": 512
-          }
-        },
-        "metadata": {
-          "name": "M3-hipp1_s5_MIP.ome.tiff - M3-hipp1_s5",
-          "width": 23630,
-          "height": 15336,
-          "sizeZ": 1,
-          "sizeT": 1,
-          "channelType": "DEFAULT",
-          "isRGB": false,
-          "pixelType": "UINT16",
-          "levels": [
-            {
-              "downsample": 1.0,
-              "width": 23630,
-              "height": 15336
-            },
-            {
-              "downsample": 4.0,
-              "width": 5907,
-              "height": 3834
-            },
-            {
-              "downsample": 16.0,
-              "width": 1476,
-              "height": 958
-            }
-          ],
-          "channels": [
-            {
-              "name": "AF568-T2",
-              "color": -65536
-            },
-            {
-              "name": "AF488-T3",
-              "color": -16711936
-            },
-            {
-              "name": "DAPI-T4",
-              "color": -16776961
-            }
-          ],
-          "pixelCalibration": {
-            "pixelWidth": {
-              "value": 0.460357,
-              "unit": "µm"
-            },
-            "pixelHeight": {
-              "value": 0.460357,
-              "unit": "µm"
-            },
-            "zSpacing": {
-              "value": 1.0,
-              "unit": "z-slice"
-            },
-            "timeUnit": "SECONDS",
-            "timepoints": []
-          },
-          "preferredTileWidth": 512,
-          "preferredTileHeight": 512
-        }
-      },
-      "entryID": 8,
-      "randomizedName": "43af9c14-a09e-4ee4-8584-9da3dd076107",
-      "imageName": "M3-hipp1_s5_MIP.ome.tiff - M3-hipp1_s5",
+      "randomizedName": "b8774ab4-42ec-4be0-926d-ca2bb7a65de1",
+      "imageName": "M3-hipp1_s1_MIP.ome.tiff - M3-hipp1_s1",
       "metadata": {},
       "tags": []
     }

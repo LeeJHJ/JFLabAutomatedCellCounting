@@ -1,0 +1,127 @@
+START 2026-07-24T16:52:25Z
+Opening CZI: /run/media/jflab/Joseph HD/Sungmo wBA/072026-001-01 processed.czi
+  Channels=2  Z-planes=5
+Pre-flight: 5 scenes found (get_all_mosaic_scene_bounding_boxes)
+  scene_key=0 (0-based)  bbox=(x=113327, y=85405, w=22248, h=15336)
+  scene_key=1 (0-based)  bbox=(x=137197, y=101997, w=22248, h=16718)
+  scene_key=2 (0-based)  bbox=(x=161589, y=102313, w=20865, h=16718)
+  scene_key=3 (0-based)  bbox=(x=136962, y=119390, w=22248, h=15336)
+  scene_key=4 (0-based)  bbox=(x=162148, y=119753, w=22248, h=15336)
+  All 5 scene bboxes pairwise non-overlapping -- PASS
+Processing scene 0 -> s1  bbox=(x=113327, y=85405, w=22248, h=15336)
+  Generating hybrid projection for scene 0 (s1)...
+    Channel 0/1: reading 5 z-planes...
+      z=0 shape=(1, 1, 15336, 22248) dtype=uint16
+      z=1 shape=(1, 1, 15336, 22248) dtype=uint16
+      z=2 shape=(1, 1, 15336, 22248) dtype=uint16
+      z=3 shape=(1, 1, 15336, 22248) dtype=uint16
+      z=4 shape=(1, 1, 15336, 22248) dtype=uint16
+    Channel 0 read done (5 planes).
+    Channel 1/1: reading 5 z-planes...
+      z=0 shape=(1, 1, 15336, 22248) dtype=uint16
+      z=1 shape=(1, 1, 15336, 22248) dtype=uint16
+      z=2 shape=(1, 1, 15336, 22248) dtype=uint16
+      z=3 shape=(1, 1, 15336, 22248) dtype=uint16
+      z=4 shape=(1, 1, 15336, 22248) dtype=uint16
+    Channel 1 read done (5 planes).
+    anchor channel 1 (DAPI-T4) focus (var-of-Laplacian) by Z: Z0=1.67e+07, Z1=1.77e+07, Z2=1.7e+07, Z3=1.42e+07, Z4=1.17e+07
+    scene 0 (s1): sharpest anchor plane -> Z=1 (markers full-Z max-projected)
+  Scene 0 (s1) hybrid MIP shape: (2, 15336, 22248)  dtype: uint16
+scene_key=0 (0-based)  label=s1 (1-based)  bbox=(x=113327, y=85405, w=22248, h=15336)  M_tiles=163  dims=(15336, 22248)
+  Identity thumbnail: /home/jflab/Analysis/wBA/wBA1-2_2-1 tdt-only 072026/wBA1-2_2-1_s1_identity.png
+  Writing /home/jflab/Analysis/wBA/wBA1-2_2-1 tdt-only 072026/wBA1-2_2-1_s1_MIP.ome.tiff ...
+  Done: /home/jflab/Analysis/wBA/wBA1-2_2-1 tdt-only 072026/wBA1-2_2-1_s1_MIP.ome.tiff
+Processing scene 1 -> s2  bbox=(x=137197, y=101997, w=22248, h=16718)
+  Generating hybrid projection for scene 1 (s2)...
+    Channel 0/1: reading 5 z-planes...
+      z=0 shape=(1, 1, 16718, 22248) dtype=uint16
+      z=1 shape=(1, 1, 16718, 22248) dtype=uint16
+      z=2 shape=(1, 1, 16718, 22248) dtype=uint16
+      z=3 shape=(1, 1, 16718, 22248) dtype=uint16
+      z=4 shape=(1, 1, 16718, 22248) dtype=uint16
+    Channel 0 read done (5 planes).
+    Channel 1/1: reading 5 z-planes...
+      z=0 shape=(1, 1, 16718, 22248) dtype=uint16
+      z=1 shape=(1, 1, 16718, 22248) dtype=uint16
+      z=2 shape=(1, 1, 16718, 22248) dtype=uint16
+      z=3 shape=(1, 1, 16718, 22248) dtype=uint16
+      z=4 shape=(1, 1, 16718, 22248) dtype=uint16
+    Channel 1 read done (5 planes).
+    anchor channel 1 (DAPI-T4) focus (var-of-Laplacian) by Z: Z0=1.54e+07, Z1=1.59e+07, Z2=1.57e+07, Z3=1.47e+07, Z4=1.23e+07
+    scene 1 (s2): sharpest anchor plane -> Z=1 (markers full-Z max-projected)
+  Scene 1 (s2) hybrid MIP shape: (2, 16718, 22248)  dtype: uint16
+scene_key=1 (0-based)  label=s2 (1-based)  bbox=(x=137197, y=101997, w=22248, h=16718)  M_tiles=172  dims=(16718, 22248)
+  Identity thumbnail: /home/jflab/Analysis/wBA/wBA1-2_2-1 tdt-only 072026/wBA1-2_2-1_s2_identity.png
+  Writing /home/jflab/Analysis/wBA/wBA1-2_2-1 tdt-only 072026/wBA1-2_2-1_s2_MIP.ome.tiff ...
+  Done: /home/jflab/Analysis/wBA/wBA1-2_2-1 tdt-only 072026/wBA1-2_2-1_s2_MIP.ome.tiff
+Processing scene 2 -> s3  bbox=(x=161589, y=102313, w=20865, h=16718)
+  Generating hybrid projection for scene 2 (s3)...
+    Channel 0/1: reading 5 z-planes...
+      z=0 shape=(1, 1, 16718, 20865) dtype=uint16
+      z=1 shape=(1, 1, 16718, 20865) dtype=uint16
+      z=2 shape=(1, 1, 16718, 20865) dtype=uint16
+      z=3 shape=(1, 1, 16718, 20865) dtype=uint16
+      z=4 shape=(1, 1, 16718, 20865) dtype=uint16
+    Channel 0 read done (5 planes).
+    Channel 1/1: reading 5 z-planes...
+      z=0 shape=(1, 1, 16718, 20865) dtype=uint16
+      z=1 shape=(1, 1, 16718, 20865) dtype=uint16
+      z=2 shape=(1, 1, 16718, 20865) dtype=uint16
+      z=3 shape=(1, 1, 16718, 20865) dtype=uint16
+      z=4 shape=(1, 1, 16718, 20865) dtype=uint16
+    Channel 1 read done (5 planes).
+    anchor channel 1 (DAPI-T4) focus (var-of-Laplacian) by Z: Z0=1.61e+07, Z1=1.69e+07, Z2=1.65e+07, Z3=1.49e+07, Z4=1.26e+07
+    scene 2 (s3): sharpest anchor plane -> Z=1 (markers full-Z max-projected)
+  Scene 2 (s3) hybrid MIP shape: (2, 16718, 20865)  dtype: uint16
+scene_key=2 (0-based)  label=s3 (1-based)  bbox=(x=161589, y=102313, w=20865, h=16718)  M_tiles=160  dims=(16718, 20865)
+  Identity thumbnail: /home/jflab/Analysis/wBA/wBA1-2_2-1 tdt-only 072026/wBA1-2_2-1_s3_identity.png
+  Writing /home/jflab/Analysis/wBA/wBA1-2_2-1 tdt-only 072026/wBA1-2_2-1_s3_MIP.ome.tiff ...
+  Done: /home/jflab/Analysis/wBA/wBA1-2_2-1 tdt-only 072026/wBA1-2_2-1_s3_MIP.ome.tiff
+Processing scene 3 -> s4  bbox=(x=136962, y=119390, w=22248, h=15336)
+  Generating hybrid projection for scene 3 (s4)...
+    Channel 0/1: reading 5 z-planes...
+      z=0 shape=(1, 1, 15336, 22248) dtype=uint16
+      z=1 shape=(1, 1, 15336, 22248) dtype=uint16
+      z=2 shape=(1, 1, 15336, 22248) dtype=uint16
+      z=3 shape=(1, 1, 15336, 22248) dtype=uint16
+      z=4 shape=(1, 1, 15336, 22248) dtype=uint16
+    Channel 0 read done (5 planes).
+    Channel 1/1: reading 5 z-planes...
+      z=0 shape=(1, 1, 15336, 22248) dtype=uint16
+      z=1 shape=(1, 1, 15336, 22248) dtype=uint16
+      z=2 shape=(1, 1, 15336, 22248) dtype=uint16
+      z=3 shape=(1, 1, 15336, 22248) dtype=uint16
+      z=4 shape=(1, 1, 15336, 22248) dtype=uint16
+    Channel 1 read done (5 planes).
+    anchor channel 1 (DAPI-T4) focus (var-of-Laplacian) by Z: Z0=1.8e+07, Z1=1.88e+07, Z2=1.78e+07, Z3=1.57e+07, Z4=1.3e+07
+    scene 3 (s4): sharpest anchor plane -> Z=1 (markers full-Z max-projected)
+  Scene 3 (s4) hybrid MIP shape: (2, 15336, 22248)  dtype: uint16
+scene_key=3 (0-based)  label=s4 (1-based)  bbox=(x=136962, y=119390, w=22248, h=15336)  M_tiles=162  dims=(15336, 22248)
+  Identity thumbnail: /home/jflab/Analysis/wBA/wBA1-2_2-1 tdt-only 072026/wBA1-2_2-1_s4_identity.png
+  Writing /home/jflab/Analysis/wBA/wBA1-2_2-1 tdt-only 072026/wBA1-2_2-1_s4_MIP.ome.tiff ...
+  Done: /home/jflab/Analysis/wBA/wBA1-2_2-1 tdt-only 072026/wBA1-2_2-1_s4_MIP.ome.tiff
+Processing scene 4 -> s5  bbox=(x=162148, y=119753, w=22248, h=15336)
+  Generating hybrid projection for scene 4 (s5)...
+    Channel 0/1: reading 5 z-planes...
+      z=0 shape=(1, 1, 15336, 22248) dtype=uint16
+      z=1 shape=(1, 1, 15336, 22248) dtype=uint16
+      z=2 shape=(1, 1, 15336, 22248) dtype=uint16
+      z=3 shape=(1, 1, 15336, 22248) dtype=uint16
+      z=4 shape=(1, 1, 15336, 22248) dtype=uint16
+    Channel 0 read done (5 planes).
+    Channel 1/1: reading 5 z-planes...
+      z=0 shape=(1, 1, 15336, 22248) dtype=uint16
+      z=1 shape=(1, 1, 15336, 22248) dtype=uint16
+      z=2 shape=(1, 1, 15336, 22248) dtype=uint16
+      z=3 shape=(1, 1, 15336, 22248) dtype=uint16
+      z=4 shape=(1, 1, 15336, 22248) dtype=uint16
+    Channel 1 read done (5 planes).
+    anchor channel 1 (DAPI-T4) focus (var-of-Laplacian) by Z: Z0=1.68e+07, Z1=1.73e+07, Z2=1.62e+07, Z3=1.39e+07, Z4=1.11e+07
+    scene 4 (s5): sharpest anchor plane -> Z=1 (markers full-Z max-projected)
+  Scene 4 (s5) hybrid MIP shape: (2, 15336, 22248)  dtype: uint16
+scene_key=4 (0-based)  label=s5 (1-based)  bbox=(x=162148, y=119753, w=22248, h=15336)  M_tiles=160  dims=(15336, 22248)
+  Identity thumbnail: /home/jflab/Analysis/wBA/wBA1-2_2-1 tdt-only 072026/wBA1-2_2-1_s5_identity.png
+  Writing /home/jflab/Analysis/wBA/wBA1-2_2-1 tdt-only 072026/wBA1-2_2-1_s5_MIP.ome.tiff ...
+  Done: /home/jflab/Analysis/wBA/wBA1-2_2-1 tdt-only 072026/wBA1-2_2-1_s5_MIP.ome.tiff
+All 5 scenes converted -> 5 MIP OME-TIFFs written to /home/jflab/Analysis/wBA/wBA1-2_2-1 tdt-only 072026
+DONE 2026-07-24T17:08:17Z exit=0

@@ -1,0 +1,211 @@
+{
+  "slicesStates": [
+    {
+      "channelVisible": [
+        false,
+        true
+      ],
+      "displaysettings": [
+        {
+          "color": [
+            255,
+            0,
+            0,
+            255
+          ],
+          "min": 0.0,
+          "max": 255.0,
+          "isSet": true,
+          "projectionMode": "Sum",
+          "name": "vs:-1",
+          "id": -1
+        },
+        {
+          "color": [
+            0,
+            255,
+            0,
+            255
+          ],
+          "min": 0.0,
+          "max": 18000.0,
+          "isSet": true,
+          "projectionMode": "Sum",
+          "name": "vs:-1",
+          "id": -1
+        }
+      ],
+      "sliceVisible": true
+    },
+    {
+      "channelVisible": [
+        false,
+        true
+      ],
+      "displaysettings": [
+        {
+          "color": [
+            255,
+            0,
+            0,
+            255
+          ],
+          "min": 0.0,
+          "max": 255.0,
+          "isSet": true,
+          "projectionMode": "Sum",
+          "name": "vs:-1",
+          "id": -1
+        },
+        {
+          "color": [
+            0,
+            255,
+            0,
+            255
+          ],
+          "min": 0.0,
+          "max": 18000.0,
+          "isSet": true,
+          "projectionMode": "Sum",
+          "name": "vs:-1",
+          "id": -1
+        }
+      ],
+      "sliceVisible": true
+    },
+    {
+      "channelVisible": [
+        false,
+        true
+      ],
+      "displaysettings": [
+        {
+          "color": [
+            255,
+            0,
+            0,
+            255
+          ],
+          "min": 0.0,
+          "max": 255.0,
+          "isSet": true,
+          "projectionMode": "Sum",
+          "name": "vs:-1",
+          "id": -1
+        },
+        {
+          "color": [
+            0,
+            255,
+            0,
+            255
+          ],
+          "min": 0.0,
+          "max": 18000.0,
+          "isSet": true,
+          "projectionMode": "Sum",
+          "name": "vs:-1",
+          "id": -1
+        }
+      ],
+      "sliceVisible": true
+    },
+    {
+      "channelVisible": [
+        false,
+        true
+      ],
+      "displaysettings": [
+        {
+          "color": [
+            255,
+            0,
+            0,
+            255
+          ],
+          "min": 0.0,
+          "max": 255.0,
+          "isSet": true,
+          "projectionMode": "Sum",
+          "name": "vs:-1",
+          "id": -1
+        },
+        {
+          "color": [
+            0,
+            255,
+            0,
+            255
+          ],
+          "min": 0.0,
+          "max": 18000.0,
+          "isSet": true,
+          "projectionMode": "Sum",
+          "name": "vs:-1",
+          "id": -1
+        }
+      ],
+      "sliceVisible": true
+    },
+    {
+      "channelVisible": [
+        false,
+        true
+      ],
+      "displaysettings": [
+        {
+          "color": [
+            255,
+            0,
+            0,
+            255
+          ],
+          "min": 0.0,
+          "max": 255.0,
+          "isSet": true,
+          "projectionMode": "Sum",
+          "name": "vs:-1",
+          "id": -1
+        },
+        {
+          "color": [
+            0,
+            255,
+            0,
+            255
+          ],
+          "min": 0.0,
+          "max": 18000.0,
+          "isSet": true,
+          "projectionMode": "Sum",
+          "name": "vs:-1",
+          "id": -1
+        }
+      ],
+      "sliceVisible": true
+    }
+  ],
+  "bdvView": [
+    140.50226839659922,
+    0.0,
+    0.0,
+    1012.3169568145549,
+    0.0,
+    140.50226839659922,
+    0.0,
+    683.679719491555,
+    0.0,
+    0.0,
+    140.50226839659922,
+    -1121.4076732990977
+  ],
+  "bdvViewMode": 1,
+  "bdvSliceViewMode": 0,
+  "overlapMode": 2,
+  "showInfo": false,
+  "atlasSlicingStep": 50,
+  "iCurrentSlice": 2,
+  "overlapFactorX": 1.0,
+  "overlapFactorY": 1.0
+}

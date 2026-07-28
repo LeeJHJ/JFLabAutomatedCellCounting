@@ -21,6 +21,9 @@
 *.bfmemo
 **/thumbnail.jpg
 
+# ── Per-slice QC / registration identity renders (regenerable, ~4 MB each) ──
+*_identity.png
+
 # ── QuPath / BraiAnDetect per-run exports (regenerable; churn every detection pass) ──
 # NOTE: this is per-project output, NOT the top-level reference/ accumulator (which IS tracked).
 **/results/
