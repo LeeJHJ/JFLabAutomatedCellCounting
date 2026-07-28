@@ -157,7 +157,7 @@ First v1.1 execution step (Phase 5) is scriptable (no GUI dependency); Phases 6-
 | 260724-fast | fix(03_export): D-10 zero-leak assertion reconciles unresolved detections (cell centroid outside all atlas regions) — `sumAnchorOwn + nUnresolved == nClassified`; found on wBA1-2_2-1 s5 (off-by-1); propagated to deploy copies | 2026-07-24 | e712989 | — |
 | 260725-fast | fix(02_classify): coerce whole-cell guard key to String (GString!=String in Set.contains) — was false-aborting on a valid `Cell: AF568-T2 mean`; propagated to deploy copies | 2026-07-25 | 7c1d7eb | — |
 | 260725-fast2 | fix(03_export): accept whole-cell compartment (validator + COMPARTMENT_LABELS) — 260725-w88 rollout missed 03; propagated | 2026-07-25 | c40cb95 | — |
-| 260728-kbs | cockpit increment 2: `scripts/cockpit_regions.py` — region-of-interest readout CSV (ontology-frontier roll-up, exclusion-aware, L/R+pooled, dynamic marker cols). Rolls up from the Allen ontology, NOT the region_table parent rows (QuPath annotation hierarchy ≠ ontology — BMA parent row=0 while BMAa=1253). Self-test 21/21 + real tdt-only fixture validated | 2026-07-28 | PENDING | [260728-kbs-add-cockpit-regions-py-region-of-interes](./quick/260728-kbs-add-cockpit-regions-py-region-of-interes/) |
+| 260728-kbs | cockpit increment 2: `scripts/cockpit_regions.py` — region-of-interest readout CSV (ontology-frontier roll-up, exclusion-aware, L/R+pooled, dynamic marker cols). Rolls up from the Allen ontology, NOT the region_table parent rows (QuPath annotation hierarchy ≠ ontology — BMA parent row=0 while BMAa=1253). Self-test 21/21 + real tdt-only fixture validated | 2026-07-28 | c7d567f | [260728-kbs-add-cockpit-regions-py-region-of-interes](./quick/260728-kbs-add-cockpit-regions-py-region-of-interes/) |
 
 ---
 
