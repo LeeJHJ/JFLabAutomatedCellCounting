@@ -104,6 +104,15 @@ class GateThresholds:
     k_values: tuple[float, ...] = (2.0, 2.5, 3.0)
     k_swing_max_pp: float = 10.0             # percentage points
 
+    # Gates named here still compute and still print their number, but are demoted
+    # to advisory so they no longer drive the slice's overall verdict. Use this to
+    # park a known issue you have consciously decided not to chase yet, instead of
+    # deleting the gate (which would lose the number) or loosening its threshold
+    # (which would fake a PASS). NOTE: demoting the white-matter gate means DAPI
+    # DENSITIES are not trustworthy for that run -- ratio readouts such as
+    # P(target+|condition+) are unaffected, as they carry no DAPI denominator.
+    advisory_gates: tuple[str, ...] = ()
+
 
 DEFAULT_THRESHOLDS = GateThresholds()
 
@@ -716,6 +725,11 @@ def run_all_gates(sl: SliceFiles, project_dir: Path,
                         ("grey_density_median", True), ("total_density", True)):
             results.append(GateResult(nm, float("nan"), NA, "no regions.tsv", advisory=adv))
 
+    if th.advisory_gates:
+        results = [r._replace(advisory=True, detail=(r.detail + "  [demoted to advisory]").strip())
+                   if r.name in th.advisory_gates and not r.advisory else r
+                   for r in results]
+
     return results
 
 
@@ -950,7 +964,25 @@ def _self_test() -> None:
         check(res_p["nucleus_area_peak_um2"].status == NA, "missing percell -> N/A not crash")
         check(res_p["white_matter_density"].status in (PASS, FLAG), "regions gate still evaluated")
 
-        print("\n[9] headless command construction")
+        print("\n[9] advisory_gates demotes without hiding the number")
+        demoted = replace(DEFAULT_THRESHOLDS,
+                          advisory_gates=("white_matter_density", "ventricle_density"))
+        base = {r.name: r for r in run_all_gates(bad, proj)}
+        dem = {r.name: r for r in run_all_gates(bad, proj, demoted)}
+        check(base["white_matter_density"].status == FLAG
+              and dem["white_matter_density"].status == FLAG,
+              "demoted gate still reports FLAG (verdict is not faked)")
+        check(dem["white_matter_density"].value == base["white_matter_density"].value,
+              "demoted gate still reports its number unchanged")
+        check(dem["white_matter_density"].advisory and not base["white_matter_density"].advisory,
+              "demoted gate is marked advisory")
+        check(dem["nucleus_area_peak_um2"].advisory is False,
+              "non-demoted gate keeps blocking")
+        t_dem = gate_table(proj, demoted)
+        check(t_dem.loc[t_dem["slice"] == "syn_s2", "flagged"].iloc[0] == "nucleus_area_peak_um2",
+              "overall verdict now driven only by the remaining blocking gate")
+
+        print("\n[10] headless command construction")
         cmd = qupath_command(proj, "run_braian_detection.groovy", image="syn_s1")
         check(cmd[1] == "script" and "-i" in cmd and "syn_s1" in cmd, "single-image cmd uses -i")
         check("-s" in cmd, "cmd passes --save (else a 30-min pass is discarded)")
@@ -959,7 +991,7 @@ def _self_test() -> None:
         check("-i" not in qupath_command(proj, "x.groovy"), "project-wide cmd omits -i")
         check(run_qupath(cmd, dry_run=True) == -1, "dry_run prints instead of launching a JVM")
 
-        print("\n[10] lock_detection_params preserves comments and verifies the write")
+        print("\n[11] lock_detection_params preserves comments and verifies the write")
         (proj / "BraiAn.yml").write_text(
             "classForDetections: allen_mouse_10um_java\n"
             "channelDetections:\n"
