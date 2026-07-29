@@ -107,6 +107,8 @@ Usage (from the Analysis root, braian env):
 from __future__ import annotations
 
 import argparse
+import colorsys
+import textwrap
 import glob
 import re
 import sys
@@ -684,7 +686,12 @@ def _footnote(fig: Figure, excluded: list[str], extra: str | None = None) -> Non
            f"{', '.join(excluded)} -- see cockpit_regions.coverage_report()")
     if extra:
         text = extra + "\n" + text
-    fig.text(0.01, 0.01, text, fontsize=7, color=COLOR_INK, ha="left", va="bottom", wrap=True)
+    # Hard-wrap to the figure width. matplotlib's wrap=True measures against the FIGURE
+    # box, not the 0.01 left inset, so a long note reliably ran off the right edge.
+    width_chars = max(60, int(fig.get_size_inches()[0] / 0.062))
+    text = "\n".join(line for para in text.split("\n")
+                     for line in textwrap.wrap(para, width_chars) or [""])
+    fig.text(0.01, 0.01, text, fontsize=7, color=COLOR_INK, ha="left", va="bottom")
 
 
 def _rank_regions(df: pd.DataFrame, top_n: int = DEFAULT_TOP_N) -> list[str]:
@@ -1118,10 +1125,337 @@ def plot_hemisphere_symmetry(df: pd.DataFrame, config: creg.Config, roles: Roles
     return fig
 
 
+# ---------------------------------------------------------------------------
+# Quick visualization (section 6) -- regions on X, scan a chosen set
+# ---------------------------------------------------------------------------
+def _k_ramp(base_hex: str, n: int) -> list[str]:
+    """`n` steps of ONE hue, lightest first. k is an ORDERED quantity (higher k = stricter
+    cut), so its encoding is a single-hue SEQUENTIAL ramp -- light = permissive, dark =
+    strict -- never distinct categorical hues.
+
+    The dataviz categorical validator (chroma floor / CVD pair separation) does NOT apply
+    to a sequential ramp; the rule for a ramp is monotonic lightness, which `_self_test`
+    asserts directly for n=1..5 on both base hues rather than trusting fixed hexes.
+
+    Verified at n=3:
+      COLOR_ABOVE #C0492B -> #eab2a3 (L .778), #dc7a61 (L .622), #c0492b (L .461)
+      COLOR_BELOW #2E5EAA -> #a7c0e7 (L .780), #5f8cd4 (L .602), #2e5eaa (L .424)
+    """
+    if n <= 1:
+        return [base_hex]
+    h, lightness, s = colorsys.rgb_to_hls(*mcolors.to_rgb(base_hex))
+    top = max(0.78, lightness)
+    return [mcolors.to_hex(colorsys.hls_to_rgb(h, top + (lightness - top) * i / (n - 1), s))
+            for i in range(n)]
+
+
+def _marker_colors(marker_names: list[str]) -> list[str]:
+    """Marker identity IS categorical, so it uses the already-validated diverging pair in
+    declaration order. COLOR_NEUTRAL is deliberately NOT a fallback -- it is the diverging
+    midpoint and carries no identity by design."""
+    if len(marker_names) <= 1:
+        return [COLOR_ABOVE]
+    if len(marker_names) == 2:
+        return [COLOR_ABOVE, COLOR_BELOW]
+    raise ValueError(
+        f"_marker_colors: {len(marker_names)} markers ({marker_names}) exhausts the "
+        f"validated categorical pair ({COLOR_ABOVE}, {COLOR_BELOW}). Validate a third hue "
+        f"first and report the output:\n  node <dataviz-skill>/scripts/validate_palette.js "
+        f'"{COLOR_ABOVE},{COLOR_BELOW},<new>" --mode light   (and --mode dark)')
+
+
+def _k_split_counts(project_dir: Path, config: creg.Config, roles: Roles,
+                    k_values: list[float], regions: list[str],
+                    rollup_n: dict[str, float]) -> tuple[pd.DataFrame, list[str]]:
+    """Recomputes per-region counts at each k from `results/*percell_export.tsv`.
+
+    Why not region_table.tsv: its counts are FROZEN at the single k baked in when QuPath
+    classified. Varying k requires going back to the per-cell measures.
+
+    LOCKED CORRECTNESS RULE: the cut applied inside a region is the SECTION-level threshold
+    at that k (`ksr._threshold_at_k` over `ksr.analyze_section`). A threshold is NEVER
+    re-derived from a region's own cells -- a small region would get its own noise-driven
+    cut. Thresholds are per-section; COUNTS are summed across slices; ratios are computed
+    from the sums ONLY at the end (pool then recompute, never a mean of per-slice ratios).
+
+    `ksr.region_stats_for_group` is deliberately bypassed for counting: it returns a
+    per-marker array that is not row-aligned ACROSS markers, so it cannot express joint
+    (Double+) positivity. Instead the counting population is the row-aligned intersection
+    of `ksr.classifiable_mask` over every marker, so the singles and the joint share one
+    denominator exactly. For a 1-marker config that intersection reduces to precisely what
+    `region_stats_for_group` would have returned.
+
+    FRONTIER-BASIS GUARD: `percell.region_label` is a BARE acronym with no hemisphere
+    prefix, so this path is POOLED-HEMISPHERE ONLY, and it matches an acronym LITERALLY --
+    whereas the rollup sums over the ontology-frontier descendant set. Measured on M3:
+    identical to the integer on frontier leaves (CA1 22740, PVH 4495, ...), but DG is
+    rollup 9806 vs percell 0 (cells sit on DG-mo/DG-po) and STRd is rollup 0 vs percell
+    165595. Silently swapping basis would change a denominator ~100x with nothing to say
+    so, so any region whose count at the LOCKED k differs from the rollup's N is DROPPED
+    and returned for footnoting. Consequence: for every surviving region the locked-k point
+    is guaranteed to land exactly on the no-k default value read from the rollup.
+    """
+    locked_k = float(ksr.load_pipeline_config(Path(project_dir) / "pipeline.yml")["k_robust"])
+    compute_ks = sorted({float(k) for k in k_values} | {locked_k})
+    tally: dict[tuple[str, float], dict[str, int]] = {
+        (r, k): {"N": 0} for r in regions for k in compute_ks}
+
+    paths = sorted(Path(project_dir).glob("results/*percell_export.tsv"))
+    if not paths:
+        raise ValueError(f"_k_split_counts: no *percell_export.tsv under {project_dir}/results")
+
+    for path in paths:
+        d = ksr.load_percell(path)
+        present = ksr.markers_in_df(d)
+        ms = [m for m in config.marker_names if m in present]
+        if not ms:
+            continue
+        st = ksr.analyze_section(d, ms)
+        inter = np.ones(len(d), dtype=bool)
+        for m in ms:
+            inter &= ksr.classifiable_mask(d, m).to_numpy(dtype=bool)
+        sub = d.loc[inter]
+        acrs = sub["acronym"].to_numpy()
+        pair = [roles.tagged, roles.activity] if (roles.tagged and roles.activity) else []
+        emit_double = config.emit_double and len([m for m in pair if m in ms]) == 2
+
+        for k in compute_ks:
+            pos = {m: sub[f"{m}_bgsub"].to_numpy(dtype=float) >= ksr._threshold_at_k(st[m], k)
+                   for m in ms}
+            for region in regions:
+                mask = acrs == region
+                cell = tally[(region, k)]
+                cell["N"] += int(mask.sum())
+                for m in ms:
+                    cell[f"{m}+_count"] = cell.get(f"{m}+_count", 0) + int((pos[m] & mask).sum())
+                if emit_double:
+                    joint = pos[pair[0]] & pos[pair[1]] & mask
+                    cell["Double+_count"] = cell.get("Double+_count", 0) + int(joint.sum())
+
+    dropped = sorted(r for r in regions
+                     if float(tally[(r, locked_k)]["N"]) != float(rollup_n.get(r, np.nan)))
+    kept = [r for r in regions if r not in dropped]
+
+    rows = []
+    for region in kept:
+        for k in k_values:
+            c = tally[(region, float(k))]
+            n = float(c["N"])
+            row = {"region_acronym": region, "k": float(k), "N": n}
+            for key, val in c.items():
+                if key.endswith("+_count"):
+                    row[key] = val
+                    row[key.replace("_count", "_pct")] = 100.0 * val / n if n > 0 else np.nan
+            t = float(row.get(f"{roles.tagged}+_count", np.nan)) if roles.tagged else np.nan
+            a = float(row.get(f"{roles.activity}+_count", np.nan)) if roles.activity else np.nan
+            dbl = float(row.get("Double+_count", np.nan))
+            row["overlap_above_chance"] = (
+                dbl * n / (t * a) if np.isfinite(dbl) and t > 0 and a > 0 else np.nan)
+            rows.append(row)
+    return pd.DataFrame(rows), dropped
+
+
+_QV_DODGE = 0.28
+_K_BASIS_NOTE = "k series recomputed from per-cell exports -- POOLED ACROSS HEMISPHERES."
+
+
+def _qv_regions(sub: pd.DataFrame, regions: list[str] | None) -> list[str]:
+    """Caller order preserved by default -- that is the point of this figure (scanning a
+    chosen set, comparably across animals and across k). Figure 1 already does ranking."""
+    if regions is None:
+        return sub["region_acronym"].tolist()
+    return [r for r in regions if r in set(sub["region_acronym"])]
+
+
+def _qv_layout(n_regions: int, n_panels: int = 1) -> tuple[float, float, float, float]:
+    total_h, top, bottom = _reserve_chrome(n_panels, per_row=3.4, header_in=0.75,
+                                           footer_in=1.15, min_content_in=3.0)
+    return max(6.0, 0.42 * n_regions + 1.8), total_h, top, bottom
+
+
+def _qv_finish(ax: plt.Axes, order: list[str]) -> None:
+    """Region acronyms on an X axis collide, so they are always rotated and anchored."""
+    ax.set_xticks(range(len(order)))
+    ax.set_xticklabels(order, rotation=45, ha="right", rotation_mode="anchor")
+    ax.set_xlim(-0.6, len(order) - 0.4)
+    _style_axes(ax, grid_axis="y")
+
+
+def plot_regions_overlap(df: pd.DataFrame, config: creg.Config, roles: Roles,
+                         regions: list[str] | None = None, animal: str | None = None,
+                         k_values: list[float] | None = None,
+                         project_dir: Path | None = None,
+                         sort_by_value: bool = False) -> Figure | None:
+    """Quick-viz A -- above-chance overlap (y) across the chosen regions (x), against a
+    dashed reference line at 1.0 = chance.
+
+    MARK IS DOTS, NOT BARS, deliberately: overlap_above_chance is a ratio whose honest
+    baseline is 1.0, not 0. A bar drawn from 0 up to 4.2x reads as "4.2 units of stuff".
+    Dots make no baseline claim and the dashed chance line supplies the reference. Do not
+    "fix" this into a bar chart.
+
+    Returns None (with a printed reason) on a 1-marker project -- never empty axes.
+    """
+    if "overlap_above_chance" not in df.columns:
+        print("  plot_regions_overlap: no overlap_above_chance column (1-marker project / "
+              "fewer than 2 resolved roles) -- skipping. This is the expected single-marker "
+              "path, not an error.")
+        return None
+
+    sub, animal = _select_animal(df, animal)
+    sub = sub[sub["hemisphere"] == "both"].copy()
+    kept, excluded = _exclude_unusable(sub, ["overlap_above_chance"], config.anchor_name)
+    order = _qv_regions(kept, regions)
+    if sort_by_value:
+        order = (kept[kept["region_acronym"].isin(order)]
+                 .sort_values("overlap_above_chance", ascending=False)["region_acronym"].tolist())
+    base = kept.set_index("region_acronym")
+
+    extra, dropped = None, []
+    kdf = None
+    if k_values:
+        if project_dir is None:
+            raise ValueError("plot_regions_overlap: k_values requires project_dir (the k "
+                             "series is recomputed from that project's per-cell exports).")
+        rollup_n = {r: float(base.loc[r, "N"]) for r in order}
+        kdf, dropped = _k_split_counts(Path(project_dir), config, roles,
+                                       [float(k) for k in k_values], order, rollup_n)
+        order = [r for r in order if r not in dropped]
+        extra = _K_BASIS_NOTE
+        if dropped:
+            extra += (f" Dropped (per-cell labels sit on descendant annotations, so the "
+                      f"bare-acronym basis != the rollup's frontier basis): "
+                      f"{', '.join(dropped)}.")
+
+    width, height, top, bottom = _qv_layout(len(order))
+    fig, ax = plt.subplots(figsize=(width, height))
+    x = np.arange(len(order))
+
+    if kdf is None:
+        vals = base.loc[order, "overlap_above_chance"].to_numpy(dtype=float)
+        with np.errstate(divide="ignore", invalid="ignore"):
+            colors = _enrichment_colors(np.log2(vals))
+        ax.scatter(x, vals, c=colors, s=46, zorder=3)
+    else:
+        ks = sorted({float(k) for k in k_values})
+        ramp = _k_ramp(COLOR_ABOVE, len(ks))
+        offs = np.linspace(-_QV_DODGE, _QV_DODGE, len(ks)) if len(ks) > 1 else [0.0]
+        piv = kdf.pivot(index="region_acronym", columns="k", values="overlap_above_chance")
+        for i, k in enumerate(ks):
+            ax.plot(x + offs[i], piv.loc[order, k].to_numpy(dtype=float), ls="none",
+                    marker="o", ms=6, color=ramp[i], label=f"k={k:g}", zorder=3)
+        ax.legend(loc="lower left", bbox_to_anchor=(0, 1.02), ncol=len(ks),
+                  frameon=False, fontsize=8)
+
+    ax.axhline(1.0, ls="--", lw=1.0, color=COLOR_NEUTRAL, zorder=1)
+    ax.annotate("1.0x = chance", xy=(1.0, 1.0), xycoords=("axes fraction", "data"),
+                xytext=(-4, 4), textcoords="offset points", ha="right", va="bottom",
+                fontsize=7.5, color=COLOR_INK)
+    ax.set_ylabel("overlap above chance (x)")
+    ax.set_title(f"{animal} -- above-chance overlap by region",
+                 pad=24 if kdf is not None else 8)
+    _qv_finish(ax, order)
+    _footnote(fig, excluded, extra=extra)
+    fig.subplots_adjust(top=top, bottom=bottom)
+    return fig
+
+
+def plot_regions_positivity(df: pd.DataFrame, config: creg.Config, roles: Roles,
+                            regions: list[str] | None = None, animal: str | None = None,
+                            k_values: list[float] | None = None,
+                            project_dir: Path | None = None,
+                            sort_by_value: bool = False) -> Figure:
+    """Quick-viz B -- per-marker positivity percent (y) across the chosen regions (x).
+
+    Marker names are CONFIG-DERIVED everywhere, including axis labels, legend and titles.
+    y starts at 0: unlike an above-chance ratio, a percentage has an honest zero.
+
+    With k_values: ONE PANEL PER MARKER. Marker identity is categorical (hue) while k is
+    ordered (lightness); crossing them on one axes would stack n_markers x n_k overlapping
+    dots at every region. A 1-marker project therefore yields exactly one panel.
+    """
+    sub, animal = _select_animal(df, animal)
+    sub = sub[sub["hemisphere"] == "both"].copy()
+    markers = list(config.marker_names)
+    cols = [f"{m}+_count" for m in markers if f"{m}+_count" in sub.columns]
+    kept, excluded = _exclude_unusable(sub, cols + ["N"], config.anchor_name)
+    order = _qv_regions(kept, regions)
+    base = kept.set_index("region_acronym")
+    for m in markers:
+        base[f"{m}+_pct"] = 100.0 * base[f"{m}+_count"].to_numpy(dtype=float) / \
+            base["N"].to_numpy(dtype=float)
+    if sort_by_value and markers:
+        order = (base.loc[order].sort_values(f"{markers[0]}+_pct", ascending=False)
+                 .index.tolist())
+
+    extra, dropped, kdf = None, [], None
+    if k_values:
+        if project_dir is None:
+            raise ValueError("plot_regions_positivity: k_values requires project_dir (the k "
+                             "series is recomputed from that project's per-cell exports).")
+        rollup_n = {r: float(base.loc[r, "N"]) for r in order}
+        kdf, dropped = _k_split_counts(Path(project_dir), config, roles,
+                                       [float(k) for k in k_values], order, rollup_n)
+        order = [r for r in order if r not in dropped]
+        extra = _K_BASIS_NOTE
+        if dropped:
+            extra += (f" Dropped (per-cell labels on descendant annotations): "
+                      f"{', '.join(dropped)}.")
+
+    m_colors = _marker_colors(markers)
+    n_panels = len(markers) if kdf is not None else 1
+    width, height, top, bottom = _qv_layout(len(order), n_panels=n_panels)
+    fig, axes = plt.subplots(n_panels, 1, figsize=(width, height), sharex=True, squeeze=False)
+    axes = axes.ravel()
+    x = np.arange(len(order))
+
+    if kdf is None:
+        ax = axes[0]
+        for m, color in zip(markers, m_colors):
+            ax.plot(x, base.loc[order, f"{m}+_pct"].to_numpy(dtype=float), ls="none",
+                    marker="o", ms=6, color=color, label=f"{m}+", zorder=3)
+        if len(markers) > 1:
+            ax.legend(loc="lower left", bbox_to_anchor=(0, 1.02), ncol=len(markers),
+                      frameon=False, fontsize=8)
+        ax.set_title(f"{animal} -- marker positivity by region",
+                     pad=24 if len(markers) > 1 else 8)
+    else:
+        ks = sorted({float(k) for k in k_values})
+        offs = np.linspace(-_QV_DODGE, _QV_DODGE, len(ks)) if len(ks) > 1 else [0.0]
+        ymax = 0.0
+        for ax, m, color in zip(axes, markers, m_colors):
+            ramp = _k_ramp(color, len(ks))
+            piv = kdf.pivot(index="region_acronym", columns="k", values=f"{m}+_pct")
+            for i, k in enumerate(ks):
+                vals = piv.loc[order, k].to_numpy(dtype=float)
+                ymax = max(ymax, float(np.nanmax(vals)) if vals.size else 0.0)
+                ax.plot(x + offs[i], vals, ls="none", marker="o", ms=6, color=ramp[i],
+                        label=f"k={k:g}", zorder=3)
+            ax.set_title(f"{m}+", fontsize=9.5, color=COLOR_INK)
+        for ax in axes:
+            ax.set_ylim(0, ymax * 1.08 if ymax > 0 else 1.0)
+        axes[0].legend(loc="lower left", bbox_to_anchor=(0, 1.14), ncol=len(ks),
+                       frameon=False, fontsize=8)
+
+    for ax in axes:
+        ax.set_ylabel("% positive")
+        if kdf is None:
+            ax.set_ylim(bottom=0)
+        _style_axes(ax, grid_axis="y")
+    _qv_finish(axes[-1], order)
+    _footnote(fig, excluded, extra=extra)
+    fig.subplots_adjust(top=top, bottom=bottom)
+    return fig
+
+
 def build_figures(df: pd.DataFrame, config: creg.Config, roles: Roles,
                   per_slice: pd.DataFrame | None = None, animal: str | None = None,
                   top_n: int = DEFAULT_TOP_N,
-                  min_cells: int = DEFAULT_MIN_CELLS) -> dict[str, Figure]:
+                  min_cells: int = DEFAULT_MIN_CELLS,
+                  quick_viz: bool = False, regions: list[str] | None = None,
+                  k_values: list[float] | None = None,
+                  project_dir: Path | None = None,
+                  sort_by_value: bool = False) -> dict[str, Figure]:
     """Orchestrates figures 1-5. Applies D-10: a figure whose inputs are structurally
     absent (no overlap_above_chance; no per_slice frame; fewer than 2 finite L/R pairs) is
     OMITTED from the returned dict with one printed explanatory line -- NEVER a Figure with
@@ -1160,6 +1494,22 @@ def build_figures(df: pd.DataFrame, config: creg.Config, roles: Roles,
     fig5 = plot_hemisphere_symmetry(df, config, roles, animal=animal)
     if fig5 is not None:
         figs["hemisphere_symmetry"] = fig5
+
+    # Section 6 quick-viz is opt-in via an EXPLICIT flag rather than inferred from
+    # `regions`, so notebook section 5 provably keeps returning exactly the five figures
+    # above and section 6 cannot double-render them.
+    if quick_viz:
+        if k_values and project_dir is None:
+            raise ValueError("build_figures: k_values requires project_dir (the k series is "
+                             "recomputed from that project's per-cell exports).")
+        fig6 = plot_regions_overlap(df, config, roles, regions=regions, animal=animal,
+                                    k_values=k_values, project_dir=project_dir,
+                                    sort_by_value=sort_by_value)
+        if fig6 is not None:
+            figs["regions_overlap"] = fig6
+        figs["regions_positivity"] = plot_regions_positivity(
+            df, config, roles, regions=regions, animal=animal, k_values=k_values,
+            project_dir=project_dir, sort_by_value=sort_by_value)
 
     return figs
 
@@ -1607,6 +1957,94 @@ def _self_test() -> None:
             check("Animal2M" in str(exc) and "Animal1M" in str(exc),
                   f"multi-animal ValueError names both animals ({exc})")
 
+        print("\n[self-test] QV-1 sequential k ramp (monotonic lightness)")
+        # A ramp's rule is monotonic lightness, NOT the categorical chroma/CVD checks --
+        # assert the invariant directly rather than trusting fixed hexes.
+        for base in (COLOR_ABOVE, COLOR_BELOW):
+            for n in range(1, 6):
+                ramp = _k_ramp(base, n)
+                hls = [colorsys.rgb_to_hls(*mcolors.to_rgb(c)) for c in ramp]
+                ls = [h[1] for h in hls]
+                hues = [h[0] for h in hls]
+                check(len(ramp) == n, f"_k_ramp({base}, {n}) returns {n} steps")
+                check(all(a > b for a, b in zip(ls, ls[1:])),
+                      f"_k_ramp({base}, {n}) lightness strictly decreasing (light->dark)")
+                # to_hex quantizes to 8-bit, so hue round-trips with small error.
+                check(max(hues) - min(hues) < 0.02,
+                      f"_k_ramp({base}, {n}) holds one hue (spread {max(hues)-min(hues):.4f})")
+        check(_k_ramp(COLOR_ABOVE, 1) == [COLOR_ABOVE], "_k_ramp(n=1) returns the base hue")
+
+        print("\n[self-test] QV-2 _marker_colors uses the validated categorical pair")
+        check(_marker_colors(["Fos", "TdT"]) == [COLOR_ABOVE, COLOR_BELOW],
+              "two markers -> validated pair in declaration order")
+        check(_marker_colors(["TdT"]) == [COLOR_ABOVE], "one marker -> COLOR_ABOVE")
+        try:
+            _marker_colors(["a", "b", "c"])
+            check(False, "_marker_colors must raise on 3 markers")
+        except ValueError as exc:
+            check("validate_palette" in str(exc),
+                  "3-marker ValueError names the palette validator")
+        check(COLOR_NEUTRAL not in _marker_colors(["Fos", "TdT"]) + _marker_colors(["TdT"]),
+              "COLOR_NEUTRAL is never a marker identity (it is the diverging midpoint)")
+
+        print("\n[self-test] QV-3 quick-viz plots, order, exclusion, skip paths")
+        qv_regions = ["CA1", "LA", "BLA"]
+        fig_ov = plot_regions_overlap(rolled2, config2, roles2, regions=qv_regions)
+        check(isinstance(fig_ov, Figure), "plot_regions_overlap returns a Figure (2-marker)")
+        ticks = [t.get_text() for t in fig_ov.axes[0].get_xticklabels()]
+        check(ticks == [r for r in qv_regions if r in ticks],
+              f"x tick labels preserve the requested regions order ({ticks})")
+        fig_sorted = plot_regions_overlap(rolled2, config2, roles2, regions=qv_regions,
+                                          sort_by_value=True)
+        sticks = [t.get_text() for t in fig_sorted.axes[0].get_xticklabels()]
+        svals = [float(rolled2[(rolled2.region_acronym == r) &
+                               (rolled2.hemisphere == "both")]["overlap_above_chance"].iloc[0])
+                 for r in sticks]
+        check(svals == sorted(svals, reverse=True),
+              f"sort_by_value=True orders descending by value ({sticks})")
+
+        fig_pos = plot_regions_positivity(rolled2, config2, roles2, regions=qv_regions)
+        check(isinstance(fig_pos, Figure), "plot_regions_positivity returns a Figure")
+        check(len(fig_pos.axes) == 1, "no k_values -> a single positivity axes")
+
+        # zero-cell region excluded from the axis, named in the footnote -- never a zero
+        # dot. Needs the UNFILTERED rollup: rolled2 is scoped to LA/CA1/BLA, so CEA (the
+        # fixture's all-zero region) is not in that frame at all.
+        rolled_all = rollup_animal(proj2, roles=roles2)
+        zero_fig = plot_regions_overlap(rolled_all, config2, roles2)
+        zero_ticks = [t.get_text() for t in zero_fig.axes[0].get_xticklabels()]
+        check("CEA" not in zero_ticks, "zero-cell region absent from x tick labels")
+        zfoot = " ".join(t.get_text() for t in zero_fig.texts)
+        check("CEA" in zfoot,
+              "zero-cell region IS named in the footnote (excluded, not silently dropped)")
+        plt.close(zero_fig)
+
+        # 1-marker: overlap skips (None, not empty axes), positivity still renders
+        check(plot_regions_overlap(rolled1, config1, roles1) is None,
+              "1-marker project -> plot_regions_overlap returns None (skip, not empty axes)")
+        figs_qv1 = build_figures(rolled1, config1, roles1, quick_viz=True)
+        check("regions_overlap" not in figs_qv1,
+              "1-marker build_figures(quick_viz=True) omits regions_overlap")
+        check("regions_positivity" in figs_qv1,
+              "1-marker build_figures(quick_viz=True) still returns regions_positivity")
+        check(len(figs_qv1["regions_positivity"].axes) == 1,
+              "1-marker positivity has exactly one panel")
+
+        # the five section-5 figures must be untouched by the new flag's default
+        keys_default = list(build_figures(rolled2, config2, roles2).keys())
+        check("regions_overlap" not in keys_default and "regions_positivity" not in keys_default,
+              f"quick_viz defaults off -- section 5 keys unchanged ({keys_default})")
+        check(list(build_figures(rolled2, config2, roles2, quick_viz=True).keys())[:len(keys_default)]
+              == keys_default, "quick-viz keys are APPENDED after the existing five")
+
+        try:
+            build_figures(rolled2, config2, roles2, quick_viz=True, k_values=[2.0])
+            check(False, "k_values without project_dir must raise")
+        except ValueError as exc:
+            check("project_dir" in str(exc), "k_values without project_dir raises, naming it")
+        for f in list(figs_qv1.values()) + [fig_ov, fig_pos, fig_sorted]:
+            plt.close(f)
+
     print()
     if failures:
         print(f"SELF-TEST FAILED ({len(failures)} check(s)):")
@@ -1645,6 +2083,17 @@ def main() -> None:
     ap.add_argument("--plots", action="store_true",
                     help="Also build the interpretation-plot figures (see PLOTTING in "
                         "--help) and save them as PNGs under <out-dir>/figures/.")
+    ap.add_argument("--quick-viz", action="store_true",
+                    help="also build the section-6 quick-viz plots (regions on X): "
+                         "above-chance overlap and per-marker positivity")
+    ap.add_argument("--k-values", type=str, default=None,
+                    help="comma-separated k list for the quick-viz per-k series, e.g. "
+                         "'2,2.5,3'. Recomputes from the per-cell exports, so it POOLS "
+                         "HEMISPHERES and needs exactly one --project. Omit to use the k "
+                         "locked in pipeline.yml (read straight from the rollup).")
+    ap.add_argument("--sort-by-value", action="store_true",
+                    help="quick-viz: sort regions descending by value instead of keeping "
+                         "the --regions order")
     ap.add_argument("--top-n", type=int, default=DEFAULT_TOP_N,
                     help=f"Region cap for the ranked figures (default: {DEFAULT_TOP_N}).")
     ap.add_argument("--min-cells", type=int, default=DEFAULT_MIN_CELLS,
@@ -1723,8 +2172,19 @@ def main() -> None:
             print("  --plots: more than one --project given -- skipping figure 4 "
                  "(slice_spread needs a single project's per-slice readout).")
         print("\nBuilding interpretation plots...")
+        k_values = None
+        if args.k_values:
+            k_values = [float(x) for x in args.k_values.split(",") if x.strip()]
+            if len(args.project) != 1:
+                sys.exit("ERROR: --k-values needs exactly one --project (the per-k series "
+                         f"is recomputed from that project's per-cell exports; got "
+                         f"{len(args.project)}).")
         figs = build_figures(combined, config0, roles0, per_slice=per_slice,
-                             top_n=args.top_n, min_cells=args.min_cells)
+                             top_n=args.top_n, min_cells=args.min_cells,
+                             quick_viz=args.quick_viz or bool(k_values),
+                             regions=regions, k_values=k_values,
+                             project_dir=args.project[0] if len(args.project) == 1 else None,
+                             sort_by_value=args.sort_by_value)
         for p in save_figures(figs, args.out_dir):
             print(f"Wrote figure -> {p}")
 
