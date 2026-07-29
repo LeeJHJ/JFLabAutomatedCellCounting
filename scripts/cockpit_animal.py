@@ -70,6 +70,34 @@ never re-runs detection/classification/export, and never writes inside a project
 all generated tables land under an operator-chosen ``--out-dir`` (default ``results/animal``,
 gitignored).
 
+PLOTTING (follow-up increment; a pre-analysis interpretation aid alongside the CSV export --
+NOT publication figures, NOT statistics; see each plot_* docstring for the specific trap it
+defends against):
+  1. plot_region_ranking      -- regions ranked by ``overlap_above_chance``, displayed as
+                                  log2(overlap_above_chance) on a LINEAR axis (a raw ratio on
+                                  a linear axis hides depletion below 1.0x; a log-scaled axis
+                                  has no honest bar baseline). Chance sits at 0, labeled
+                                  "1.0x (chance)".
+  2. plot_raw_vs_corrected    -- two panels, one shared region order, one shared diverging
+                                  color encoding: raw reactivation_rate vs the same log2
+                                  display transform. Guards the PVH trap (69% raw, only 1.4x
+                                  above chance) -- NEVER a dual y-axis.
+  3. plot_evidence_guard      -- Double+_count (or {tagged}+_count, 1-marker) vs N on a log
+                                  x-axis as dots/lollipops, never bars (a log axis has no
+                                  honest bar baseline). Sub-``min_cells`` regions are drawn
+                                  de-emphasised (neutral, low alpha) but stay labeled -- never
+                                  silently dropped.
+  4. plot_slice_spread        -- per-slice reactivation dots vs the POOLED (sum D / sum T,
+                                  reported) value vs the mean-of-slices (NOT reported) -- the
+                                  anti-pseudoreplication rule made visual. No error bars ever.
+  5. plot_hemisphere_symmetry -- L vs R scatter against y=x; a QC check (registration /
+                                  tissue-damage flag), not a biology claim.
+  Zero-cell / all-NaN regions are excluded from every figure with a visible footnote, never
+  drawn as a zero bar. ``build_figures(...)`` orchestrates all five and OMITS a figure whose
+  inputs are structurally absent (e.g. a 1-marker project has no ``overlap_above_chance``)
+  rather than drawing empty axes. ``save_figures(...)`` writes PNGs under
+  ``<out_dir>/figures/``. CLI: ``--plots [--top-n N] [--min-cells N]``.
+
 Usage (from the Analysis root, braian env):
   conda run -n braian python scripts/cockpit_animal.py --self-test
   conda run -n braian python scripts/cockpit_animal.py \\
@@ -88,6 +116,19 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 import yaml
+
+# Claim the headless backend ONLY when run as a CLI (mirrors k_sweep_readout.py lines
+# 52-60). As an imported library this module must NOT touch the backend -- an
+# unconditional matplotlib.use("Agg") at import time is the bd5d11f regression: it
+# silently blanked every notebook plot because the notebook's inline backend got
+# clobbered before a single cell ever ran. Nothing outside this guard may call
+# matplotlib.use(...).
+import matplotlib
+if __name__ == "__main__":
+    matplotlib.use("Agg")
+import matplotlib.pyplot as plt  # noqa: E402  (must follow the matplotlib.use above)
+import matplotlib.colors as mcolors  # noqa: E402  self-test facecolor assertions
+from matplotlib.figure import Figure  # noqa: E402  plot_* return-type annotations
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
@@ -558,6 +599,292 @@ def write_wide_pivots(df: pd.DataFrame, out_dir: Path, hemisphere: str = "both")
         piv.to_csv(p)
         written.append(p)
     return written
+
+
+# ---------------------------------------------------------------------------
+# Interpretation plots (follow-up increment) -- D-1..D-10, see module docstring
+# ---------------------------------------------------------------------------
+# D-1: palette validated with the dataviz skill's validate_palette.js (light mode: ALL
+# CHECKS PASS; dark mode: contrast WARN on COLOR_BELOW, mitigated by direct region labels
+# on every figure that uses it -- never color-only identification). COLOR_NEUTRAL FAILS
+# the validator's categorical chroma-floor check BY DESIGN: that check targets categorical
+# palettes where every slot must carry identity, but COLOR_NEUTRAL is a diverging
+# MIDPOINT, which is supposed to read as "nothing". Do not "fix" this into a hue.
+COLOR_ABOVE = "#C0492B"    # warm pole -- above chance / flagged
+COLOR_BELOW = "#2E5EAA"    # cool pole -- below chance
+COLOR_NEUTRAL = "#8A8F98"  # diverging midpoint + low-evidence de-emphasis
+COLOR_INK = "#333333"      # text / axis ink (neutral, carries no data identity)
+
+DEFAULT_TOP_N = 20
+DEFAULT_MIN_CELLS = 30
+DEFAULT_ASYM_TOL = 0.25
+
+_TIMES = "×"
+_LEFT_ARROW = "←"
+_RIGHT_ARROW = "→"
+_NEAR_CHANCE_LOG2_TOL = 0.05  # +-0.05 log2 (~1.0x) reads as "at chance", not enriched/depleted
+_N_IMMUNE_METRIC_PRIORITY = ("reactivation_rate", "tagging_rate")  # D-9, in priority order
+
+
+def _select_animal(df: pd.DataFrame, animal: str | None) -> tuple[pd.DataFrame, str]:
+    """D-7 fail-loud animal selection. ``animal=None`` + exactly one animal in the frame
+    selects it; ``animal=None`` + multiple animals RAISES, naming them -- group-level
+    faceting of these figures is deliberately out of scope (it edges into a statistical
+    comparison)."""
+    animals = sorted(df["animal"].unique())
+    if animal is None:
+        if len(animals) != 1:
+            raise ValueError(
+                f"animal=None requires exactly one animal in the frame; found {animals}. "
+                f"Pass animal=<name> to select one (group-level faceting is out of scope).")
+        animal = animals[0]
+    elif animal not in animals:
+        raise ValueError(f"animal '{animal}' not found in frame; available: {animals}")
+    return df[df["animal"] == animal].copy(), animal
+
+
+def _style_axes(ax: plt.Axes, grid_axis: str = "x") -> None:
+    """Recessive chrome shared by every figure: hide top/right spines, tick labels and
+    remaining spines in COLOR_INK, grid on the value axis only and behind the marks, no
+    bounding box, no chartjunk. Applied by every plot_* function so the whole set of five
+    figures reads as one system."""
+    ax.spines["top"].set_visible(False)
+    ax.spines["right"].set_visible(False)
+    for spine in ("left", "bottom"):
+        ax.spines[spine].set_color(COLOR_INK)
+        ax.spines[spine].set_linewidth(0.8)
+    ax.tick_params(colors=COLOR_INK, labelsize=8.5)
+    ax.set_axisbelow(True)
+    ax.grid(axis=grid_axis, color=COLOR_NEUTRAL, alpha=0.25, lw=0.6)
+
+
+def _exclude_unusable(df: pd.DataFrame, cols: list[str],
+                      anchor: str) -> tuple[pd.DataFrame, list[str]]:
+    """D-5: drop rows where any of `cols` is non-finite, OR the anchor count is 0. Returns
+    (kept, sorted excluded acronyms) -- callers footnote the excluded list and never render
+    a zero bar for a structurally-unusable region (increment 2's frontier-coverage caveat
+    surfacing at figure level)."""
+    finite_mask = np.ones(len(df), dtype=bool)
+    for c in cols:
+        finite_mask &= np.isfinite(df[c].to_numpy(dtype=float))
+    anchor_col = f"{anchor}_count"
+    if anchor_col in df.columns:
+        finite_mask &= (df[anchor_col].to_numpy(dtype=float) > 0)
+    kept = df.loc[finite_mask].copy()
+    excluded = sorted(df.loc[~finite_mask, "region_acronym"].unique())
+    return kept, excluded
+
+
+def _footnote(fig: Figure, excluded: list[str], extra: str | None = None) -> None:
+    """D-5 exclusion note, drawn on the figure (not just printed) -- a figure with
+    exclusions must never render as if every requested region were usable."""
+    if not excluded:
+        return
+    text = (f"{len(excluded)} region(s) excluded (all-NaN / zero-count): "
+           f"{', '.join(excluded)} -- see cockpit_regions.coverage_report()")
+    if extra:
+        text = extra + "\n" + text
+    fig.text(0.01, 0.01, text, fontsize=7, color=COLOR_INK, ha="left", va="bottom", wrap=True)
+
+
+def _rank_regions(df: pd.DataFrame, top_n: int = DEFAULT_TOP_N) -> list[str]:
+    """D-6: the ONE ranking helper consumed by figures 1-3 (and 4), guaranteeing a shared
+    region order by construction rather than by three call sites agreeing. Sorts by
+    overlap_above_chance desc when present, else the first available of reactivation_rate /
+    tagging_rate; caps at top_n. NaN sort keys sort last (never dropped here -- a caller
+    that needs a region excluded runs it through `_exclude_unusable` first, which produces
+    a footnote; silently vanishing from the ranking would not)."""
+    if "overlap_above_chance" in df.columns:
+        sort_col = "overlap_above_chance"
+    elif "reactivation_rate" in df.columns:
+        sort_col = "reactivation_rate"
+    elif "tagging_rate" in df.columns:
+        sort_col = "tagging_rate"
+    else:
+        raise ValueError(
+            "_rank_regions: no rankable metric column present (overlap_above_chance / "
+            "reactivation_rate / tagging_rate)")
+    ranked = df.sort_values(sort_col, ascending=False, na_position="last")
+    return ranked["region_acronym"].tolist()[:top_n]
+
+
+def _enrichment_colors(values: np.ndarray) -> list[str]:
+    """Maps log2(overlap_above_chance) sign to the diverging palette: warm = enriched,
+    cool = depleted, neutral within +-0.05 log2 (~1.0x, at chance) or non-finite. Shared by
+    figures 1-3 so the enrichment encoding is IDENTICAL across the whole set (D-3)."""
+    colors = []
+    for v in values:
+        if not np.isfinite(v) or abs(v) <= _NEAR_CHANCE_LOG2_TOL:
+            colors.append(COLOR_NEUTRAL)
+        elif v > 0:
+            colors.append(COLOR_ABOVE)
+        else:
+            colors.append(COLOR_BELOW)
+    return colors
+
+
+def _log2_ratio_axis(ax: plt.Axes, values: np.ndarray) -> None:
+    """D-2 display transform: the value axis is log2(overlap_above_chance) on a LINEAR
+    scale (never a log-scaled axis -- that has no honest zero, so a bar's origin becomes
+    arbitrary). Ticks are relabeled as multiples (0.25x, 0.5x, 1x, 2x, 4x, 8x, ...) and the
+    chance reference is drawn at 0 and labeled -- bars emanate from 0 (= 1.0x, chance)."""
+    finite = values[np.isfinite(values)]
+    lo = int(np.floor(finite.min())) if finite.size else -1
+    hi = int(np.ceil(finite.max())) if finite.size else 1
+    lo = min(lo, -1)
+    hi = max(hi, 1)
+    ticks = list(range(lo, hi + 1))
+    ax.set_xticks(ticks)
+    ax.set_xticklabels([f"{2.0 ** t:g}{_TIMES}" for t in ticks])
+    ax.axvline(0, color=COLOR_NEUTRAL, ls="--", lw=1.0, zorder=1)
+    ax.text(0, 1.02, f"1.0{_TIMES} (chance)", transform=ax.get_xaxis_transform(),
+           ha="center", va="bottom", fontsize=7.5, color=COLOR_INK)
+    ax.set_xlabel("log2(overlap_above_chance)  [display transform of overlap_above_chance]")
+
+
+def plot_region_ranking(df: pd.DataFrame, config: creg.Config, roles: Roles,
+                        animal: str | None = None, top_n: int = DEFAULT_TOP_N) -> Figure:
+    """Figure 1 -- regions ranked by chance-corrected enrichment (D-2), NOT raw rate. A
+    single diverging series -> no legend; the title names the metric and the axis ends are
+    annotated 'depleted <-' / '-> enriched'. Defends against the PVH trap: a region with a
+    huge raw rate but only ~1x enrichment must NOT look important here."""
+    sub, animal = _select_animal(df, animal)
+    sub = sub[sub["hemisphere"] == "both"].copy()
+    anchor = config.anchor_name
+
+    with np.errstate(divide="ignore", invalid="ignore"):
+        sub["_log2_oac"] = np.log2(sub["overlap_above_chance"].to_numpy(dtype=float))
+    kept, excluded = _exclude_unusable(sub, ["_log2_oac"], anchor)
+    order = _rank_regions(kept, top_n=top_n)
+    plot_df = kept.set_index("region_acronym").loc[order].reset_index()
+
+    fig, ax = plt.subplots(figsize=(7.5, max(2.6, 0.34 * len(plot_df) + 1.3)))
+    colors = _enrichment_colors(plot_df["_log2_oac"].to_numpy())
+    ax.barh(plot_df["region_acronym"], plot_df["_log2_oac"], color=colors, height=0.6, zorder=2)
+    ax.invert_yaxis()
+    _log2_ratio_axis(ax, plot_df["_log2_oac"].to_numpy())
+    _style_axes(ax, grid_axis="x")
+    ax.text(0.0, -0.14, f"depleted {_LEFT_ARROW}", ha="left", va="top", fontsize=7.5,
+           color=COLOR_INK, transform=ax.transAxes)
+    ax.text(1.0, -0.14, f"{_RIGHT_ARROW} enriched", ha="right", va="top", fontsize=7.5,
+           color=COLOR_INK, transform=ax.transAxes)
+    ax.set_title(f"{animal} -- region ranking by overlap_above_chance (top {len(plot_df)})")
+    _footnote(fig, excluded)
+    fig.subplots_adjust(top=0.90, bottom=0.22)
+    return fig
+
+
+def plot_raw_vs_corrected(df: pd.DataFrame, config: creg.Config, roles: Roles,
+                          animal: str | None = None, top_n: int = DEFAULT_TOP_N) -> Figure:
+    """Figure 2 -- raw reactivation_rate vs chance-corrected overlap_above_chance, two
+    panels sharing ONE region order and ONE diverging color encoding (D-3). This is the PVH
+    trap made visual: a region with a huge raw bar rendered in neutral/cool immediately
+    reads as 'high raw rate, not actually enriched'. Each left-panel row also carries a
+    small #k raw-rank annotation, so a rank inversion between raw and corrected is legible
+    without a spaghetti slope chart. UNDER NO CIRCUMSTANCE does either panel get a second
+    (twin) y-axis -- a dual-axis chart is the single worst chart mistake."""
+    sub, animal = _select_animal(df, animal)
+    sub = sub[sub["hemisphere"] == "both"].copy()
+    anchor = config.anchor_name
+
+    with np.errstate(divide="ignore", invalid="ignore"):
+        sub["_log2_oac"] = np.log2(sub["overlap_above_chance"].to_numpy(dtype=float))
+    kept, excluded = _exclude_unusable(sub, ["reactivation_rate", "_log2_oac"], anchor)
+    order = _rank_regions(kept, top_n=top_n)
+    plot_df = kept.set_index("region_acronym").loc[order].reset_index()
+    plot_df["_raw_rank"] = (plot_df["reactivation_rate"]
+                           .rank(ascending=False, method="min").astype(int))
+
+    n = len(plot_df)
+    fig, (axL, axR) = plt.subplots(1, 2, sharey=True, figsize=(11.0, max(2.6, 0.34 * n + 1.3)))
+    colors = _enrichment_colors(plot_df["_log2_oac"].to_numpy())
+
+    rate_pct = plot_df["reactivation_rate"].to_numpy(dtype=float) * 100.0
+    axL.barh(plot_df["region_acronym"], rate_pct, color=colors, height=0.6, zorder=2)
+    axL.set_xlim(0, max(float(rate_pct.max()) * 1.24, 1.0))
+    for yi, (rate, k) in enumerate(zip(rate_pct, plot_df["_raw_rank"])):
+        axL.text(rate, yi, f"  #{k}", va="center", ha="left", fontsize=7, color=COLOR_INK)
+    axL.invert_yaxis()
+    axL.set_xlabel("reactivation_rate (%) -- raw, D/T")
+    _style_axes(axL, grid_axis="x")
+
+    axR.barh(plot_df["region_acronym"], plot_df["_log2_oac"], color=colors, height=0.6, zorder=2)
+    _log2_ratio_axis(axR, plot_df["_log2_oac"].to_numpy())
+    axR.tick_params(labelleft=False)
+    _style_axes(axR, grid_axis="x")
+
+    handles = [plt.Rectangle((0, 0), 1, 1, color=COLOR_ABOVE),
+              plt.Rectangle((0, 0), 1, 1, color=COLOR_BELOW)]
+    fig.legend(handles, ["above chance", "below chance"], loc="upper center", ncol=2,
+              frameon=False, fontsize=8.5, bbox_to_anchor=(0.5, 0.985))
+    fig.suptitle(f"{animal} -- raw rate vs chance-corrected enrichment  (#k = raw-rate rank)",
+                y=0.90, fontsize=10.5)
+    _footnote(fig, excluded)
+    fig.subplots_adjust(top=0.78, bottom=0.22, wspace=0.06)
+    return fig
+
+
+def plot_evidence_guard(df: pd.DataFrame, config: creg.Config, roles: Roles,
+                        animal: str | None = None, top_n: int = DEFAULT_TOP_N,
+                        min_cells: int = DEFAULT_MIN_CELLS) -> Figure:
+    """Figure 3 -- evidence guard: Double+_count (2-marker) or {tagged}+_count (1-marker)
+    vs N, on a log x-axis as dots/lollipops -- NEVER bars (a log axis has no honest bar
+    baseline; dots from a common left edge are). Sub-min_cells regions are DE-EMPHASISED in
+    neutral grey at reduced alpha and KEPT LABELED (D-4) -- never silently dropped, so
+    '4x on 12 cells' is unmistakable rather than invisible."""
+    sub, animal = _select_animal(df, animal)
+    sub = sub[sub["hemisphere"] == "both"].copy()
+    anchor = config.anchor_name
+    count_col = "Double+_count" if config.emit_double else f"{roles.tagged}+_count"
+    kept, excluded = _exclude_unusable(sub, [count_col, "N"], anchor)
+
+    if "overlap_above_chance" in kept.columns:
+        with np.errstate(divide="ignore", invalid="ignore"):
+            kept = kept.copy()
+            kept["_log2_oac"] = np.log2(kept["overlap_above_chance"].to_numpy(dtype=float))
+        order = _rank_regions(kept, top_n=top_n)
+        colors_by_region = dict(zip(kept["region_acronym"],
+                                    _enrichment_colors(kept["_log2_oac"].to_numpy())))
+    else:
+        order = _rank_regions(kept, top_n=top_n)
+        colors_by_region = {r: COLOR_NEUTRAL for r in kept["region_acronym"]}
+
+    plot_df = kept.set_index("region_acronym").loc[order].reset_index()
+    below = plot_df[count_col].to_numpy(dtype=float) < min_cells
+    base_colors = [colors_by_region[r] for r in plot_df["region_acronym"]]
+    facecolors = [COLOR_NEUTRAL if b else c for b, c in zip(below, base_colors)]
+    alphas = [0.55 if b else 0.9 for b in below]
+
+    n = len(plot_df)
+    y = np.arange(n)
+    fig, (axL, axR) = plt.subplots(1, 2, sharey=True, figsize=(11.0, max(2.6, 0.34 * n + 1.3)))
+    for ax_, col, xlabel in ((axL, count_col, f"{count_col}  (log scale)"),
+                            (axR, "N", "N  (log scale)")):
+        vals = plot_df[col].to_numpy(dtype=float)
+        vals_plot = np.clip(vals, a_min=0.5, a_max=None)  # log axis has no honest zero
+        ax_.hlines(y, 0.5, vals_plot, color=COLOR_NEUTRAL, lw=1.0, alpha=0.4, zorder=1)
+        rgba = [mcolors.to_rgba(fc, alpha=a) for fc, a in zip(facecolors, alphas)]
+        ax_.scatter(vals_plot, y, c=rgba, s=42, zorder=2, edgecolors="white", linewidths=0.6)
+        ax_.set_xscale("log")
+        ax_.set_xlabel(xlabel)
+        _style_axes(ax_, grid_axis="x")
+    axL.set_yticks(y)
+    axL.set_yticklabels(plot_df["region_acronym"])
+    axL.invert_yaxis()
+    axR.invert_yaxis()
+    axR.tick_params(labelleft=False)
+
+    n_below = int(below.sum())
+    extra = None
+    if n_below:
+        extra = (f"{n_below} region(s) below min_cells={min_cells} shown de-emphasised "
+               f"(grey, kept labeled): "
+               f"{', '.join(plot_df.loc[below, 'region_acronym'])}")
+    fig.suptitle(f"{animal} -- evidence guard: {count_col} vs N  (top {n})",
+                y=0.96, fontsize=10.5)
+    _footnote(fig, excluded, extra=extra)
+    fig.subplots_adjust(top=0.84, bottom=0.22, wspace=0.08)
+    return fig
 
 
 # ---------------------------------------------------------------------------
