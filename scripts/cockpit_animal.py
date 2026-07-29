@@ -345,6 +345,194 @@ def add_metrics(df: pd.DataFrame, config: creg.Config, roles: Roles) -> pd.DataF
 
 
 # ---------------------------------------------------------------------------
+# D-2: stacking animals with different marker sets -- fail loud by default
+# ---------------------------------------------------------------------------
+_PAIR_METRIC_COLS = ("reactivation_rate", "reverse_rate", "overlap_above_chance",
+                    "log2_odds_ratio", "log2_odds_ratio_hc", "jaccard")
+
+
+def _restrict_to_intersection(df: pd.DataFrame, config: creg.Config, roles: Roles,
+                              intersection: set[str]) -> pd.DataFrame:
+    """Drop count/density/rate columns for markers (and pair-metrics) not in the shared
+    intersection marker set, so a concat never produces a NaN wall for the non-shared marker."""
+    drop_cols = []
+    for m in config.marker_names:
+        if m not in intersection:
+            drop_cols += [c for c in (f"{m}+_count", f"{m}+_density") if c in df.columns]
+    if roles.tagged is not None and roles.tagged not in intersection:
+        drop_cols += [c for c in ("tagging_rate",) if c in df.columns]
+    if roles.activity is not None and roles.activity not in intersection:
+        drop_cols += [c for c in ("activity_rate",) if c in df.columns]
+    if len(intersection) < 2:
+        drop_cols += [c for c in ("Double+_count", "Double+_density") + _PAIR_METRIC_COLS
+                     if c in df.columns]
+    return df.drop(columns=[c for c in drop_cols if c in df.columns])
+
+
+def stack_animals(project_dirs: list[Path], regions: list[str] | None = None,
+                  tagged: str | None = None, activity: str | None = None,
+                  n_source: str = "auto", stack_on_intersection: bool = False) -> pd.DataFrame:
+    """Roll up and concatenate multiple projects/animals into one group-ready table.
+
+    D-2: a marker-set mismatch across projects RAISES by default (silently dropping a marker
+    would corrupt a group comparison). ``stack_on_intersection`` opts in to stacking on the
+    shared marker set, printing exactly which columns were dropped and why. If the intersection
+    has fewer than 2 markers, the pair (overlap) metrics are dropped entirely -- absent columns,
+    never a NaN wall.
+    """
+    project_dirs = [Path(p) for p in project_dirs]
+    configs = {p: creg.load_pipeline_config(p) for p in project_dirs}
+    marker_sets = {p: tuple(configs[p].marker_names) for p in project_dirs}
+    unique_sets = sorted(set(marker_sets.values()))
+
+    if len(unique_sets) > 1:
+        if not stack_on_intersection:
+            lines = "\n".join(f"  {p}: {marker_sets[p]}" for p in project_dirs)
+            raise ValueError(
+                "Marker sets differ across stacked projects (D-2) -- stacking would silently "
+                "corrupt a group comparison. Declared marker sets:\n" + lines +
+                "\nPass --stack-on-intersection to stack on the shared marker set instead.")
+        intersection: set[str] = set(unique_sets[0])
+        for s in unique_sets[1:]:
+            intersection &= set(s)
+        for p in project_dirs:
+            dropped = [m for m in marker_sets[p] if m not in intersection]
+            if dropped:
+                print(f"  --stack-on-intersection: dropping {dropped} from {p.name} "
+                      f"(declared {marker_sets[p]}, shared {sorted(intersection)})")
+        if len(intersection) < 2:
+            print(f"  Intersection marker set {sorted(intersection)} has < 2 markers -- "
+                  f"overlap/pair metrics skip entirely (columns absent) for every project.")
+    else:
+        intersection = set(unique_sets[0]) if unique_sets else set()
+
+    frames = []
+    for p in project_dirs:
+        config = configs[p]
+        roles = resolve_roles(config, tagged=tagged, activity=activity)
+        df = rollup_animal(p, regions=regions, roles=roles, n_source=n_source)
+        if stack_on_intersection and set(marker_sets[p]) != intersection:
+            df = _restrict_to_intersection(df, config, roles, intersection)
+        frames.append(df)
+
+    return pd.concat(frames, ignore_index=True, sort=False)
+
+
+# ---------------------------------------------------------------------------
+# D-3: explicit operator group/condition assignment -- never inferred
+# ---------------------------------------------------------------------------
+def load_group_map(path: Path | None, pairs: list[str] | None = None) -> dict[str, str]:
+    """YAML `{groups: {animal: group}}` or a two-column CSV `animal,group`; repeatable
+    `animal=group` one-offs layer on top (and win on conflict)."""
+    mapping: dict[str, str] = {}
+    if path is not None:
+        path = Path(path)
+        suffix = path.suffix.lower()
+        if suffix in (".yml", ".yaml"):
+            doc = yaml.safe_load(path.read_text()) or {}
+            mapping.update({str(k): str(v) for k, v in (doc.get("groups") or {}).items()})
+        elif suffix == ".csv":
+            gdf = pd.read_csv(path)
+            if not {"animal", "group"} <= set(gdf.columns):
+                raise ValueError(f"{path}: group CSV must have columns 'animal','group'")
+            mapping.update({str(a): str(g) for a, g in zip(gdf["animal"], gdf["group"])})
+        else:
+            raise ValueError(f"{path}: unrecognized group-map suffix (expected .yml/.yaml/.csv)")
+    for pair in (pairs or []):
+        if "=" not in pair:
+            raise ValueError(f"--group '{pair}' must be of the form animal=group")
+        a, g = pair.split("=", 1)
+        mapping[a.strip()] = g.strip()
+    return mapping
+
+
+def apply_group_map(df: pd.DataFrame, mapping: dict[str, str]) -> pd.DataFrame:
+    """D-3: a supplied mapping that omits an animal is a hard error (silent blank group would
+    corrupt an ANOVA). No mapping at all -> group='unassigned' + a loud warning."""
+    animals = sorted(df["animal"].unique())
+    df = df.copy()
+    if not mapping:
+        print("  WARNING: no group mapping supplied -- group='unassigned' for every animal; "
+              "group comparisons are not possible until --groups/--group is provided.")
+        df["group"] = "unassigned"
+        return df
+    missing = [a for a in animals if a not in mapping]
+    if missing:
+        raise ValueError(f"Group mapping omits animal(s) {missing} -- a supplied mapping must "
+                         f"cover every stacked animal (D-3); a silent blank group would corrupt "
+                         f"a group comparison.")
+    df["group"] = df["animal"].map(mapping)
+    return df
+
+
+# ---------------------------------------------------------------------------
+# Export shapes: tidy LONG table + Prism-friendly WIDE pivots
+# ---------------------------------------------------------------------------
+_IDENTITY_COLS = ["group", "animal", "region_acronym", "region_name", "level", "hemisphere",
+                  "n_slices", "projects", "N_source"]
+
+
+def write_long_csv(df: pd.DataFrame, out_path: Path) -> Path:
+    """Canonical tidy LONG table: identity -> counts (area_mm2, N, per-category counts) ->
+    densities -> metrics. One row per animal x region x hemisphere."""
+    identity = [c for c in _IDENTITY_COLS if c in df.columns]
+    counts = [c for c in df.columns if c in ("area_mm2", "N") or c.endswith("_count")]
+    densities = [c for c in df.columns if c.endswith("_density")]
+    metrics = [c for c in df.columns if c not in identity and c not in counts
+              and c not in densities]
+    ordered = identity + counts + densities + metrics
+    out_path = Path(out_path)
+    out_path.parent.mkdir(parents=True, exist_ok=True)
+    df[ordered].to_csv(out_path, index=False)
+    return out_path
+
+
+def _sanitize_colname(s: str) -> str:
+    return re.sub(r"[^A-Za-z0-9]+", "_", s).strip("_")
+
+
+def write_wide_pivots(df: pd.DataFrame, out_dir: Path, hemisphere: str = "both") -> list[Path]:
+    """Prism pivots: rows = region, columns = animal (or `{group}:{animal}` when a group
+    mapping exists, ordered so Prism gets contiguous group blocks). One file per metric plus
+    every `*_density` column. `--hemisphere` selects which slice of the long table is pivoted;
+    the long table itself always keeps all three hemisphere values."""
+    out_dir = Path(out_dir) / "wide"
+    out_dir.mkdir(parents=True, exist_ok=True)
+
+    sub = df[df["hemisphere"] == hemisphere].copy()
+    if sub.empty:
+        print(f"  WARNING: no rows at hemisphere == '{hemisphere}' -- no wide pivots written.")
+        return []
+
+    if "group" in sub.columns:
+        order = (sub[["animal", "group"]].drop_duplicates()
+                .sort_values(["group", "animal"]))
+        col_label = {row.animal: f"{row.group}:{row.animal}" for row in order.itertuples()}
+    else:
+        order = sub[["animal"]].drop_duplicates().sort_values("animal")
+        col_label = {a: a for a in order["animal"]}
+    sub["_col"] = sub["animal"].map(col_label)
+
+    density_cols = [c for c in sub.columns if c.endswith("_density")]
+    metric_cols = [c for c in ("tagging_rate", "activity_rate") + _PAIR_METRIC_COLS
+                  if c in sub.columns]
+    pivot_cols = density_cols + metric_cols
+
+    written: list[Path] = []
+    seen_names: set[str] = set()
+    for col in pivot_cols:
+        piv = sub.pivot_table(index="region_acronym", columns="_col", values=col, aggfunc="first")
+        fname = "wide__" + _sanitize_colname(col) + ".csv"
+        if fname in seen_names:
+            raise ValueError(f"filename collision writing wide pivot for column '{col}' -> {fname}")
+        seen_names.add(fname)
+        p = out_dir / fname
+        piv.to_csv(p)
+        written.append(p)
+    return written
+
+
+# ---------------------------------------------------------------------------
 # Self-test (synthetic fixture -- no real data needed)
 # ---------------------------------------------------------------------------
 def _percell_rows(acronym_counts: dict[str, int], marker_names: list[str]) -> list[dict]:
@@ -560,6 +748,64 @@ def _self_test() -> None:
         check(lr_rows["N"].isna().all(),
               "n_source='classifiable' leaves L/R N as NaN (per-cell N is pooled-only)")
 
+        # --- D-2: stacking (mismatch raises; --stack-on-intersection drops cleanly) ----------
+        print("\n[self-test] D-2 stacking")
+        try:
+            stack_animals([proj2, proj1], regions=["LA"])
+            check(False, "mismatched marker sets must raise without --stack-on-intersection")
+        except ValueError as exc:
+            check("Animal2M" in str(exc) or "synthetic_Animal2M" in str(exc),
+                  "marker-set mismatch error names both projects' declared sets")
+
+        stacked = stack_animals([proj2, proj1], regions=["LA"], stack_on_intersection=True)
+        check(set(stacked["animal"]) == {"Animal2M", "Animal1M"},
+              "--stack-on-intersection stacks both animals into one table")
+        check(not (set(_PAIR_METRIC_COLS) & set(stacked.columns)),
+              "intersection {TdT} has < 2 markers -- pair metrics absent, not a NaN wall")
+        check("Fos+_count" not in stacked.columns,
+              "non-shared marker (Fos) column dropped entirely by --stack-on-intersection")
+        check("TdT+_count" in stacked.columns and "tagging_rate" in stacked.columns,
+              "shared marker (TdT) columns survive --stack-on-intersection")
+
+        # --- D-3: group mapping ---------------------------------------------------------------
+        print("\n[self-test] D-3 group mapping")
+        no_map = apply_group_map(stacked, {})
+        check((no_map["group"] == "unassigned").all(), "no mapping -> group='unassigned' + warning")
+
+        try:
+            apply_group_map(stacked, {"Animal2M": "recall"})
+            check(False, "a mapping omitting an animal must raise")
+        except ValueError:
+            check(True, "group mapping omitting an animal raises (D-3 hard error)")
+
+        mapped = apply_group_map(stacked, {"Animal2M": "recall", "Animal1M": "control"})
+        check(set(mapped["group"]) == {"recall", "control"}, "explicit mapping assigns both groups")
+
+        gmap_csv = base / "groups.csv"
+        pd.DataFrame({"animal": ["Animal2M", "Animal1M"], "group": ["recall", "control"]}).to_csv(
+            gmap_csv, index=False)
+        loaded = load_group_map(gmap_csv, ["Animal1M=control2"])
+        check(loaded == {"Animal2M": "recall", "Animal1M": "control2"},
+              "CSV group map loads and a --group pair overrides it")
+
+        # --- export shapes ----------------------------------------------------------------------
+        print("\n[self-test] export shapes")
+        long_path = write_long_csv(mapped, base / "out" / "animal_region_long.csv")
+        check(long_path.exists(), "write_long_csv writes a file")
+        reread = pd.read_csv(long_path)
+        check(list(reread.columns[:2]) == ["group", "animal"],
+              "long table leads with identity columns (group, animal, ...)")
+
+        wide_paths = write_wide_pivots(mapped, base / "out", hemisphere="both")
+        check(len(wide_paths) > 0, "write_wide_pivots writes at least one file")
+        check(all(p.exists() for p in wide_paths), "every wide pivot path exists on disk")
+        matches = [p for p in wide_paths if "TdT" in p.name and "density" in p.name]
+        check(bool(matches), f"a TdT+_density wide pivot was written ({[p.name for p in wide_paths]})")
+        if matches:
+            piv = pd.read_csv(matches[0], index_col=0)
+            check(set(piv.columns) == {"recall:Animal2M", "control:Animal1M"},
+                  f"wide pivot columns are '{{group}}:{{animal}}' ({list(piv.columns)})")
+
     print()
     if failures:
         print(f"SELF-TEST FAILED ({len(failures)} check(s)):")
@@ -570,7 +816,7 @@ def _self_test() -> None:
 
 
 # ---------------------------------------------------------------------------
-# CLI (Task 2 extends this with stacking / export flags)
+# CLI
 # ---------------------------------------------------------------------------
 def main() -> None:
     ap = argparse.ArgumentParser(
@@ -579,6 +825,22 @@ def main() -> None:
                     help="QuPath project dir (repeatable; holds pipeline.yml, results/).")
     ap.add_argument("--regions", type=str, default=None,
                     help="Comma-separated acronyms (default: all included leaves per project).")
+    ap.add_argument("--groups", type=Path, default=None,
+                    help="D-3: YAML ({groups: {animal: group}}) or two-column CSV (animal,group).")
+    ap.add_argument("--group", action="append", default=[], metavar="animal=group",
+                    help="D-3: one-off animal=group mapping (repeatable; wins over --groups).")
+    ap.add_argument("--tagged-marker", default=None,
+                    help="D-1: override the tagged-marker role resolution.")
+    ap.add_argument("--activity-marker", default=None,
+                    help="D-1: override the activity-marker role resolution.")
+    ap.add_argument("--n-source", choices=["auto", "anchor", "classifiable"], default="auto",
+                    help="D-4: denominator source (default: auto).")
+    ap.add_argument("--hemisphere", choices=["both", "L", "R"], default="both",
+                    help="Wide-pivot hemisphere slice (the long table always keeps all three).")
+    ap.add_argument("--stack-on-intersection", action="store_true",
+                    help="D-2: stack on the shared marker set instead of failing on a mismatch.")
+    ap.add_argument("--out-dir", type=Path, default=Path("results/animal"),
+                    help="Output directory for the long CSV + wide/ pivots (gitignored).")
     ap.add_argument("--self-test", action="store_true", help="Run the built-in self-test and exit.")
     args = ap.parse_args()
 
@@ -586,7 +848,61 @@ def main() -> None:
         _self_test()
         return
 
-    ap.error("Task 2 adds the full CLI (stacking, groups, export). Use --self-test for now.")
+    if not args.project:
+        ap.error("--project is required at least once (or use --self-test)")
+
+    regions = ([r.strip() for r in args.regions.split(",") if r.strip()]
+              if args.regions else None)
+
+    print("Resolved roles per animal:")
+    for p in args.project:
+        config = creg.load_pipeline_config(p)
+        roles = resolve_roles(config, tagged=args.tagged_marker, activity=args.activity_marker)
+        print(f"  {p.name}: markers={config.marker_names}  "
+              f"tagged={roles.tagged}  activity={roles.activity}")
+
+    try:
+        combined = stack_animals(args.project, regions=regions, tagged=args.tagged_marker,
+                                 activity=args.activity_marker, n_source=args.n_source,
+                                 stack_on_intersection=args.stack_on_intersection)
+    except ValueError as exc:
+        print(f"\nERROR: {exc}", file=sys.stderr)
+        sys.exit(1)
+
+    group_map = load_group_map(args.groups, args.group)
+    combined = apply_group_map(combined, group_map)
+
+    print("\nN_source split (both-hemisphere rows) + classifiable/anchor ratio:")
+    both_rows = combined[combined["hemisphere"] == "both"]
+    for animal, g in both_rows.groupby("animal"):
+        n_classifiable = int((g["N_source"] == "classifiable").sum())
+        n_anchor = int((g["N_source"] == "anchor_count").sum())
+        anchor_cols = [c for c in g.columns if c.endswith("_count")
+                      and "+" not in c and c != "N"]
+        ratio_note = ""
+        if anchor_cols and n_classifiable:
+            classif = g[g["N_source"] == "classifiable"]
+            ratio = (classif["N"] / classif[anchor_cols[0]].replace(0, np.nan)).mean()
+            if np.isfinite(ratio):
+                ratio_note = f"  classifiable/anchor ratio (mean) = {ratio:.4f}"
+        print(f"  {animal}: {n_classifiable} region row(s) classifiable-N, "
+              f"{n_anchor} anchor-N{ratio_note}")
+
+    print("\nDAPI-dependence caveat: tagging_rate, activity_rate, overlap_above_chance and both "
+          "log2_odds_ratio columns carry N (DAPI-derived) in their denominator. The white-matter/"
+          "ventricle QC gates are currently parked as advisory, so DAPI is known to be "
+          "over-detected in some regions -- inflated N deflates activity_rate and INFLATES "
+          "overlap_above_chance. reactivation_rate, reverse_rate and jaccard carry no N and are "
+          "unaffected. Switching --n-source to classifiable does NOT fix this (recon: 0.005% "
+          "difference on M3) -- it only removes Excluded/non-finite rows from N, it does not "
+          "correct DAPI over-detection. The real levers: re-arm the white-matter gate, raise "
+          "k_robust, or lower cellExpansionMicrons.")
+
+    args.out_dir.mkdir(parents=True, exist_ok=True)
+    long_path = write_long_csv(combined, args.out_dir / "animal_region_long.csv")
+    print(f"\nWrote long table -> {long_path}")
+    for wp in write_wide_pivots(combined, args.out_dir, hemisphere=args.hemisphere):
+        print(f"Wrote wide pivot -> {wp}")
 
 
 if __name__ == "__main__":
