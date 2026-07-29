@@ -1,0 +1,845 @@
+<title>Allen CCFv3 Region Acronyms — Engram &amp; Morphine Reference</title>
+<style>
+:root{
+  --paper:#fbfcfd; --sunk:#f1f4f8; --card:#ffffff;
+  --ink:#12151f; --ink2:#4a5262; --ink3:#767f90;
+  --line:#dfe4ec; --line2:#eef1f6;
+  --accent:#3b5bdb; --accent-soft:#eaeeff;
+  --present:#0f7355; --present-bg:#e4f4ee;
+  --absent:#7b8394; --absent-bg:#eef0f4;
+  --warn:#9a5b12; --warn-bg:#fdf1e0; --warn-line:#e8c99a;
+  --mono:ui-monospace,SFMono-Regular,"SF Mono",Menlo,Consolas,monospace;
+  --sans:ui-sans-serif,-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
+}
+@media (prefers-color-scheme:dark){:root{
+  --paper:#0e1118; --sunk:#141926; --card:#151a25;
+  --ink:#e9edf5; --ink2:#a8b1c4; --ink3:#7d8699;
+  --line:#242c3d; --line2:#1c2331;
+  --accent:#8ba4ff; --accent-soft:#1b2340;
+  --present:#5cc9a0; --present-bg:#123329;
+  --absent:#8891a3; --absent-bg:#1d2331;
+  --warn:#e5b877; --warn-bg:#2e2313; --warn-line:#5c4622;
+}}
+:root[data-theme="dark"]{
+  --paper:#0e1118; --sunk:#141926; --card:#151a25;
+  --ink:#e9edf5; --ink2:#a8b1c4; --ink3:#7d8699;
+  --line:#242c3d; --line2:#1c2331;
+  --accent:#8ba4ff; --accent-soft:#1b2340;
+  --present:#5cc9a0; --present-bg:#123329;
+  --absent:#8891a3; --absent-bg:#1d2331;
+  --warn:#e5b877; --warn-bg:#2e2313; --warn-line:#5c4622;
+}
+:root[data-theme="light"]{
+  --paper:#fbfcfd; --sunk:#f1f4f8; --card:#ffffff;
+  --ink:#12151f; --ink2:#4a5262; --ink3:#767f90;
+  --line:#dfe4ec; --line2:#eef1f6;
+  --accent:#3b5bdb; --accent-soft:#eaeeff;
+  --present:#0f7355; --present-bg:#e4f4ee;
+  --absent:#7b8394; --absent-bg:#eef0f4;
+  --warn:#9a5b12; --warn-bg:#fdf1e0; --warn-line:#e8c99a;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--paper);color:var(--ink);font-family:var(--sans);
+  font-size:15px;line-height:1.55;-webkit-font-smoothing:antialiased}
+.wrap{max-width:1000px;margin:0 auto;padding:44px 22px 80px;
+  display:flex;flex-direction:column;gap:30px}
+h1{font-size:clamp(25px,4vw,35px);line-height:1.12;margin:0;letter-spacing:-.022em;
+  text-wrap:balance;font-weight:660}
+.eyebrow{font-size:11px;letter-spacing:.14em;text-transform:uppercase;
+  color:var(--accent);font-weight:700;margin:0 0 11px;font-family:var(--mono)}
+.lede{color:var(--ink2);font-size:16px;max-width:66ch;margin:13px 0 0}
+
+.rule{background:var(--warn-bg);border:1px solid var(--warn-line);
+  border-radius:9px;padding:15px 17px;display:flex;flex-direction:column;gap:7px}
+.rule h3{margin:0;font-size:13.5px;color:var(--warn);letter-spacing:.01em}
+.rule p{margin:0;font-size:14px;color:var(--ink2)}
+.rule code,code{font-family:var(--mono);font-size:.9em;background:var(--sunk);
+  border:1px solid var(--line);border-radius:4px;padding:1px 5px;color:var(--ink)}
+
+.tools{position:sticky;top:0;z-index:9;background:var(--paper);
+  padding:11px 0;border-bottom:1px solid var(--line);
+  display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+#q{flex:1 1 250px;min-width:0;font-family:var(--sans);font-size:14.5px;
+  padding:9px 13px;border:1px solid var(--line);border-radius:8px;
+  background:var(--card);color:var(--ink)}
+#q:focus{outline:2px solid var(--accent);outline-offset:1px;border-color:transparent}
+.fbtn{font-family:var(--sans);font-size:13px;font-weight:600;cursor:pointer;
+  padding:8px 13px;border-radius:8px;border:1px solid var(--line);
+  background:var(--card);color:var(--ink2)}
+.fbtn[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:#fff}
+.fbtn:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+#count{font-size:12.5px;color:var(--ink3);font-family:var(--mono);margin-left:auto}
+
+.grp{border:1px solid var(--line);border-radius:11px;background:var(--card);overflow:hidden}
+.ghead{padding:15px 18px;border-bottom:1px solid var(--line2);background:var(--sunk)}
+.ghead h2{margin:0;font-size:16px;letter-spacing:-.008em;display:flex;
+  align-items:center;gap:9px;flex-wrap:wrap;font-weight:650}
+.note{margin:6px 0 0;font-size:13.2px;color:var(--ink2);max-width:74ch}
+.tag{font-size:10px;letter-spacing:.09em;text-transform:uppercase;font-weight:700;
+  padding:2.5px 7px;border-radius:20px;border:1px solid var(--line);
+  color:var(--ink3);background:var(--card);font-family:var(--mono)}
+.tag.engram{color:var(--accent);border-color:var(--accent);background:var(--accent-soft)}
+.tag.morphine{color:var(--warn);border-color:var(--warn-line);background:var(--warn-bg)}
+
+.tw{overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-size:14px}
+th{text-align:left;font-size:10.5px;letter-spacing:.11em;text-transform:uppercase;
+  color:var(--ink3);font-weight:700;padding:9px 18px;border-bottom:1px solid var(--line2);
+  white-space:nowrap;font-family:var(--mono)}
+td{padding:7px 18px;border-bottom:1px solid var(--line2);vertical-align:middle}
+tr:last-child td{border-bottom:none}
+tbody tr:hover{background:var(--sunk)}
+.acr{font-family:var(--mono);font-size:13.5px;font-weight:640;color:var(--accent);
+  background:var(--accent-soft);border:1px solid transparent;border-radius:5px;
+  padding:3px 8px;cursor:pointer;white-space:nowrap}
+.acr:hover{border-color:var(--accent)}
+.acr:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.acr.ok{background:var(--present-bg);color:var(--present)}
+.nm{color:var(--ink2)}
+.chip{font-size:11px;font-weight:600;padding:2.5px 8px;border-radius:20px;
+  white-space:nowrap;color:var(--absent);background:var(--absent-bg)}
+.chip.present{color:var(--present);background:var(--present-bg)}
+.grp[hidden]{display:none}
+footer{color:var(--ink3);font-size:12.5px;border-top:1px solid var(--line);
+  padding-top:18px;max-width:74ch}
+@media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+</style>
+
+<div class="wrap">
+<header>
+<p class="eyebrow">Allen CCFv3 &middot; regions_of_interest</p>
+<h1>Region acronyms for engram &amp; morphine work</h1>
+<p class="lede">Every acronym below was validated against <code>allen_mouse_10um_java-Ontology.json</code>
+in your M3 project &mdash; 1,327 atlas structures, filtered to the 138 most relevant to
+engram tagging and opioid circuitry. Names are the atlas's own, verbatim.</p>
+</header>
+
+<div class="rule">
+<h3>The acronym must match exactly &mdash; a typo returns nothing, not an error</h3>
+<p>Region lookup is an exact string match against the atlas. <code>Ca1</code>, <code>ca1</code>
+and <code>CA-1</code> all silently yield an empty region rather than failing. Click any acronym
+to copy it.</p>
+<p><strong>Watch the habenula/hypothalamus collision:</strong> <code>LH</code> is the
+<em>lateral habenula</em>; the lateral hypothalamic area is <code>LHA</code>. Likewise
+<code>PL</code> is prelimbic cortex, and <code>LA</code> is the lateral amygdala &mdash; not
+a thalamic nucleus.</p>
+</div>
+
+<div class="tools">
+<input id="q" type="search" placeholder="Filter by acronym or name&hellip;" aria-label="Filter regions">
+<button class="fbtn" id="fPresent" aria-pressed="false">Only regions in my data</button>
+<span id="count"></span>
+</div>
+<section class="grp" data-grp>
+<header class="ghead">
+<h2>Hippocampal formation<span class="tag engram">Engram</span></h2>
+<p class="note">Engram core — context/episodic memory. CA1 is your strongest reactivation signal (~4.2x).</p>
+</header>
+<div class="tw"><table>
+<thead><tr><th>Acronym</th><th>Allen full name</th><th>M3 7-scene</th></tr></thead>
+<tbody><tr class="r" data-s="ca1 field ca1">
+<td><button class="acr" data-c="CA1" title="Click to copy">CA1</button></td>
+<td class="nm">Field CA1</td>
+<td><span class="chip present" title="in your data">in your data</span></td>
+</tr><tr class="r" data-s="ca2 field ca2">
+<td><button class="acr" data-c="CA2" title="Click to copy">CA2</button></td>
+<td class="nm">Field CA2</td>
+<td><span class="chip present" title="in your data">in your data</span></td>
+</tr><tr class="r" data-s="ca3 field ca3">
+<td><button class="acr" data-c="CA3" title="Click to copy">CA3</button></td>
+<td class="nm">Field CA3</td>
+<td><span class="chip present" title="in your data">in your data</span></td>
+</tr><tr class="r" data-s="dg dentate gyrus">
+<td><button class="acr" data-c="DG" title="Click to copy">DG</button></td>
+<td class="nm">Dentate gyrus</td>
+<td><span class="chip present" title="in your data">in your data</span></td>
+</tr><tr class="r" data-s="dg-mo dentate gyrus, molecular layer">
+<td><button class="acr" data-c="DG-mo" title="Click to copy">DG-mo</button></td>
+<td class="nm">Dentate gyrus, molecular layer</td>
+<td><span class="chip present" title="in your data">in your data</span></td>
+</tr><tr class="r" data-s="dg-po dentate gyrus, polymorph layer">
+<td><button class="acr" data-c="DG-po" title="Click to copy">DG-po</button></td>
+<td class="nm">Dentate gyrus, polymorph layer</td>
+<td><span class="chip present" title="in your data">in your data</span></td>
+</tr><tr class="r" data-s="dg-sg dentate gyrus, granule cell layer">
+<td><button class="acr" data-c="DG-sg" title="Click to copy">DG-sg</button></td>
+<td class="nm">Dentate gyrus, granule cell layer</td>
+<td><span class="chip absent" title="not in this series">not in this series</span></td>
+</tr><tr class="r" data-s="sub subiculum">
+<td><button class="acr" data-c="SUB" title="Click to copy">SUB</button></td>
+<td class="nm">Subiculum</td>
+<td><span class="chip absent" title="not in this series">not in this series</span></td>
+</tr><tr class="r" data-s="pros prosubiculum">
+<td><button class="acr" data-c="ProS" title="Click to copy">ProS</button></td>
+<td class="nm">Prosubiculum</td>
+<td><span class="chip absent" title="not in this series">not in this series</span></td>
+</tr><tr class="r" data-s="post postsubiculum">
+<td><button class="acr" data-c="POST" title="Click to copy">POST</button></td>
+<td class="nm">Postsubiculum</td>
+<td><span class="chip absent" title="not in this series">not in this series</span></td>
+</tr><tr class="r" data-s="pre presubiculum">
+<td><button class="acr" data-c="PRE" title="Click to copy">PRE</button></td>
+<td class="nm">Presubiculum</td>
+<td><span class="chip absent" title="not in this series">not in this series</span></td>
+</tr><tr class="r" data-s="par parasubiculum">
+<td><button class="acr" data-c="PAR" title="Click to copy">PAR</button></td>
+<td class="nm">Parasubiculum</td>
+<td><span class="chip absent" title="not in this series">not in this series</span></td>
+</tr><tr class="r" data-s="entl entorhinal area, lateral part">
+<td><button class="acr" data-c="ENTl" title="Click to copy">ENTl</button></td>
+<td class="nm">Entorhinal area, lateral part</td>
+<td><span class="chip present" title="in your data">in your data</span></td>
+</tr><tr class="r" data-s="entm entorhinal area, medial part, dorsal zone">
+<td><button class="acr" data-c="ENTm" title="Click to copy">ENTm</button></td>
+<td class="nm">Entorhinal area, medial part, dorsal zone</td>
+<td><span class="chip absent" title="not in this series">not in this series</span></td>
+</tr><tr class="r" data-s="hpf hippocampal formation">
+<td><button class="acr" data-c="HPF" title="Click to copy">HPF</button></td>
+<td class="nm">Hippocampal formation</td>
+<td><span class="chip present" title="in your data">in your data</span></td>
+</tr></tbody>
+</table></div></section>
+<section class="grp" data-grp>
+<header class="ghead">
+<h2>Amygdala<span class="tag both">Both</span></h2>
+<p class="note">Fear/aversive engram; CEA is the opioid-analgesia and withdrawal hub.</p>
+</header>
+<div class="tw"><table>
+<thead><tr><th>Acronym</th><th>Allen full name</th><th>M3 7-scene</th></tr></thead>
+<tbody><tr class="r" data-s="la lateral amygdalar nucleus">
+<td><button class="acr" data-c="LA" title="Click to copy">LA</button></td>
+<td class="nm">Lateral amygdalar nucleus</td>
+<td><span class="chip present" title="in your data">in your data</span></td>
+</tr><tr class="r" data-s="bla basolateral amygdalar nucleus">
+<td><button class="acr" data-c="BLA" title="Click to copy">BLA</button></td>
+<td class="nm">Basolateral amygdalar nucleus</td>
+<td><span class="chip present" title="in your data">in your data</span></td>
+</tr><tr class="r" data-s="blaa basolateral amygdalar nucleus, anterior part">
+<td><button class="acr" data-c="BLAa" title="Click to copy">BLAa</button></td>
+<td class="nm">Basolateral amygdalar nucleus, anterior part</td>
+<td><span class="chip present" title="in your data">in your data</span></td>
+</tr><tr class="r" data-s="blap basolateral amygdalar nucleus, posterior part">
+<td><button class="acr" data-c="BLAp" title="Click to copy">BLAp</button></td>
+<td class="nm">Basolateral amygdalar nucleus, posterior part</td>
+<td><span class="chip present" title="in your data">in your data</span></td>
+</tr><tr class="r" data-s="blav basolateral amygdalar nucleus, ventral part">
+<td><button class="acr" data-c="BLAv" title="Click to copy">BLAv</button></td>
+<td class="nm">Basolateral amygdalar nucleus, ventral part</td>
+<td><span class="chip present" title="in your data">in your data</span></td>
+</tr><tr class="r" data-s="bma basomedial amygdalar nucleus">
+<td><button class="acr" data-c="BMA" title="Click to copy">BMA</button></td>
+<td class="nm">Basomedial amygdalar nucleus</td>
+<td><span class="chip present" title="in your data">in your data</span></td>
+</tr><tr class="r" data-s="bmaa basomedial amygdalar nucleus, anterior part">
+<td><button class="acr" data-c="BMAa" title="Click to copy">BMAa</button></td>
+<td class="nm">Basomedial amygdalar nucleus, anterior part</td>
+<td><span class="chip present" title="in your data">in your data</span></td>
+</tr><tr class="r" data-s="bmap basomedial amygdalar nucleus, posterior part">
+<td><button class="acr" data-c="BMAp" title="Click to copy">BMAp</button></td>
+<td class="nm">Basomedial amygdalar nucleus, posterior part</td>
+<td><span class="chip present" title="in your data">in your data</span></td>
+</tr><tr class="r" data-s="cea central amygdalar nucleus">
+<td><button class="acr" data-c="CEA" title="Click to copy">CEA</button></td>
+<td class="nm">Central amygdalar nucleus</td>
+<td><span class="chip present" title="in your data">in your data</span></td>
+</tr><tr class="r" data-s="ceac central amygdalar nucleus, capsular part">
+<td><button class="acr" data-c="CEAc" title="Click to copy">CEAc</button></td>
+<td class="nm">Central amygdalar nucleus, capsular part</td>
+<td><span class="chip present" title="in your data">in your data</span></td>
+</tr><tr class="r" data-s="ceal central amygdalar nucleus, lateral part">
+<td><button class="acr" data-c="CEAl" title="Click to copy">CEAl</button></td>
+<td class="nm">Central amygdalar nucleus, lateral part</td>
+<td><span class="chip present" title="in your data">in your data</span></td>
+</tr><tr class="r" data-s="ceam central amygdalar nucleus, medial part">
+<td><button class="acr" data-c="CEAm" title="Click to copy">CEAm</button></td>
+<td class="nm">Central amygdalar nucleus, medial part</td>
+<td><span class="chip present" title="in your data">in your data</span></td>
+</tr><tr class="r" data-s="mea medial amygdalar nucleus">
+<td><button class="acr" data-c="MEA" title="Click to copy">MEA</button></td>
+<td class="nm">Medial amygdalar nucleus</td>
+<td><span class="chip present" title="in your data">in your data</span></td>
+</tr><tr class="r" data-s="ia intercalated amygdalar nucleus">
+<td><button class="acr" data-c="IA" title="Click to copy">IA</button></td>
+<td class="nm">Intercalated amygdalar nucleus</td>
+<td><span class="chip present" title="in your data">in your data</span></td>
+</tr><tr class="r" data-s="coaa cortical amygdalar area, anterior part">
+<td><button class="acr" data-c="COAa" title="Click to copy">COAa</button></td>
+<td class="nm">Cortical amygdalar area, anterior part</td>
+<td><span class="chip present" title="in your data">in your data</span></td>
+</tr><tr class="r" data-s="coap cortical amygdalar area, posterior part">
+<td><button class="acr" data-c="COAp" title="Click to copy">COAp</button></td>
+<td class="nm">Cortical amygdalar area, posterior part</td>
+<td><span class="chip absent" title="not in this series">not in this series</span></td>
+</tr><tr class="r" data-s="pa posterior amygdalar nucleus">
+<td><button class="acr" data-c="PA" title="Click to copy">PA</button></td>
+<td class="nm">Posterior amygdalar nucleus</td>
+<td><span class="chip absent" title="not in this series">not in this series</span></td>
+</tr></tbody>
+</table></div></section>
+<section class="grp" data-grp>
+<header class="ghead">
+<h2>Prefrontal &amp; cingulate cortex<span class="tag both">Both</span></h2>
+<p class="note">Memory retrieval control + drug-seeking / relapse circuitry.</p>
+</header>
+<div class="tw"><table>
+<thead><tr><th>Acronym</th><th>Allen full name</th><th>M3 7-scene</th></tr></thead>
+<tbody><tr class="r" data-s="pl prelimbic area">
+<td><button class="acr" data-c="PL" title="Click to copy">PL</button></td>
+<td class="nm">Prelimbic area</td>
+<td><span class="chip absent" title="not in this series">not in this series</span></td>
+</tr><tr class="r" data-s="ila infralimbic area">
+<td><button class="acr" data-c="ILA" title="Click to copy">ILA</button></td>
+<td class="nm">Infralimbic area</td>
+<td><span class="chip absent" title="not in this series">not in this series</span></td>
+</tr><tr class="r" data-s="acad anterior cingulate area, dorsal part">
+<td><button class="acr" data-c="ACAd" title="Click to copy">ACAd</button></td>
+<td class="nm">Anterior cingulate area, dorsal part</td>
+<td><span class="chip present" title="in your data">in your data</span></td>
+</tr><tr class="r" data-s="acav anterior cingulate area, ventral part">
+<td><button class="acr" data-c="ACAv" title="Click to copy">ACAv</button></td>
+<td class="nm">Anterior cingulate area, ventral part</td>
+<td><span class="chip present" title="in your data">in your data</span></td>
+</tr><tr class="r" data-s="orbl orbital area, lateral part">
+<td><button class="acr" data-c="ORBl" title="Click to copy">ORBl</button></td>
+<td class="nm">Orbital area, lateral part</td>
+<td><span class="chip absent" title="not in this series">not in this series</span></td>
+</tr><tr class="r" data-s="orbm orbital area, medial part">
+<td><button class="acr" data-c="ORBm" title="Click to copy">ORBm</button></td>
+<td class="nm">Orbital area, medial part</td>
+<td><span class="chip absent" title="not in this series">not in this series</span></td>
+</tr><tr class="r" data-s="orbvl orbital area, ventrolateral part">
+<td><button class="acr" data-c="ORBvl" title="Click to copy">ORBvl</button></td>
+<td class="nm">Orbital area, ventrolateral part</td>
+<td><span class="chip absent" title="not in this series">not in this series</span></td>
+</tr><tr class="r" data-s="frp frontal pole, cerebral cortex">
+<td><button class="acr" data-c="FRP" title="Click to copy">FRP</button></td>
+<td class="nm">Frontal pole, cerebral cortex</td>
+<td><span class="chip absent" title="not in this series">not in this series</span></td>
+</tr><tr class="r" data-s="mos secondary motor area">
+<td><button class="acr" data-c="MOs" title="Click to copy">MOs</button></td>
+<td class="nm">Secondary motor area</td>
+<td><span class="chip present" title="in your data">in your data</span></td>
+</tr></tbody>
+</table></div></section>
+<section class="grp" data-grp>
+<header class="ghead">
+<h2>Insular, perirhinal &amp; association cortex<span class="tag both">Both</span></h2>
+<p class="note">Interoception (insula = opioid interoceptive hub); PERI/ECT feed the hippocampal engram.</p>
+</header>
+<div class="tw"><table>
+<thead><tr><th>Acronym</th><th>Allen full name</th><th>M3 7-scene</th></tr></thead>
+<tbody><tr class="r" data-s="aid agranular insular area, dorsal part">
+<td><button class="acr" data-c="AId" title="Click to copy">AId</button></td>
+<td class="nm">Agranular insular area, dorsal part</td>
+<td><span class="chip absent" title="not in this series">not in this series</span></td>
+</tr><tr class="r" data-s="aiv agranular insular area, ventral part">
+<td><button class="acr" data-c="AIv" title="Click to copy">AIv</button></td>
+<td class="nm">Agranular insular area, ventral part</td>
+<td><span class="chip absent" title="not in this series">not in this series</span></td>
+</tr><tr class="r" data-s="aip agranular insular area, posterior part">
+<td><button class="acr" data-c="AIp" title="Click to copy">AIp</button></td>
+<td class="nm">Agranular insular area, posterior part</td>
+<td><span class="chip present" title="in your data">in your data</span></td>
+</tr><tr class="r" data-s="peri perirhinal area">
+<td><button class="acr" data-c="PERI" title="Click to copy">PERI</button></td>
+<td class="nm">Perirhinal area</td>
+<td><span class="chip present" title="in your data">in your data</span></td>
+</tr><tr class="r" data-s="ect ectorhinal area">
+<td><button class="acr" data-c="ECT" title="Click to copy">ECT</button></td>
+<td class="nm">Ectorhinal area</td>
+<td><span class="chip present" title="in your data">in your data</span></td>
+</tr><tr class="r" data-s="tea temporal association areas">
+<td><button class="acr" data-c="TEa" title="Click to copy">TEa</button></td>
+<td class="nm">Temporal association areas</td>
+<td><span class="chip present" title="in your data">in your data</span></td>
+</tr><tr class="r" data-s="visp primary visual area">
+<td><button class="acr" data-c="VISp" title="Click to copy">VISp</button></td>
+<td class="nm">Primary visual area</td>
+<td><span class="chip absent" title="not in this series">not in this series</span></td>
+</tr><tr class="r" data-s="ssp primary somatosensory area">
+<td><button class="acr" data-c="SSp" title="Click to copy">SSp</button></td>
+<td class="nm">Primary somatosensory area</td>
+<td><span class="chip present" title="in your data">in your data</span></td>
+</tr><tr class="r" data-s="sss supplemental somatosensory area">
+<td><button class="acr" data-c="SSs" title="Click to copy">SSs</button></td>
+<td class="nm">Supplemental somatosensory area</td>
+<td><span class="chip present" title="in your data">in your data</span></td>
+</tr><tr class="r" data-s="audp primary auditory area">
+<td><button class="acr" data-c="AUDp" title="Click to copy">AUDp</button></td>
+<td class="nm">Primary auditory area</td>
+<td><span class="chip present" title="in your data">in your data</span></td>
+</tr><tr class="r" data-s="mop primary motor area">
+<td><button class="acr" data-c="MOp" title="Click to copy">MOp</button></td>
+<td class="nm">Primary motor area</td>
+<td><span class="chip present" title="in your data">in your data</span></td>
+</tr></tbody>
+</table></div></section>
+<section class="grp" data-grp>
+<header class="ghead">
+<h2>Retrosplenial cortex<span class="tag engram">Engram</span></h2>
+<p class="note">Context/spatial memory consolidation — reliable engram target.</p>
+</header>
+<div class="tw"><table>
+<thead><tr><th>Acronym</th><th>Allen full name</th><th>M3 7-scene</th></tr></thead>
+<tbody><tr class="r" data-s="rspd retrosplenial area, dorsal part">
+<td><button class="acr" data-c="RSPd" title="Click to copy">RSPd</button></td>
+<td class="nm">Retrosplenial area, dorsal part</td>
+<td><span class="chip present" title="in your data">in your data</span></td>
+</tr><tr class="r" data-s="rspv retrosplenial area, ventral part">
+<td><button class="acr" data-c="RSPv" title="Click to copy">RSPv</button></td>
+<td class="nm">Retrosplenial area, ventral part</td>
+<td><span class="chip present" title="in your data">in your data</span></td>
+</tr><tr class="r" data-s="rspagl retrosplenial area, lateral agranular part">
+<td><button class="acr" data-c="RSPagl" title="Click to copy">RSPagl</button></td>
+<td class="nm">Retrosplenial area, lateral agranular part</td>
+<td><span class="chip present" title="in your data">in your data</span></td>
+</tr></tbody>
+</table></div></section>
+<section class="grp" data-grp>
+<header class="ghead">
+<h2>Thalamus<span class="tag both">Both</span></h2>
+<p class="note">PVT = salience/withdrawal/relapse. RE/AM = hippocampal-prefrontal memory relay.</p>
+</header>
+<div class="tw"><table>
+<thead><tr><th>Acronym</th><th>Allen full name</th><th>M3 7-scene</th></tr></thead>
+<tbody><tr class="r" data-s="pvt paraventricular nucleus of the thalamus">
+<td><button class="acr" data-c="PVT" title="Click to copy">PVT</button></td>
+<td class="nm">Paraventricular nucleus of the thalamus</td>
+<td><span class="chip present" title="in your data">in your data</span></td>
+</tr><tr class="r" data-s="re nucleus of reuniens">
+<td><button class="acr" data-c="RE" title="Click to copy">RE</button></td>
+<td class="nm">Nucleus of reuniens</td>
+<td><span class="chip present" title="in your data">in your data</span></td>
+</tr><tr class="r" data-s="rh rhomboid nucleus">
+<td><button class="acr" data-c="RH" title="Click to copy">RH</button></td>
+<td class="nm">Rhomboid nucleus</td>
+<td><span class="chip present" title="in your data">in your data</span></td>
+</tr><tr class="r" data-s="am anteromedial nucleus">
+<td><button class="acr" data-c="AM" title="Click to copy">AM</button></td>
+<td class="nm">Anteromedial nucleus</td>
+<td><span class="chip present" title="in your data">in your data</span></td>
+</tr><tr class="r" data-s="av anteroventral nucleus of thalamus">
+<td><button class="acr" data-c="AV" title="Click to copy">AV</button></td>
+<td class="nm">Anteroventral nucleus of thalamus</td>
+<td><span class="chip present" title="in your data">in your data</span></td>
+</tr><tr class="r" data-s="ad anterodorsal nucleus">
+<td><button class="acr" data-c="AD" title="Click to copy">AD</button></td>
+<td class="nm">Anterodorsal nucleus</td>
+<td><span class="chip present" title="in your data">in your data</span></td>
+</tr><tr class="r" data-s="md mediodorsal nucleus of thalamus">
+<td><button class="acr" data-c="MD" title="Click to copy">MD</button></td>
+<td class="nm">Mediodorsal nucleus of thalamus</td>
+<td><span class="chip present" title="in your data">in your data</span></td>
+</tr><tr class="r" data-s="ld lateral dorsal nucleus of thalamus">
+<td><button class="acr" data-c="LD" title="Click to copy">LD</button></td>
+<td class="nm">Lateral dorsal nucleus of thalamus</td>
+<td><span class="chip present" title="in your data">in your data</span></td>
+</tr><tr class="r" data-s="cm central medial nucleus of the thalamus">
+<td><button class="acr" data-c="CM" title="Click to copy">CM</button></td>
+<td class="nm">Central medial nucleus of the thalamus</td>
+<td><span class="chip present" title="in your data">in your data</span></td>
+</tr><tr class="r" data-s="pf parafascicular nucleus">
+<td><button class="acr" data-c="PF" title="Click to copy">PF</button></td>
+<td class="nm">Parafascicular nucleus</td>
+<td><span class="chip absent" title="not in this series">not in this series</span></td>
+</tr><tr class="r" data-s="po posterior complex of the thalamus">
+<td><button class="acr" data-c="PO" title="Click to copy">PO</button></td>
+<td class="nm">Posterior complex of the thalamus</td>
+<td><span class="chip present" title="in your data">in your data</span></td>
+</tr><tr class="r" data-s="vpm ventral posteromedial nucleus of the thalamus">
+<td><button class="acr" data-c="VPM" title="Click to copy">VPM</button></td>
+<td class="nm">Ventral posteromedial nucleus of the thalamus</td>
+<td><span class="chip present" title="in your data">in your data</span></td>
+</tr><tr class="r" data-s="vpl ventral posterolateral nucleus of the thalamus">
+<td><button class="acr" data-c="VPL" title="Click to copy">VPL</button></td>
+<td class="nm">Ventral posterolateral nucleus of the thalamus</td>
+<td><span class="chip present" title="in your data">in your data</span></td>
+</tr><tr class="r" data-s="lgd dorsal part of the lateral geniculate complex">
+<td><button class="acr" data-c="LGd" title="Click to copy">LGd</button></td>
+<td class="nm">Dorsal part of the lateral geniculate complex</td>
+<td><span class="chip present" title="in your data">in your data</span></td>
+</tr><tr class="r" data-s="lp lateral posterior nucleus of the thalamus">
+<td><button class="acr" data-c="LP" title="Click to copy">LP</button></td>
+<td class="nm">Lateral posterior nucleus of the thalamus</td>
+<td><span class="chip present" title="in your data">in your data</span></td>
+</tr></tbody>
+</table></div></section>
+<section class="grp" data-grp>
+<header class="ghead">
+<h2>Septum &amp; basal forebrain<span class="tag both">Both</span></h2>
+<p class="note">Theta pacing for memory; SI/MA = ventral pallidal reward output.</p>
+</header>
+<div class="tw"><table>
+<thead><tr><th>Acronym</th><th>Allen full name</th><th>M3 7-scene</th></tr></thead>
+<tbody><tr class="r" data-s="ms medial septal nucleus">
+<td><button class="acr" data-c="MS" title="Click to copy">MS</button></td>
+<td class="nm">Medial septal nucleus</td>
+<td><span class="chip absent" title="not in this series">not in this series</span></td>
+</tr><tr class="r" data-s="ndb diagonal band nucleus">
+<td><button class="acr" data-c="NDB" title="Click to copy">NDB</button></td>
+<td class="nm">Diagonal band nucleus</td>
+<td><span class="chip present" title="in your data">in your data</span></td>
+</tr><tr class="r" data-s="lsc lateral septal nucleus, caudal (caudodorsal) part">
+<td><button class="acr" data-c="LSc" title="Click to copy">LSc</button></td>
+<td class="nm">Lateral septal nucleus, caudal (caudodorsal) part</td>
+<td><span class="chip absent" title="not in this series">not in this series</span></td>
+</tr><tr class="r" data-s="lsr lateral septal nucleus, rostral (rostroventral) part">
+<td><button class="acr" data-c="LSr" title="Click to copy">LSr</button></td>
+<td class="nm">Lateral septal nucleus, rostral (rostroventral) part</td>
+<td><span class="chip absent" title="not in this series">not in this series</span></td>
+</tr><tr class="r" data-s="lsv lateral septal nucleus, ventral part">
+<td><button class="acr" data-c="LSv" title="Click to copy">LSv</button></td>
+<td class="nm">Lateral septal nucleus, ventral part</td>
+<td><span class="chip absent" title="not in this series">not in this series</span></td>
+</tr><tr class="r" data-s="trs triangular nucleus of septum">
+<td><button class="acr" data-c="TRS" title="Click to copy">TRS</button></td>
+<td class="nm">Triangular nucleus of septum</td>
+<td><span class="chip present" title="in your data">in your data</span></td>
+</tr><tr class="r" data-s="si substantia innominata">
+<td><button class="acr" data-c="SI" title="Click to copy">SI</button></td>
+<td class="nm">Substantia innominata</td>
+<td><span class="chip present" title="in your data">in your data</span></td>
+</tr><tr class="r" data-s="ma magnocellular nucleus">
+<td><button class="acr" data-c="MA" title="Click to copy">MA</button></td>
+<td class="nm">Magnocellular nucleus</td>
+<td><span class="chip present" title="in your data">in your data</span></td>
+</tr><tr class="r" data-s="bst bed nuclei of the stria terminalis">
+<td><button class="acr" data-c="BST" title="Click to copy">BST</button></td>
+<td class="nm">Bed nuclei of the stria terminalis</td>
+<td><span class="chip present" title="in your data">in your data</span></td>
+</tr></tbody>
+</table></div></section>
+<section class="grp" data-grp>
+<header class="ghead">
+<h2>Hypothalamus<span class="tag both">Both</span></h2>
+<p class="note">LHA = reward/orexin (~4.2x in your M3 run). PVH = stress axis, withdrawal.</p>
+</header>
+<div class="tw"><table>
+<thead><tr><th>Acronym</th><th>Allen full name</th><th>M3 7-scene</th></tr></thead>
+<tbody><tr class="r" data-s="lha lateral hypothalamic area">
+<td><button class="acr" data-c="LHA" title="Click to copy">LHA</button></td>
+<td class="nm">Lateral hypothalamic area</td>
+<td><span class="chip present" title="in your data">in your data</span></td>
+</tr><tr class="r" data-s="pvh paraventricular hypothalamic nucleus">
+<td><button class="acr" data-c="PVH" title="Click to copy">PVH</button></td>
+<td class="nm">Paraventricular hypothalamic nucleus</td>
+<td><span class="chip present" title="in your data">in your data</span></td>
+</tr><tr class="r" data-s="vmh ventromedial hypothalamic nucleus">
+<td><button class="acr" data-c="VMH" title="Click to copy">VMH</button></td>
+<td class="nm">Ventromedial hypothalamic nucleus</td>
+<td><span class="chip present" title="in your data">in your data</span></td>
+</tr><tr class="r" data-s="dmh dorsomedial nucleus of the hypothalamus">
+<td><button class="acr" data-c="DMH" title="Click to copy">DMH</button></td>
+<td class="nm">Dorsomedial nucleus of the hypothalamus</td>
+<td><span class="chip absent" title="not in this series">not in this series</span></td>
+</tr><tr class="r" data-s="arh arcuate hypothalamic nucleus">
+<td><button class="acr" data-c="ARH" title="Click to copy">ARH</button></td>
+<td class="nm">Arcuate hypothalamic nucleus</td>
+<td><span class="chip present" title="in your data">in your data</span></td>
+</tr><tr class="r" data-s="mm medial mammillary nucleus">
+<td><button class="acr" data-c="MM" title="Click to copy">MM</button></td>
+<td class="nm">Medial mammillary nucleus</td>
+<td><span class="chip absent" title="not in this series">not in this series</span></td>
+</tr><tr class="r" data-s="sum supramammillary nucleus">
+<td><button class="acr" data-c="SUM" title="Click to copy">SUM</button></td>
+<td class="nm">Supramammillary nucleus</td>
+<td><span class="chip absent" title="not in this series">not in this series</span></td>
+</tr><tr class="r" data-s="ahn anterior hypothalamic nucleus">
+<td><button class="acr" data-c="AHN" title="Click to copy">AHN</button></td>
+<td class="nm">Anterior hypothalamic nucleus</td>
+<td><span class="chip present" title="in your data">in your data</span></td>
+</tr><tr class="r" data-s="ph posterior hypothalamic nucleus">
+<td><button class="acr" data-c="PH" title="Click to copy">PH</button></td>
+<td class="nm">Posterior hypothalamic nucleus</td>
+<td><span class="chip absent" title="not in this series">not in this series</span></td>
+</tr><tr class="r" data-s="tu tuberal nucleus">
+<td><button class="acr" data-c="TU" title="Click to copy">TU</button></td>
+<td class="nm">Tuberal nucleus</td>
+<td><span class="chip present" title="in your data">in your data</span></td>
+</tr><tr class="r" data-s="stn subthalamic nucleus">
+<td><button class="acr" data-c="STN" title="Click to copy">STN</button></td>
+<td class="nm">Subthalamic nucleus</td>
+<td><span class="chip present" title="in your data">in your data</span></td>
+</tr><tr class="r" data-s="pstn parasubthalamic nucleus">
+<td><button class="acr" data-c="PSTN" title="Click to copy">PSTN</button></td>
+<td class="nm">Parasubthalamic nucleus</td>
+<td><span class="chip absent" title="not in this series">not in this series</span></td>
+</tr><tr class="r" data-s="zi zona incerta">
+<td><button class="acr" data-c="ZI" title="Click to copy">ZI</button></td>
+<td class="nm">Zona incerta</td>
+<td><span class="chip present" title="in your data">in your data</span></td>
+</tr><tr class="r" data-s="mpo medial preoptic area">
+<td><button class="acr" data-c="MPO" title="Click to copy">MPO</button></td>
+<td class="nm">Medial preoptic area</td>
+<td><span class="chip present" title="in your data">in your data</span></td>
+</tr><tr class="r" data-s="mpn medial preoptic nucleus">
+<td><button class="acr" data-c="MPN" title="Click to copy">MPN</button></td>
+<td class="nm">Medial preoptic nucleus</td>
+<td><span class="chip present" title="in your data">in your data</span></td>
+</tr><tr class="r" data-s="so supraoptic nucleus">
+<td><button class="acr" data-c="SO" title="Click to copy">SO</button></td>
+<td class="nm">Supraoptic nucleus</td>
+<td><span class="chip present" title="in your data">in your data</span></td>
+</tr><tr class="r" data-s="vlpo ventrolateral preoptic nucleus">
+<td><button class="acr" data-c="VLPO" title="Click to copy">VLPO</button></td>
+<td class="nm">Ventrolateral preoptic nucleus</td>
+<td><span class="chip absent" title="not in this series">not in this series</span></td>
+</tr><tr class="r" data-s="lpo lateral preoptic area">
+<td><button class="acr" data-c="LPO" title="Click to copy">LPO</button></td>
+<td class="nm">Lateral preoptic area</td>
+<td><span class="chip absent" title="not in this series">not in this series</span></td>
+</tr></tbody>
+</table></div></section>
+<section class="grp" data-grp>
+<header class="ghead">
+<h2>Striatum &amp; pallidum<span class="tag morphine">Morphine</span></h2>
+<p class="note">Core reward/habit. ACB is the canonical morphine target.</p>
+</header>
+<div class="tw"><table>
+<thead><tr><th>Acronym</th><th>Allen full name</th><th>M3 7-scene</th></tr></thead>
+<tbody><tr class="r" data-s="acb nucleus accumbens">
+<td><button class="acr" data-c="ACB" title="Click to copy">ACB</button></td>
+<td class="nm">Nucleus accumbens</td>
+<td><span class="chip absent" title="not in this series">not in this series</span></td>
+</tr><tr class="r" data-s="cp caudoputamen">
+<td><button class="acr" data-c="CP" title="Click to copy">CP</button></td>
+<td class="nm">Caudoputamen</td>
+<td><span class="chip absent" title="not in this series">not in this series</span></td>
+</tr><tr class="r" data-s="ot olfactory tubercle">
+<td><button class="acr" data-c="OT" title="Click to copy">OT</button></td>
+<td class="nm">Olfactory tubercle</td>
+<td><span class="chip present" title="in your data">in your data</span></td>
+</tr><tr class="r" data-s="fs fundus of striatum">
+<td><button class="acr" data-c="FS" title="Click to copy">FS</button></td>
+<td class="nm">Fundus of striatum</td>
+<td><span class="chip present" title="in your data">in your data</span></td>
+</tr><tr class="r" data-s="gpe globus pallidus, external segment">
+<td><button class="acr" data-c="GPe" title="Click to copy">GPe</button></td>
+<td class="nm">Globus pallidus, external segment</td>
+<td><span class="chip present" title="in your data">in your data</span></td>
+</tr><tr class="r" data-s="gpi globus pallidus, internal segment">
+<td><button class="acr" data-c="GPi" title="Click to copy">GPi</button></td>
+<td class="nm">Globus pallidus, internal segment</td>
+<td><span class="chip present" title="in your data">in your data</span></td>
+</tr><tr class="r" data-s="acvi accessory abducens nucleus">
+<td><button class="acr" data-c="ACVI" title="Click to copy">ACVI</button></td>
+<td class="nm">Accessory abducens nucleus</td>
+<td><span class="chip absent" title="not in this series">not in this series</span></td>
+</tr></tbody>
+</table></div></section>
+<section class="grp" data-grp>
+<header class="ghead">
+<h2>Midbrain — dopamine &amp; analgesia<span class="tag morphine">Morphine</span></h2>
+<p class="note">VTA-&gt;ACB = opioid reward. PAG = descending analgesia, the morphine site.</p>
+</header>
+<div class="tw"><table>
+<thead><tr><th>Acronym</th><th>Allen full name</th><th>M3 7-scene</th></tr></thead>
+<tbody><tr class="r" data-s="vta ventral tegmental area">
+<td><button class="acr" data-c="VTA" title="Click to copy">VTA</button></td>
+<td class="nm">Ventral tegmental area</td>
+<td><span class="chip absent" title="not in this series">not in this series</span></td>
+</tr><tr class="r" data-s="snc substantia nigra, compact part">
+<td><button class="acr" data-c="SNc" title="Click to copy">SNc</button></td>
+<td class="nm">Substantia nigra, compact part</td>
+<td><span class="chip absent" title="not in this series">not in this series</span></td>
+</tr><tr class="r" data-s="snr substantia nigra, reticular part">
+<td><button class="acr" data-c="SNr" title="Click to copy">SNr</button></td>
+<td class="nm">Substantia nigra, reticular part</td>
+<td><span class="chip absent" title="not in this series">not in this series</span></td>
+</tr><tr class="r" data-s="pag periaqueductal gray">
+<td><button class="acr" data-c="PAG" title="Click to copy">PAG</button></td>
+<td class="nm">Periaqueductal gray</td>
+<td><span class="chip absent" title="not in this series">not in this series</span></td>
+</tr><tr class="r" data-s="mrn midbrain reticular nucleus">
+<td><button class="acr" data-c="MRN" title="Click to copy">MRN</button></td>
+<td class="nm">Midbrain reticular nucleus</td>
+<td><span class="chip absent" title="not in this series">not in this series</span></td>
+</tr><tr class="r" data-s="scm superior colliculus, motor related">
+<td><button class="acr" data-c="SCm" title="Click to copy">SCm</button></td>
+<td class="nm">Superior colliculus, motor related</td>
+<td><span class="chip absent" title="not in this series">not in this series</span></td>
+</tr><tr class="r" data-s="scs superior colliculus, sensory related">
+<td><button class="acr" data-c="SCs" title="Click to copy">SCs</button></td>
+<td class="nm">Superior colliculus, sensory related</td>
+<td><span class="chip absent" title="not in this series">not in this series</span></td>
+</tr><tr class="r" data-s="ic inferior colliculus">
+<td><button class="acr" data-c="IC" title="Click to copy">IC</button></td>
+<td class="nm">Inferior colliculus</td>
+<td><span class="chip absent" title="not in this series">not in this series</span></td>
+</tr><tr class="r" data-s="ppn pedunculopontine nucleus">
+<td><button class="acr" data-c="PPN" title="Click to copy">PPN</button></td>
+<td class="nm">Pedunculopontine nucleus</td>
+<td><span class="chip absent" title="not in this series">not in this series</span></td>
+</tr><tr class="r" data-s="rr midbrain reticular nucleus, retrorubral area">
+<td><button class="acr" data-c="RR" title="Click to copy">RR</button></td>
+<td class="nm">Midbrain reticular nucleus, retrorubral area</td>
+<td><span class="chip absent" title="not in this series">not in this series</span></td>
+</tr><tr class="r" data-s="cli central linear nucleus raphe">
+<td><button class="acr" data-c="CLI" title="Click to copy">CLI</button></td>
+<td class="nm">Central linear nucleus raphe</td>
+<td><span class="chip absent" title="not in this series">not in this series</span></td>
+</tr><tr class="r" data-s="dr dorsal nucleus raphe">
+<td><button class="acr" data-c="DR" title="Click to copy">DR</button></td>
+<td class="nm">Dorsal nucleus raphe</td>
+<td><span class="chip absent" title="not in this series">not in this series</span></td>
+</tr><tr class="r" data-s="cs superior central nucleus raphe">
+<td><button class="acr" data-c="CS" title="Click to copy">CS</button></td>
+<td class="nm">Superior central nucleus raphe</td>
+<td><span class="chip absent" title="not in this series">not in this series</span></td>
+</tr><tr class="r" data-s="ipn interpeduncular nucleus">
+<td><button class="acr" data-c="IPN" title="Click to copy">IPN</button></td>
+<td class="nm">Interpeduncular nucleus</td>
+<td><span class="chip absent" title="not in this series">not in this series</span></td>
+</tr></tbody>
+</table></div></section>
+<section class="grp" data-grp>
+<header class="ghead">
+<h2>Habenula<span class="tag morphine">Morphine</span></h2>
+<p class="note">Aversion, withdrawal, negative affect. NOTE: LH = lateral HABENULA, not hypothalamus.</p>
+</header>
+<div class="tw"><table>
+<thead><tr><th>Acronym</th><th>Allen full name</th><th>M3 7-scene</th></tr></thead>
+<tbody><tr class="r" data-s="mh medial habenula">
+<td><button class="acr" data-c="MH" title="Click to copy">MH</button></td>
+<td class="nm">Medial habenula</td>
+<td><span class="chip present" title="in your data">in your data</span></td>
+</tr><tr class="r" data-s="lh lateral habenula">
+<td><button class="acr" data-c="LH" title="Click to copy">LH</button></td>
+<td class="nm">Lateral habenula</td>
+<td><span class="chip present" title="in your data">in your data</span></td>
+</tr></tbody>
+</table></div></section>
+<section class="grp" data-grp>
+<header class="ghead">
+<h2>Pons &amp; medulla<span class="tag morphine">Morphine</span></h2>
+<p class="note">Opioid analgesia relay + autonomic withdrawal signs.</p>
+</header>
+<div class="tw"><table>
+<thead><tr><th>Acronym</th><th>Allen full name</th><th>M3 7-scene</th></tr></thead>
+<tbody><tr class="r" data-s="lc locus ceruleus">
+<td><button class="acr" data-c="LC" title="Click to copy">LC</button></td>
+<td class="nm">Locus ceruleus</td>
+<td><span class="chip absent" title="not in this series">not in this series</span></td>
+</tr><tr class="r" data-s="pb parabrachial nucleus">
+<td><button class="acr" data-c="PB" title="Click to copy">PB</button></td>
+<td class="nm">Parabrachial nucleus</td>
+<td><span class="chip absent" title="not in this series">not in this series</span></td>
+</tr><tr class="r" data-s="pbl parabrachial nucleus, lateral division">
+<td><button class="acr" data-c="PBl" title="Click to copy">PBl</button></td>
+<td class="nm">Parabrachial nucleus, lateral division</td>
+<td><span class="chip absent" title="not in this series">not in this series</span></td>
+</tr><tr class="r" data-s="pbm parabrachial nucleus, medial division">
+<td><button class="acr" data-c="PBm" title="Click to copy">PBm</button></td>
+<td class="nm">Parabrachial nucleus, medial division</td>
+<td><span class="chip absent" title="not in this series">not in this series</span></td>
+</tr><tr class="r" data-s="rm nucleus raphe magnus">
+<td><button class="acr" data-c="RM" title="Click to copy">RM</button></td>
+<td class="nm">Nucleus raphe magnus</td>
+<td><span class="chip absent" title="not in this series">not in this series</span></td>
+</tr><tr class="r" data-s="rpa nucleus raphe pallidus">
+<td><button class="acr" data-c="RPA" title="Click to copy">RPA</button></td>
+<td class="nm">Nucleus raphe pallidus</td>
+<td><span class="chip absent" title="not in this series">not in this series</span></td>
+</tr><tr class="r" data-s="ro nucleus raphe obscurus">
+<td><button class="acr" data-c="RO" title="Click to copy">RO</button></td>
+<td class="nm">Nucleus raphe obscurus</td>
+<td><span class="chip absent" title="not in this series">not in this series</span></td>
+</tr><tr class="r" data-s="pcg pontine central gray">
+<td><button class="acr" data-c="PCG" title="Click to copy">PCG</button></td>
+<td class="nm">Pontine central gray</td>
+<td><span class="chip absent" title="not in this series">not in this series</span></td>
+</tr><tr class="r" data-s="prnr pontine reticular nucleus">
+<td><button class="acr" data-c="PRNr" title="Click to copy">PRNr</button></td>
+<td class="nm">Pontine reticular nucleus</td>
+<td><span class="chip absent" title="not in this series">not in this series</span></td>
+</tr><tr class="r" data-s="prnc pontine reticular nucleus, caudal part">
+<td><button class="acr" data-c="PRNc" title="Click to copy">PRNc</button></td>
+<td class="nm">Pontine reticular nucleus, caudal part</td>
+<td><span class="chip absent" title="not in this series">not in this series</span></td>
+</tr><tr class="r" data-s="ldt laterodorsal tegmental nucleus">
+<td><button class="acr" data-c="LDT" title="Click to copy">LDT</button></td>
+<td class="nm">Laterodorsal tegmental nucleus</td>
+<td><span class="chip absent" title="not in this series">not in this series</span></td>
+</tr><tr class="r" data-s="dtn dorsal tegmental nucleus">
+<td><button class="acr" data-c="DTN" title="Click to copy">DTN</button></td>
+<td class="nm">Dorsal tegmental nucleus</td>
+<td><span class="chip absent" title="not in this series">not in this series</span></td>
+</tr><tr class="r" data-s="ni nucleus incertus">
+<td><button class="acr" data-c="NI" title="Click to copy">NI</button></td>
+<td class="nm">Nucleus incertus</td>
+<td><span class="chip absent" title="not in this series">not in this series</span></td>
+</tr><tr class="r" data-s="nts nucleus of the solitary tract">
+<td><button class="acr" data-c="NTS" title="Click to copy">NTS</button></td>
+<td class="nm">Nucleus of the solitary tract</td>
+<td><span class="chip absent" title="not in this series">not in this series</span></td>
+</tr><tr class="r" data-s="ap area postrema">
+<td><button class="acr" data-c="AP" title="Click to copy">AP</button></td>
+<td class="nm">Area postrema</td>
+<td><span class="chip absent" title="not in this series">not in this series</span></td>
+</tr><tr class="r" data-s="dmx dorsal motor nucleus of the vagus nerve">
+<td><button class="acr" data-c="DMX" title="Click to copy">DMX</button></td>
+<td class="nm">Dorsal motor nucleus of the vagus nerve</td>
+<td><span class="chip absent" title="not in this series">not in this series</span></td>
+</tr><tr class="r" data-s="irn intermediate reticular nucleus">
+<td><button class="acr" data-c="IRN" title="Click to copy">IRN</button></td>
+<td class="nm">Intermediate reticular nucleus</td>
+<td><span class="chip absent" title="not in this series">not in this series</span></td>
+</tr><tr class="r" data-s="grn gigantocellular reticular nucleus">
+<td><button class="acr" data-c="GRN" title="Click to copy">GRN</button></td>
+<td class="nm">Gigantocellular reticular nucleus</td>
+<td><span class="chip absent" title="not in this series">not in this series</span></td>
+</tr></tbody>
+</table></div></section>
+<footer>
+<p><strong>How to use these.</strong> Put one acronym per line in
+<code>&lt;project&gt;/regions_of_interest.txt</code> (<code>#</code> comments allowed), or pass
+them as the <code>regions</code> list in a notebook <code>PARAMS</code> dict. Omit the file
+entirely and the readout falls back to every included leaf region.</p>
+<p><strong>&ldquo;In your data&rdquo;</strong> means the region carries at least one detected cell
+somewhere in the M3 7-scene series (73 of 138 do). That series spans rostral forebrain through
+hippocampus, thalamus and hypothalamus &mdash; midbrain, pons and medulla regions are listed for
+completeness but need a section series that reaches them.</p>
+<p>A region can also read as empty when its cells sit on a coarser parent annotation instead of
+the region itself &mdash; the rollup warns by name when that happens.</p>
+</footer>
+</div>
+
+<script>
+(function(){
+  var q=document.getElementById('q'), fp=document.getElementById('fPresent'),
+      cnt=document.getElementById('count'), rows=[].slice.call(document.querySelectorAll('tr.r')),
+      grps=[].slice.call(document.querySelectorAll('[data-grp]')), only=false;
+  function apply(){
+    var t=q.value.trim().toLowerCase(), n=0;
+    rows.forEach(function(r){
+      var okT=!t||r.dataset.s.indexOf(t)>-1,
+          okP=!only||r.querySelector('.chip').classList.contains('present'),
+          show=okT&&okP;
+      r.hidden=!show; if(show)n++;
+    });
+    grps.forEach(function(g){
+      g.hidden=!g.querySelectorAll('tr.r:not([hidden])').length;
+    });
+    cnt.textContent=n+' of '+rows.length+' regions';
+  }
+  q.addEventListener('input',apply);
+  fp.addEventListener('click',function(){
+    only=!only; fp.setAttribute('aria-pressed',only?'true':'false');
+    fp.textContent=only?'Showing only my data':'Only regions in my data'; apply();
+  });
+  document.addEventListener('click',function(e){
+    var b=e.target.closest('.acr'); if(!b)return;
+    var v=b.dataset.c, old=b.textContent;
+    function done(){b.textContent='copied';b.classList.add('ok');
+      setTimeout(function(){b.textContent=old;b.classList.remove('ok');},850);}
+    if(navigator.clipboard&&navigator.clipboard.writeText){
+      navigator.clipboard.writeText(v).then(done,done);
+    }else{
+      var ta=document.createElement('textarea');ta.value=v;document.body.appendChild(ta);
+      ta.select();try{document.execCommand('copy');}catch(err){}
+      document.body.removeChild(ta);done();
+    }
+  });
+  apply();
+})();
+</script>
