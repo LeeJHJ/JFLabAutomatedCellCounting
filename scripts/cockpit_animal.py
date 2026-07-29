@@ -950,7 +950,11 @@ def plot_slice_spread(df: pd.DataFrame, per_slice: pd.DataFrame, config: creg.Co
         })
 
     n = max(len(rows), 1)
-    total_h, top, bottom = _reserve_chrome(n, per_row=0.55, header_in=0.4, footer_in=0.75)
+    # header_in covers title AND a 3-entry legend placed ABOVE the axes. An in-axes legend
+    # collided with real data here: on the M3 fixture the bottom region's pooled diamond
+    # landed underneath a lower-right legend box. Dot positions are data-driven, so no
+    # in-axes corner is reliably free -- the legend has to leave the data area entirely.
+    total_h, top, bottom = _reserve_chrome(n, per_row=0.55, header_in=0.95, footer_in=0.75)
     fig, ax = plt.subplots(figsize=(7.5, total_h))
     if not rows:
         ax.text(0.5, 0.5, "no region has a usable per-slice reactivation series",
@@ -987,7 +991,9 @@ def plot_slice_spread(df: pd.DataFrame, per_slice: pd.DataFrame, config: creg.Co
     ax.set_xlabel(f"reactivation rate (%) -- Double+/{roles.tagged}+_count per slice, "
                  f"pooled vs mean")
     _style_axes(ax, grid_axis="x")
-    ax.legend(frameon=False, fontsize=8, loc="lower right")
+    handles, labels = ax.get_legend_handles_labels()
+    fig.legend(handles, labels, loc="upper center", ncol=3, frameon=False, fontsize=8,
+               bbox_to_anchor=(0.5, 1.0 - 0.42 / total_h))
     ax.set_title(f"{animal} -- per-slice reactivation spread (dots = slices per region)")
     _footnote(fig, excluded)
     fig.subplots_adjust(top=top, bottom=bottom)
