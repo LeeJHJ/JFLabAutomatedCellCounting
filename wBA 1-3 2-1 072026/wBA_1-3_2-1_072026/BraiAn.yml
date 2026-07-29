@@ -53,14 +53,14 @@ channelDetections:
       includeNuclei: true
       smoothBoundaries: true
       makeMeasurements: true
-    classifiers:
-      # BraiAn.resolvePath (v1.1.0) searches <projectBaseDir> then its PARENT for
-      # `<name>.json` -- it does NOT look inside classifiers/object_classifiers/.
-      # So `name` carries the project-relative path, keeping each JSON in QuPath's
-      # standard object_classifiers folder (still GUI-loadable, single source of truth).
-      - channel: "AF488-T3"
-        name: "classifiers/object_classifiers/Fos_Classifier_20x"
-        annotationsToClassify: []            # empty = apply to all detections
-      - channel: "AF568-T2"
-        name: "classifiers/object_classifiers/TdT_classifier"
-        annotationsToClassify: []
+    # EMPTIED 2026-07-29 (single-classification-path convergence). Previously this
+    # block applied Fos_Classifier_20x + TdT_classifier -- fixed ABSOLUTE-threshold
+    # JSONs -- at detection time. Classification is now done in exactly one place:
+    # 02_detect_classify.groovy, which reads pipeline.yml and applies the robust
+    # self-calibrating cut (median + k_robust * 1.4826 * MAD) per marker on the
+    # background-subtracted measure. Two mechanisms in two projects made the
+    # pipeline unusable by anyone who did not know which project used which.
+    # The published wBA1-3 numbers came from 02_detect_classify.groovy, not from
+    # these JSONs, so emptying this changes no reported result. The retired JSONs
+    # live in _archive/retired-classifiers/.
+    classifiers: []
