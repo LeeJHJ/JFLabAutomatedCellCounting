@@ -38,6 +38,9 @@ conda activate deepslice   # optional local DeepSlice (else use online)
 - **Export atlas coordinates in microns, not pixels** — otherwise the brainrender point cloud lands in the wrong place. ABBA's Allen atlas and brainrender's `allen_mouse` are both CCFv3; keep that consistent.
 - **"3D" = atlas-space cell point cloud** (cells plotted in the Allen reference brain), **not** physical tissue reconstruction. Confirm scope with PI before attempting the latter.
 - Detection starting parameters (threshold, min/max area, sigma, cytoplasmic expansion radius): seed from the F1000Research 2026 / bioRxiv 2024.09.16.611953 TRAP2 paper, then tune on ONE section before scaling to the series.
+- **Detection threshold must be RELATIVE, never absolute (2026-07-29).** The anchor-channel cut is `floor + span_frac * (bright_peak - floor)`, with both endpoints re-measured from *each section's own* histogram by `run_braian_detection.groovy`; `span_frac` lives in `pipeline.yml` (`detection_threshold`). BraiAn.yml's own `threshold:` / `histogramThreshold:` are ignored for the anchor channel. Rationale: `histogramThreshold` needs a dim-nuclei peak this data does not have, and an absolute cut (the former `threshold: 700`) silently under-detects on any section dimmer than the one it was tuned on — a comparability bug, not a preference. Inspect placement in `notebooks/01_calibrate.ipynb` §3 before changing `span_frac`.
+- **Pixel size comes from the CZI, never a default.** `czi_mip.py` reads `Scaling/Items/Distance` and stamps it into the OME-XML; every micron-denominated detection parameter is scaled by that number downstream. `--pixel-um` overrides explicitly and reports disagreement.
+- **One classification path.** Marker classification happens only in `02_detect_classify.groovy` from `pipeline.yml`. Every project's `BraiAn.yml` `classifiers:` block is empty by design — do not repopulate it, or classification silently happens twice by two different rules.
 
 ## Stats conventions for BraiAnalyse work
 - **Aggregate to the animal level before any group comparison** — sections are not independent; never pseudoreplicate on section- or cell-level n.
@@ -53,10 +56,19 @@ conda activate deepslice   # optional local DeepSlice (else use online)
 - [x] GUI config done (PTBIOP site, elastix paths, QuPath catalogs) — 2026-06-19
 - [x] Test: ZEN export → QuPath import on ONE section — 2026-06-20 (M3 hippocampus ~+1.4mm bregma, 10x confocal, 3ch: DAPI/Ch0, Fos-488/Ch1, TdTomato-568/Ch2)
 - [x] First registered section (DeepSlice + Affine + Spline, Allen CCFv3 regions loaded) — 2026-06-20
-- [x] 20x CZI → MIP pipeline (czi_to_mip.py); channel fix: always pass --channels "TdTomato-AF568" "Fos-AF488" "DAPI" — 2026-06-22
+- [x] 20x CZI → MIP pipeline (`czi_mip.py`, repo root — there is no `czi_to_mip.py`); channel names are `AF568-T2` (TdTomato) / `AF488-T3` (Fos) / `DAPI-T4`; pass `--channels` in physical read order (aicspylibczi order ≠ metadata order) — 2026-06-22, corrected 2026-07-29
 - [x] 20x section ABBA registration — final workflow: DeepSlice → Review Mode manual angle adjust → export (no Affine/Spline; elastix degrades result due to no tissue mask) — 2026-06-23
-- [ ] Detection params tuned on one section
-- [ ] First registered series
+- [x] First registered series + animal-level readout (wBA1-3, LA/BA amygdala) — 2026-07-23
+- [x] Generalization pass — 2026-07-29:
+      - self-calibrating relative detection threshold (`detection_threshold` in `pipeline.yml`), replacing absolute `threshold: 700`
+      - `scripts/calibrate_threshold.groovy` (read-only) + `scripts/cockpit_threshold.py` (histogram / sweep / series plots) + notebook §3
+      - `scripts/sync_project.py` — repo `scripts/` is SOURCE, project `scripts/` is DEPLOYED; retires stale copies, merges missing config blocks without touching project values
+      - pixel size read from CZI metadata, not defaulted
+      - one classification path (legacy `BraiAn.yml` `classifiers:` blocks emptied)
+      - unregistered QuPath entries now skipped loudly instead of silently entering a batch run
+      - archived: TRACR, cohort 1, Automated Cell Counting Test, 062226 Redo, 11 dead classifier JSONs
+- [ ] Detection params re-tuned against hand counts (over-segmentation open — see `.planning/codebase/TESTING.md` gaps)
+- [ ] Minimum-viable acquisition validated (see `IMAGING-MINIMUM-VIABLE-ACQUISITION.md`)
 _Update this block as the setup progresses._
 
 ## Notes from install (2026-06-19)

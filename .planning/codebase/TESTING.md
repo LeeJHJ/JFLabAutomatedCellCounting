@@ -1,147 +1,128 @@
 # Testing Patterns
 
-**Analysis Date:** 2026-06-30
+**Last verified against the codebase:** 2026-07-29
+*(Supersedes the 2026-06-30 version, which described a `pytest` layout that was never
+built, pointed at an out-of-repo script that has since been superseded, and reported
+"0% automated coverage" — all three are now wrong.)*
 
-## Test Framework
+## Test framework
 
-**Runner:** None — no automated test suite exists in this project.
+**Runner:** none, deliberately. The project convention is a **`--self-test` flag on
+every script**, asserting against synthetic in-process data. No pytest, no `tests/`
+directory, no fixtures on disk.
 
-**Assertion Library:** Not applicable.
+Why this shape rather than pytest: the units worth testing here are numeric
+transforms (projection, thresholding, rollup arithmetic) whose inputs are cheap to
+synthesise in a few lines, while everything else is either a GUI step or needs a
+multi-GB image. A self-test that ships inside the script it tests cannot drift away
+from it, and an operator can run it on the acquisition machine with no dev install.
 
-**Run Commands:** Not applicable.
+## Running the tests
 
-## Current Validation Approach
-
-This is a single-researcher bioinformatics pipeline. Validation is manual and experimental rather than automated. The following patterns substitute for formal tests:
-
-**1. `--info` flag (metadata dry-run):**
-`czi_to_mip.py` supports `--info` to print file metadata without writing output. Use this to verify channel names, z-plane counts, pixel sizes, and tile dimensions before committing to a full MIP run.
+Every one of these must exit 0 before a script is trusted:
 
 ```bash
-conda activate braian
-python /home/jflab/section-pipeline/scripts/czi_to_mip.py brain1.czi --info
+conda activate braian          # or prefix each with: conda run -n braian
+
+python3 czi_mip.py                      --self-test   # projection / stitching / OME-XML
+python3 scripts/cockpit_threshold.py    --self-test   # detection-threshold rule + plots
+python3 scripts/cockpit_checks.py       --self-test   # QC gates
+python3 scripts/sync_project.py         --self-test   # project deploy + config merge
+python3 scripts/validate_pipeline_config.py --self-test   # pipeline.yml contract
+python3 scripts/crop_to_tissue.py       --self-test   # tissue mask
+python3 run_pipeline.py                 --self-test   # launcher menu (prints, runs nothing)
 ```
 
-**2. Single-section pilot before series:**
-Per `CLAUDE.md`, detection parameters must be tuned on ONE section before scaling. This is the biological equivalent of a unit test — validate on a known section (M3 hippocampus ~+1.4 mm bregma) before batch processing.
+Groovy scripts have no self-test — QuPath's script engine is not scriptable from the
+CLI in this setup. They fail loud instead: every one validates its `pipeline.yml`
+keys up front and aborts with the exact missing key rather than proceeding on a
+default. See `02_detect_classify.groovy` and `run_braian_detection.groovy`.
 
-**3. Visual QC in QuPath:**
-After MIP generation, open in QuPath and verify:
-- Channel count and names match expectation
-- Pixel size reads correctly (check Image tab)
-- No stitching artifacts visible
+Notebooks are checked by executing them headless with `dry_run: True`, which
+exercises every cheap cell while expensive cells only print the command they would
+run:
 
-**4. DeepSlice AP sanity check:**
-`run_deepslice.py` prints estimated AP position from bregma after prediction. Compare against expected anatomy to catch gross registration errors.
-
-```
-Estimated AP: +1.42 mm from bregma  (Section_s000.png)
-```
-
-**5. ABBA registration visual review:**
-After ABBA DeepSlice + manual angle adjustment, use Review Mode to confirm alignment before exporting atlas overlays.
-
-## Test File Organization
-
-No test files exist. The closest approximation:
-- `Automated Cell Counting Test/` — QuPath project directory used as a validation workspace for the M3 hippocampus pilot section
-- `Automated Cell Counting Test/Test1 062026 Notes.txt` — manual QC notes from first pipeline run
-
-## What Would Need Testing (Gaps)
-
-**High priority — fragile by design:**
-
-1. **Channel order inversion** (`czi_to_mip.py`):
-   - `aicspylibczi` reads CZI channels in a different order than CZI metadata reports. This is a known bug (documented in `/home/jflab/.claude/projects/-home-jflab-Analysis/memory/feedback_channel_order.md`). No automated test guards against regression. Any change to the channel-read path needs manual verification with `--info` and visual QuPath inspection.
-   - Files: `/home/jflab/section-pipeline/scripts/czi_to_mip.py` (lines 56–69, `_get_channel_names`)
-
-2. **Pixel size extraction from CZI metadata:**
-   - `_get_pixel_size()` silently returns `None` on failure. A unit test checking the metres-to-µm conversion against a known CZI fixture would catch regressions.
-   - Files: `/home/jflab/section-pipeline/scripts/czi_to_mip.py` (lines 43–53)
-
-3. **Axes normalisation in OME-TIFF reader:**
-   - `generate_mip_from_ometiff()` branches on `axes` value (`CYX`, `CZYX`, `ZCYX`, fallback). Only `CZYX` and `CYX` have been tested in practice. Other axis orders fall through silently.
-   - Files: `/home/jflab/section-pipeline/scripts/czi_to_mip.py` (lines 94–141)
-
-4. **Atlas coordinate units:**
-   - Per `CLAUDE.md`, exports must be in µm not pixels. No automated check exists that exported cell centroids are in the correct unit.
-
-5. **Nucleus-anchored colocalization logic:**
-   - The rule (nucleus contains marker centroid) is not yet implemented; when implemented in QuPath Groovy scripts, it will need visual validation against known-positive cells.
-
-## If Automated Tests Were Added
-
-**Recommended framework:** `pytest` in the `braian` conda env (already has Python 3.11, numpy, tifffile).
-
-**Install:**
 ```bash
-conda activate braian
-pip install pytest
+conda run -n braian python3 -c "
+import nbformat; from nbclient import NotebookClient
+nb = nbformat.read('notebooks/01_calibrate.ipynb', as_version=4)
+NotebookClient(nb, timeout=600, resources={'metadata': {'path': 'notebooks'}}).execute()"
 ```
 
-**Suggested test layout:**
-```
-/home/jflab/section-pipeline/
-├── scripts/
-│   ├── czi_to_mip.py
-│   └── run_deepslice.py
-└── tests/
-    ├── fixtures/
-    │   └── tiny_mock.czi    # minimal synthetic CZI for fast CI
-    ├── test_czi_to_mip.py
-    └── test_run_deepslice.py
-```
+## Which script is canonical (important)
 
-**Minimal useful tests to write first:**
+There are **two** CZI→MIP scripts on this machine. Use the in-repo one.
 
-```python
-# tests/test_czi_to_mip.py
-import numpy as np
-from pathlib import Path
-from scripts.czi_to_mip import _build_ome_xml, generate_mip_from_ometiff
+| | path | status |
+|---|---|---|
+| **canonical** | `/home/jflab/Analysis/czi_mip.py` | current. Hybrid projection (single sharpest DAPI plane + full-Z marker MIP), per-scene bbox isolation, tile-stitch with feathered seams, flat-field correction, pixel size read from CZI metadata, `--self-test`. |
+| superseded | `/home/jflab/section-pipeline/scripts/czi_to_mip.py` | **do not use.** Older, plain per-channel MIP over all Z. |
 
-def test_build_ome_xml_channel_count():
-    mip = np.zeros((3, 100, 200), dtype=np.uint16)
-    ch_names = ["DAPI", "Fos-AF488", "TdTomato-AF568"]
-    xml = _build_ome_xml(mip, ch_names, pixel_um=0.69)
-    assert xml.count("<Channel") == 3
-    assert 'Name="DAPI"' in xml
-    assert 'PhysicalSizeX="0.69"' in xml
+Running the superseded one reintroduces the DAPI over-projection that fused touching
+nuclei into blobs — the exact problem hybrid projection was built to fix (see
+`IMAGING_OPTIMIZATION_NOTES.md`: nucleus separation degraded monotonically from
+single-plane → 2 → 3 → 6 planes). It is retained only as history.
 
-def test_ometiff_axes_normalisation(tmp_path):
-    """Verify CYX OME-TIFF round-trips to correct shape."""
-    import tifffile
-    arr = np.random.randint(0, 65535, (3, 512, 512), dtype=np.uint16)
-    p = tmp_path / "test.ome.tiff"
-    tifffile.imwrite(str(p), arr, photometric="minisblack")
-    mip, ch_names, pixel_um = generate_mip_from_ometiff(p, z_planes=None)
-    assert mip.shape == (3, 512, 512)
-```
+## What the self-tests actually cover
 
-## Mocking
+`czi_mip.py` — the var-of-Laplacian sharpest-plane selector picks the known-sharp
+plane; hybrid output is byte-identical to `stack[dapi_z]` on the anchor and to
+`np.max(stack, axis=0)` on markers; plane selection is independent per scene;
+tile-stitch never leaks a neighbouring scene's pixels and resolves seams to a value
+strictly between the two tiles; flat-field correction flattens a known radial
+vignette; OME channel colours and the `PhysicalSizeX` round-trip hold; the
+`--isolate auto/region/tiles` decision table including its refusal case.
 
-Not applicable — no test framework in use. When tests are added:
-- Mock `aicspylibczi.CziFile` for unit tests that don't need real CZI data
-- Use `tmp_path` pytest fixture for output file tests
-- Do NOT mock `tifffile` — the OME-XML embedding behaviour needs real file I/O to verify
+`cockpit_threshold.py` — the span-fraction arithmetic
+(`floor + span_frac × (bright − floor)`); that the historical absolute cut of 700
+corresponds to fraction 0.256 on the section it was tuned on, so the default 0.25
+reproduces the operator's own visual call; robust-z outlier detection across a
+series; that an out-of-range cut is FLAGged; headless plot rendering; empty-project
+and absent-config degradation.
 
-## Coverage
+`sync_project.py` — config-block extraction keeps its comment paragraph and does not
+bleed into neighbouring keys; a project's own marker set and `k_robust` survive a
+sync untouched; retired scripts are removed; deploy is byte-identical and idempotent;
+`--dry-run` writes nothing; a non-QuPath directory is refused.
 
-**Requirements:** None enforced.
+`validate_pipeline_config.py` — the full `pipeline.yml` contract: marker/compartment
+vocabulary, `Double+` emitted only when ≥2 non-anchor markers are declared, the
+per-marker background-subtracted measurement-key strings, and the
+`detection_threshold` block including the `resolution_level == 0` requirement.
 
-**Current state:** 0% automated coverage. All validation is visual/manual.
+## Validation that is not automatable
 
-## Biological Validation Protocol (Manual QC Checklist)
+These are operator judgment and stay manual:
 
-When running a new section through the pipeline:
+1. **Registration fit** — ABBA overlay against tissue anatomy. No ground-truth
+   metric exists; established doctrine is operator visual review (tilt before
+   elastix, not more spline control points).
+2. **Detection sanity on one section** — tune on ONE section before scaling
+   (`CLAUDE.md`). The cockpit's QC gates report numbers next to PASS/FLAG verdicts;
+   they are advisory prompts, not a gate that can be passed mechanically.
+3. **Threshold placement** — `notebooks/01_calibrate.ipynb` §3 plots where the cut
+   lands on the real histogram. Judgment call, made while looking at the data.
+4. **Scene→section identity** — that MIP `s3` really is the third physical section.
+   Only the operator can confirm this against the slide.
 
-1. `--info` check: channel names and pixel size match acquisition metadata
-2. QuPath import: image opens at correct physical dimensions
-3. ABBA registration: AP position within ±0.3 mm of anatomical expectation
-4. Detection pilot: run on one ROI, spot-check 10 cells manually for TdT+/Fos+/double+ classification
-5. Colocalization check: confirm nucleus-containment rule applied (not proximity)
-6. Atlas export: spot-check one region's cell coordinates in µm against atlas reference
+## Real gaps
+
+1. **No ground-truth cell counts.** Measured density (2,500–5,500/mm²) sits above the
+   500–2,000/mm² literature seed while nucleus area (40–50 µm²) sits below the
+   50–150 µm² seed — smaller objects and more of them, with total nuclear area
+   roughly conserved, which is the signature of watershed splitting nuclei. Nothing
+   in the pipeline can detect this; it needs hand counts on one section.
+2. **No end-to-end regression fixture.** The v1.0 numbers (213,106 cells; CA1
+   bilateral 6,354; `grey` ≈ 0) are recorded in prose in
+   `.planning/milestones/v1.0-phases/04-.../04-VALIDATION-RECORD.md`, not asserted by
+   anything. Two of them are canaries for real historical bugs: a non-trivial `grey`
+   count means the CR-01 region-labelling bug is back; an all-`Negative`
+   classification means the D-05 measurement-key bug is back.
+   Note that the TdT-derived figures in that record predate the 2026-07-25 move to
+   whole-cell TdTomato measurement and are **not** reproducible as written.
+3. **Atlas coordinate units** are not asserted anywhere — exports must be µm, and
+   `AtlasTools` returns mm (×1000 needed).
 
 ---
 
-*Testing analysis: 2026-06-30*
+*Verified by reading the scripts and running every `--self-test` listed above, 2026-07-29.*

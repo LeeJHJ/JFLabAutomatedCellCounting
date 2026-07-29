@@ -111,7 +111,7 @@ End-to-end TRAP2 cell classification pipeline for the first real section run: M3
 
 ## File Naming
 
-- Python scripts: `snake_case.py` (e.g., `czi_to_mip.py`, `run_deepslice.py`)
+- Python scripts: `snake_case.py` (e.g., `czi_mip.py`, `cockpit_threshold.py`, `sync_project.py`)
 - QuPath scripts: free-form with dates in name (e.g., `Test 062026 1.groovy`) — not yet standardised
 - Output files: `{AnimalID}_{modality}_{MIP|step}.ome.tiff` (e.g., `M3_20x_MIP.ome.tiff`)
 - QuPath projects: directory named after experiment + date (e.g., `M3 Hippocampus 20x 062226/`)
@@ -126,8 +126,8 @@ End-to-end TRAP2 cell classification pipeline for the first real section run: M3
 - `snake_case` for local variables (e.g., `pixel_um`, `ch_names`, `mip_channels`)
 - Short descriptive names for loop indices: `c` (channel), `z` (z-plane), `n_c`, `n_z`, `n_s`
 - Constants in `UPPER_SNAKE_CASE` at module level when hardcoded (e.g., `F_IN`, `F_OUT`, `PIXEL_SIZE_UM` in the prototype `czi_mip.py`)
-- Path variables use `Path` objects, not raw strings, in the canonical version (`czi_to_mip.py`)
-- Used in function signatures in `czi_to_mip.py` and `run_deepslice.py`
+- Path variables use `Path` objects, not raw strings (`czi_mip.py`, all `scripts/*.py`)
+- Used in function signatures in `czi_mip.py` and the `scripts/cockpit_*.py` modules
 - Pattern: `list[int] | None` (PEP 604 union syntax, requires `from __future__ import annotations`)
 - Return types annotated for non-trivial functions: `-> tuple[np.ndarray, list[str], float]`
 
