@@ -727,19 +727,31 @@ def _log2_ratio_axis(ax: plt.Axes, values: np.ndarray) -> None:
     """D-2 display transform: the value axis is log2(overlap_above_chance) on a LINEAR
     scale (never a log-scaled axis -- that has no honest zero, so a bar's origin becomes
     arbitrary). Ticks are relabeled as multiples (0.25x, 0.5x, 1x, 2x, 4x, 8x, ...) and the
-    chance reference is drawn at 0 and labeled -- bars emanate from 0 (= 1.0x, chance)."""
+    chance reference is drawn at 0 -- bars emanate from 0 (= 1.0x, chance). The "(chance)"
+    label is baked directly into the 0-tick's text (not a separate floating annotation) so
+    it can never collide with a title or legend above the axes."""
     finite = values[np.isfinite(values)]
     lo = int(np.floor(finite.min())) if finite.size else -1
     hi = int(np.ceil(finite.max())) if finite.size else 1
     lo = min(lo, -1)
     hi = max(hi, 1)
     ticks = list(range(lo, hi + 1))
+    labels = [f"1.0{_TIMES} (chance)" if t == 0 else f"{2.0 ** t:g}{_TIMES}" for t in ticks]
     ax.set_xticks(ticks)
-    ax.set_xticklabels([f"{2.0 ** t:g}{_TIMES}" for t in ticks])
+    ax.set_xticklabels(labels)
     ax.axvline(0, color=COLOR_NEUTRAL, ls="--", lw=1.0, zorder=1)
-    ax.text(0, 1.02, f"1.0{_TIMES} (chance)", transform=ax.get_xaxis_transform(),
-           ha="center", va="bottom", fontsize=7.5, color=COLOR_INK)
     ax.set_xlabel("log2(overlap_above_chance)  [display transform of overlap_above_chance]")
+
+
+def _reserve_chrome(n_rows: int, per_row: float, header_in: float, footer_in: float,
+                    min_content_in: float = 1.4) -> tuple[float, float, float]:
+    """Returns (total_fig_height_in, top_fraction, bottom_fraction). Header/footer chrome
+    (title, legend, footnote, axis label) gets a roughly CONSTANT absolute-inch allowance
+    regardless of row count -- a fixed FRACTION reserved on a tall, many-row figure leaves a
+    disproportionate, empty-looking gap (found on the real M3 fixture at top_n=20)."""
+    content_in = max(min_content_in, per_row * n_rows)
+    total_in = content_in + header_in + footer_in
+    return total_in, 1.0 - header_in / total_in, footer_in / total_in
 
 
 def plot_region_ranking(df: pd.DataFrame, config: creg.Config, roles: Roles,
@@ -758,19 +770,21 @@ def plot_region_ranking(df: pd.DataFrame, config: creg.Config, roles: Roles,
     order = _rank_regions(kept, top_n=top_n)
     plot_df = kept.set_index("region_acronym").loc[order].reset_index()
 
-    fig, ax = plt.subplots(figsize=(7.5, max(2.6, 0.34 * len(plot_df) + 1.3)))
+    n = len(plot_df)
+    total_h, top, bottom = _reserve_chrome(n, per_row=0.34, header_in=0.45, footer_in=0.85)
+    fig, ax = plt.subplots(figsize=(7.5, total_h))
     colors = _enrichment_colors(plot_df["_log2_oac"].to_numpy())
     ax.barh(plot_df["region_acronym"], plot_df["_log2_oac"], color=colors, height=0.6, zorder=2)
     ax.invert_yaxis()
     _log2_ratio_axis(ax, plot_df["_log2_oac"].to_numpy())
     _style_axes(ax, grid_axis="x")
-    ax.text(0.0, -0.14, f"depleted {_LEFT_ARROW}", ha="left", va="top", fontsize=7.5,
+    ax.text(0.0, -0.16, f"depleted {_LEFT_ARROW}", ha="left", va="top", fontsize=7.5,
            color=COLOR_INK, transform=ax.transAxes)
-    ax.text(1.0, -0.14, f"{_RIGHT_ARROW} enriched", ha="right", va="top", fontsize=7.5,
+    ax.text(1.0, -0.16, f"{_RIGHT_ARROW} enriched", ha="right", va="top", fontsize=7.5,
            color=COLOR_INK, transform=ax.transAxes)
-    ax.set_title(f"{animal} -- region ranking by overlap_above_chance (top {len(plot_df)})")
+    ax.set_title(f"{animal} -- region ranking by overlap_above_chance (top {n})")
     _footnote(fig, excluded)
-    fig.subplots_adjust(top=0.90, bottom=0.22)
+    fig.subplots_adjust(top=top, bottom=bottom)
     return fig
 
 
@@ -796,7 +810,8 @@ def plot_raw_vs_corrected(df: pd.DataFrame, config: creg.Config, roles: Roles,
                            .rank(ascending=False, method="min").astype(int))
 
     n = len(plot_df)
-    fig, (axL, axR) = plt.subplots(1, 2, sharey=True, figsize=(11.0, max(2.6, 0.34 * n + 1.3)))
+    total_h, top, bottom = _reserve_chrome(n, per_row=0.34, header_in=1.0, footer_in=0.85)
+    fig, (axL, axR) = plt.subplots(1, 2, sharey=True, figsize=(11.0, total_h))
     colors = _enrichment_colors(plot_df["_log2_oac"].to_numpy())
 
     rate_pct = plot_df["reactivation_rate"].to_numpy(dtype=float) * 100.0
@@ -813,14 +828,15 @@ def plot_raw_vs_corrected(df: pd.DataFrame, config: creg.Config, roles: Roles,
     axR.tick_params(labelleft=False)
     _style_axes(axR, grid_axis="x")
 
+    header_span = 1.0 - top
     handles = [plt.Rectangle((0, 0), 1, 1, color=COLOR_ABOVE),
               plt.Rectangle((0, 0), 1, 1, color=COLOR_BELOW)]
     fig.legend(handles, ["above chance", "below chance"], loc="upper center", ncol=2,
-              frameon=False, fontsize=8.5, bbox_to_anchor=(0.5, 0.985))
+              frameon=False, fontsize=8.5, bbox_to_anchor=(0.5, 1.0 - 0.15 * header_span))
     fig.suptitle(f"{animal} -- raw rate vs chance-corrected enrichment  (#k = raw-rate rank)",
-                y=0.90, fontsize=10.5)
+                y=top + 0.40 * header_span, fontsize=10.5)
     _footnote(fig, excluded)
-    fig.subplots_adjust(top=0.78, bottom=0.22, wspace=0.06)
+    fig.subplots_adjust(top=top, bottom=bottom, wspace=0.06)
     return fig
 
 
@@ -857,7 +873,8 @@ def plot_evidence_guard(df: pd.DataFrame, config: creg.Config, roles: Roles,
 
     n = len(plot_df)
     y = np.arange(n)
-    fig, (axL, axR) = plt.subplots(1, 2, sharey=True, figsize=(11.0, max(2.6, 0.34 * n + 1.3)))
+    total_h, top, bottom = _reserve_chrome(n, per_row=0.34, header_in=0.55, footer_in=0.85)
+    fig, (axL, axR) = plt.subplots(1, 2, sharey=True, figsize=(11.0, total_h))
     for ax_, col, xlabel in ((axL, count_col, f"{count_col}  (log scale)"),
                             (axR, "N", "N  (log scale)")):
         vals = plot_df[col].to_numpy(dtype=float)
@@ -881,10 +898,275 @@ def plot_evidence_guard(df: pd.DataFrame, config: creg.Config, roles: Roles,
                f"(grey, kept labeled): "
                f"{', '.join(plot_df.loc[below, 'region_acronym'])}")
     fig.suptitle(f"{animal} -- evidence guard: {count_col} vs N  (top {n})",
-                y=0.96, fontsize=10.5)
+                y=top + 0.45 * (1.0 - top), fontsize=10.5)
     _footnote(fig, excluded, extra=extra)
-    fig.subplots_adjust(top=0.84, bottom=0.22, wspace=0.08)
+    fig.subplots_adjust(top=top, bottom=bottom, wspace=0.08)
     return fig
+
+
+def plot_slice_spread(df: pd.DataFrame, per_slice: pd.DataFrame, config: creg.Config,
+                      roles: Roles, animal: str | None = None, top_n: int = 8) -> Figure:
+    """Figure 4 -- per-slice reactivation dots vs the POOLED (sum D / sum T, reported)
+    value vs the mean-of-slices (NOT reported) -- the anti-pseudoreplication rule made
+    visual (D-8). Per-slice reactivation is recomputed role-correctly as
+    Double+_count / {tagged}+_count DIRECTLY from per_slice's counts (recon 3) -- the
+    per-slice P(...) columns are keyed on marker DECLARATION order and are the REVERSE
+    rate on a project (like M3) that declares Fos before TdT; reading them would silently
+    plot the wrong quantity. NO error bars anywhere: at n=1 an error bar across slices is
+    pseudoreplication dressed as a CI."""
+    if roles.tagged is None:
+        raise ValueError("plot_slice_spread requires a resolved tagged-marker role")
+    sub, animal = _select_animal(df, animal)
+    both = sub[sub["hemisphere"] == "both"].copy()
+
+    ps = per_slice[(per_slice["hemisphere"] == "both") & (per_slice["animal"] == animal)].copy()
+    tagged_col = f"{roles.tagged}+_count"
+    if "Double+_count" not in ps.columns or tagged_col not in ps.columns:
+        raise ValueError(f"per_slice frame is missing Double+_count / {tagged_col}")
+    with np.errstate(divide="ignore", invalid="ignore"):
+        ps["_reactivation"] = (ps["Double+_count"].to_numpy(dtype=float)
+                               / ps[tagged_col].to_numpy(dtype=float))
+
+    order = _rank_regions(both, top_n=top_n)
+
+    rows: list[dict] = []
+    excluded: list[str] = []
+    for region in order:
+        rg = ps[ps["region_acronym"] == region]
+        rg = rg[np.isfinite(rg[tagged_col]) & (rg[tagged_col] > 0)]
+        pooled_row = both[both["region_acronym"] == region]
+        if (rg.empty or rg[tagged_col].sum() == 0 or pooled_row.empty
+                or not np.isfinite(pooled_row["reactivation_rate"].iloc[0])):
+            excluded.append(region)
+            continue
+        rows.append({
+            "region": region,
+            "dots": rg["_reactivation"].to_numpy(dtype=float) * 100.0,
+            "pooled": float(pooled_row["reactivation_rate"].iloc[0]) * 100.0,
+            "mean_of_slices": float(rg["_reactivation"].mean()) * 100.0,
+        })
+
+    n = max(len(rows), 1)
+    total_h, top, bottom = _reserve_chrome(n, per_row=0.55, header_in=0.4, footer_in=0.75)
+    fig, ax = plt.subplots(figsize=(7.5, total_h))
+    if not rows:
+        ax.text(0.5, 0.5, "no region has a usable per-slice reactivation series",
+               ha="center", va="center", transform=ax.transAxes, color=COLOR_INK)
+        ax.set_axis_off()
+        _footnote(fig, excluded)
+        return fig
+
+    all_dot_x: list[float] = []
+    all_dot_y: list[int] = []
+    pooled_x: list[float] = []
+    pooled_y: list[int] = []
+    mean_x: list[float] = []
+    mean_y: list[int] = []
+    for y_i, r in enumerate(rows):
+        all_dot_x.extend(r["dots"].tolist())
+        all_dot_y.extend([y_i] * len(r["dots"]))
+        pooled_x.append(r["pooled"])
+        pooled_y.append(y_i)
+        mean_x.append(r["mean_of_slices"])
+        mean_y.append(y_i)
+
+    ax.scatter(all_dot_x, all_dot_y, color=COLOR_NEUTRAL, alpha=0.6, s=30, zorder=2,
+              label="per-slice")
+    ax.scatter(pooled_x, pooled_y, marker="D", color=COLOR_ABOVE, s=64, zorder=3,
+              edgecolors="white", linewidths=0.6,
+              label=f"pooled ΣD/Σ{roles.tagged}+ (reported)")
+    ax.scatter(mean_x, mean_y, marker="o", facecolors="none", edgecolors=COLOR_BELOW,
+              s=64, zorder=3, linewidths=1.4, label="mean of slices — NOT reported")
+
+    ax.set_yticks(range(len(rows)))
+    ax.set_yticklabels([r["region"] for r in rows])
+    ax.invert_yaxis()
+    ax.set_xlabel(f"reactivation rate (%) -- Double+/{roles.tagged}+_count per slice, "
+                 f"pooled vs mean")
+    _style_axes(ax, grid_axis="x")
+    ax.legend(frameon=False, fontsize=8, loc="lower right")
+    ax.set_title(f"{animal} -- per-slice reactivation spread (dots = slices per region)")
+    _footnote(fig, excluded)
+    fig.subplots_adjust(top=top, bottom=bottom)
+    return fig
+
+
+def _first_n_immune_metric(df: pd.DataFrame, config: creg.Config, roles: Roles) -> str | None:
+    """D-9: L/R rows have N = NaN when n_source='classifiable' (per-cell N is
+    pooled-only), which NaNs every N-dependent metric on L/R. Figure 5 therefore picks the
+    first N-IMMUNE metric available: reactivation_rate -> tagging_rate -> {anchor}_density.
+    Never activity_rate / overlap_above_chance / N itself (all N-dependent)."""
+    for col in _N_IMMUNE_METRIC_PRIORITY:
+        if col in df.columns:
+            return col
+    density_col = f"{config.anchor_name}_density"
+    if density_col in df.columns:
+        return density_col
+    return None
+
+
+def plot_hemisphere_symmetry(df: pd.DataFrame, config: creg.Config, roles: Roles,
+                             animal: str | None = None,
+                             asym_tol: float = DEFAULT_ASYM_TOL) -> Figure | None:
+    """Figure 5 -- L vs R symmetry QC (D-9): large asymmetry flags registration or tissue
+    damage, NOT biology. Selects the first N-immune metric (D-9) so the figure survives
+    --n-source=classifiable's L/R N=NaN. Points within tolerance are neutral; points with
+    |L-R| / mean(L,R) > asym_tol are warm and DIRECTLY labeled (selective labels only --
+    flagged points, not every point). Returns None (with a printed message) when fewer than
+    2 regions have finite paired L and R values -- never an empty-axes Figure."""
+    sub, animal = _select_animal(df, animal)
+    metric = _first_n_immune_metric(sub, config, roles)
+    if metric is None:
+        print("  plot_hemisphere_symmetry: no N-immune metric available "
+             "(reactivation_rate / tagging_rate / anchor density all absent) -- skipped.")
+        return None
+
+    lr = sub[sub["hemisphere"].isin(["L", "R"])][["region_acronym", "hemisphere", metric]]
+    piv = lr.pivot_table(index="region_acronym", columns="hemisphere", values=metric)
+    if "L" not in piv.columns or "R" not in piv.columns:
+        print(f"  plot_hemisphere_symmetry: '{metric}' has no paired L AND R data -- "
+             f"figure 5 skipped.")
+        return None
+    piv = piv[np.isfinite(piv["L"]) & np.isfinite(piv["R"])]
+    if len(piv) < 2:
+        print(f"  plot_hemisphere_symmetry: fewer than 2 regions have finite paired L/R "
+             f"'{metric}' values ({len(piv)} found) -- figure 5 skipped.")
+        return None
+
+    denom = (piv["L"] + piv["R"]) / 2.0
+    with np.errstate(divide="ignore", invalid="ignore"):
+        asym = (np.abs(piv["L"] - piv["R"]) / denom).to_numpy(dtype=float)
+    flagged = np.isfinite(asym) & (asym > asym_tol)
+
+    lo = float(min(piv["L"].min(), piv["R"].min()))
+    hi = float(max(piv["L"].max(), piv["R"].max()))
+
+    # D-9 says "selective labels only (flagged points, not all points)" -- but at whole-brain
+    # scale (e.g. 275 regions, no --regions cap) dozens of low-evidence regions can exceed
+    # asym_tol from sampling noise alone, and labeling every one of them is the "number on
+    # every data point" anti-pattern: illegible overlapping text. Every flagged point stays
+    # colored/flagged; only up to MAX_LABELED get a direct label, chosen most-severe-first but
+    # SKIPPED if too close (in data space) to an already-accepted label -- severity-only
+    # selection still clusters labels on top of each other when the worst offenders sit near
+    # the same dense corner (observed on the real M3/wBA fixtures). The rest are named in a
+    # footnote instead of silently vanishing.
+    MAX_LABELED = 15
+    scale = max(hi - lo, 1e-9)
+    min_sep = 0.06 * scale
+    flagged_idx = np.flatnonzero(flagged)
+    severity_order = flagged_idx[np.argsort(-asym[flagged_idx])]
+    L_arr = piv["L"].to_numpy(dtype=float)
+    R_arr = piv["R"].to_numpy(dtype=float)
+    label_idx: list[int] = []
+    for idx in severity_order:
+        if len(label_idx) >= MAX_LABELED:
+            break
+        if all(abs(L_arr[idx] - L_arr[j]) >= min_sep or abs(R_arr[idx] - R_arr[j]) >= min_sep
+              for j in label_idx):
+            label_idx.append(int(idx))
+    label_mask = np.zeros(len(piv), dtype=bool)
+    label_mask[label_idx] = True
+    n_unlabeled = len(flagged_idx) - len(label_idx)
+
+    fig, ax = plt.subplots(figsize=(6.5, 6.75))
+    colors = [COLOR_ABOVE if f else COLOR_NEUTRAL for f in flagged]
+    ax.scatter(piv["L"], piv["R"], c=colors, s=44, edgecolors="white", linewidths=0.6, zorder=3)
+
+    pad = (hi - lo) * 0.08 if hi > lo else max(abs(hi), 1e-6) * 0.1
+    ax.plot([lo - pad, hi + pad], [lo - pad, hi + pad], color=COLOR_NEUTRAL, ls="--",
+           lw=1.0, zorder=1)
+    ax.set_xlim(lo - pad, hi + pad)
+    ax.set_ylim(lo - pad, hi + pad)
+    ax.set_aspect("equal", adjustable="box")
+
+    for region, do_label in zip(piv.index, label_mask):
+        if do_label:
+            ax.annotate(region, (piv.loc[region, "L"], piv.loc[region, "R"]),
+                       textcoords="offset points", xytext=(6, 4), fontsize=7.5,
+                       color=COLOR_ABOVE)
+
+    handles = [plt.Line2D([0], [0], marker="o", linestyle="none",
+                         markerfacecolor=COLOR_NEUTRAL, markeredgecolor="none",
+                         markersize=7, label=f"within tolerance ({asym_tol:.0%})"),
+              plt.Line2D([0], [0], marker="o", linestyle="none",
+                         markerfacecolor=COLOR_ABOVE, markeredgecolor="none",
+                         markersize=7, label=f"asymmetric (>{asym_tol:.0%}, labeled)")]
+    ax.legend(handles=handles, frameon=False, fontsize=8, loc="upper left")
+    ax.set_xlabel(f"L  {metric}")
+    ax.set_ylabel(f"R  {metric}")
+    ax.set_title(f"{animal} -- hemisphere L/R symmetry QC ({metric}):\n"
+                f"large asymmetry flags registration/tissue damage, not biology", fontsize=10)
+    _style_axes(ax, grid_axis="both")
+    if n_unlabeled > 0:
+        fig.text(0.01, 0.01,
+                 f"{len(flagged_idx)} region(s) flagged asymmetric (>{asym_tol:.0%}); "
+                 f"labeling the {len(label_idx)} most severe only ({n_unlabeled} more shown "
+                 f"colored but unlabeled to keep labels legible).",
+                 fontsize=7, color=COLOR_INK, ha="left", va="bottom", wrap=True)
+        fig.subplots_adjust(top=0.87, bottom=0.14)
+    else:
+        fig.subplots_adjust(top=0.87, bottom=0.09)
+    return fig
+
+
+def build_figures(df: pd.DataFrame, config: creg.Config, roles: Roles,
+                  per_slice: pd.DataFrame | None = None, animal: str | None = None,
+                  top_n: int = DEFAULT_TOP_N,
+                  min_cells: int = DEFAULT_MIN_CELLS) -> dict[str, Figure]:
+    """Orchestrates figures 1-5. Applies D-10: a figure whose inputs are structurally
+    absent (no overlap_above_chance; no per_slice frame; fewer than 2 finite L/R pairs) is
+    OMITTED from the returned dict with one printed explanatory line -- NEVER a Figure with
+    empty axes, never a NaN wall. Keys, when present, in order: region_ranking,
+    raw_vs_corrected, evidence_guard, slice_spread, hemisphere_symmetry."""
+    figs: dict[str, Figure] = {}
+    both = df[df["hemisphere"] == "both"]
+    has_pair_metrics = "overlap_above_chance" in both.columns
+
+    if has_pair_metrics:
+        figs["region_ranking"] = plot_region_ranking(df, config, roles, animal=animal,
+                                                      top_n=top_n)
+        figs["raw_vs_corrected"] = plot_raw_vs_corrected(df, config, roles, animal=animal,
+                                                         top_n=top_n)
+    else:
+        print("  build_figures: no overlap_above_chance column (1-marker project / single "
+             "resolved role) -- skipping region_ranking and raw_vs_corrected.")
+
+    figs["evidence_guard"] = plot_evidence_guard(df, config, roles, animal=animal,
+                                                 top_n=top_n, min_cells=min_cells)
+
+    if per_slice is None:
+        print("  build_figures: no per_slice frame supplied -- skipping slice_spread "
+             "(figure 4 needs the per-slice readout; only built when exactly one "
+             "--project was given).")
+    elif not has_pair_metrics or roles.tagged is None:
+        print("  build_figures: no resolved pair metrics -- skipping slice_spread "
+             "(figure 4 needs Double+_count and a resolved tagged-marker role).")
+    else:
+        try:
+            figs["slice_spread"] = plot_slice_spread(df, per_slice, config, roles,
+                                                      animal=animal, top_n=8)
+        except ValueError as exc:
+            print(f"  build_figures: slice_spread skipped ({exc})")
+
+    fig5 = plot_hemisphere_symmetry(df, config, roles, animal=animal)
+    if fig5 is not None:
+        figs["hemisphere_symmetry"] = fig5
+
+    return figs
+
+
+def save_figures(figs: dict[str, Figure], out_dir: Path) -> list[Path]:
+    """Writes one PNG per figure under <out_dir>/figures/<key>.png, dpi=150, tight bbox,
+    white facecolor. <out_dir> defaults to results/animal, which is gitignored --
+    generated PNGs are never committed."""
+    fig_dir = Path(out_dir) / "figures"
+    fig_dir.mkdir(parents=True, exist_ok=True)
+    written: list[Path] = []
+    for key, fig in figs.items():
+        p = fig_dir / f"{key}.png"
+        fig.savefig(p, dpi=150, bbox_inches="tight", facecolor="white")
+        written.append(p)
+    return written
 
 
 # ---------------------------------------------------------------------------
@@ -948,23 +1230,36 @@ def _write_synthetic_project(base: Path, animal: str, two_marker: bool,
 
     # LA: unequal per-slice N so pooled D/T != mean(D_i/T_i). CA1: single-hemisphere (Left).
     # BLA: Right-only, engineered so pooled b = T-D == 0 exactly (log2_odds_ratio NaN, hc finite).
+    # DG-mo: BOTH hemispheres present with unequal L/R reactivation -- the second paired
+    # L/R region the interpretation-plots self-test needs for figure 5 (a real L/R symmetry
+    # scatter needs >= 2 paired regions; LA alone is only one). CEA: present but ALL-ZERO
+    # counts on both hemispheres/slices -- the deliberate all-zero-region exclusion case for
+    # figures 1-3's footnote check (D-5), reusing this same fixture rather than a new one.
     slice_specs: dict[str, dict[tuple[str, str], tuple[float, dict[str, int]]]] = {
         "s1": {
             ("LA", "Left"): (0.3, _c(100, 50, 30, 20)),
             ("LA", "Right"): (0.3, _c(80, 40, 24, 16)),
             ("CA1", "Left"): (1.0, _c(200, 60, 40, 24)),
             ("BLA", "Right"): (0.2, _c(50, 10, 10, 10)),
+            ("DG-mo", "Left"): (0.4, _c(150, 30, 20, 12)),
+            ("DG-mo", "Right"): (0.4, _c(140, 28, 18, 9)),
+            ("CEA", "Left"): (0.1, _c(0, 0, 0, 0)),
+            ("CEA", "Right"): (0.1, _c(0, 0, 0, 0)),
         },
         "s2": {
             ("LA", "Left"): (0.3, _c(200, 10, 8, 2)),
             ("LA", "Right"): (0.3, _c(150, 8, 6, 1)),
             ("CA1", "Left"): (1.0, _c(300, 15, 10, 3)),
             ("BLA", "Right"): (0.2, _c(40, 5, 5, 5)),
+            ("DG-mo", "Left"): (0.4, _c(120, 20, 15, 8)),
+            ("DG-mo", "Right"): (0.4, _c(110, 18, 12, 6)),
+            ("CEA", "Left"): (0.1, _c(0, 0, 0, 0)),
+            ("CEA", "Right"): (0.1, _c(0, 0, 0, 0)),
         },
     }
     percell_counts = {
-        "s1": {"LA": 40, "CA1": 90, "BLA": 10},
-        "s2": {"LA": 15, "CA1": 60, "BLA": 5},
+        "s1": {"LA": 40, "CA1": 90, "BLA": 10, "DG-mo": 60},
+        "s2": {"LA": 15, "CA1": 60, "BLA": 5, "DG-mo": 40},
     }
     marker_names_for_percell = ["Fos", "TdT"] if two_marker else ["TdT"]
 
@@ -1181,6 +1476,128 @@ def _self_test() -> None:
             check(set(piv.columns) == {"recall:Animal2M", "control:Animal1M"},
                   f"wide pivot columns are '{{group}}:{{animal}}' ({list(piv.columns)})")
 
+        # --- interpretation plots (follow-up increment) --------------------------------------
+        print("\n[self-test] interpretation plots -- backend-unchanged subprocess assertion")
+        import subprocess
+        scripts_dir = Path(__file__).resolve().parent
+        backend_code = (
+            "import matplotlib; matplotlib.use('pdf'); b0 = matplotlib.get_backend()\n"
+            f"import sys; sys.path.insert(0, {str(scripts_dir)!r})\n"
+            "import cockpit_animal\n"
+            "assert matplotlib.get_backend() == b0, (b0, matplotlib.get_backend())\n"
+        )
+        proc = subprocess.run([sys.executable, "-c", backend_code],
+                              capture_output=True, text=True)
+        check(proc.returncode == 0,
+              f"subprocess backend-unchanged assertion (bd5d11f regression guard) exits 0 "
+              f"(stderr: {proc.stderr.strip()[:300]!r})")
+
+        print("\n[self-test] build_figures (2-marker fixture, LA/CA1/BLA/DG-mo/CEA) -- "
+              "all five keys")
+        rolled2_full = rollup_animal(proj2, regions=["LA", "CA1", "BLA", "DG-mo", "CEA"],
+                                     roles=roles2)
+        per_slice2_full = creg.build_readout(proj2, regions=["LA", "CA1", "BLA", "DG-mo", "CEA"])
+        figs2 = build_figures(rolled2_full, config2, roles2, per_slice=per_slice2_full,
+                              top_n=20, min_cells=15)
+        check(set(figs2.keys()) == {"region_ranking", "raw_vs_corrected", "evidence_guard",
+                                    "slice_spread", "hemisphere_symmetry"},
+              f"build_figures (2-marker) returns all five keys ({sorted(figs2.keys())})")
+        check(all(isinstance(f, Figure) for f in figs2.values()),
+              "every build_figures value is a matplotlib Figure")
+
+        check(len(figs2["region_ranking"].axes) == 1, "region_ranking has exactly 1 axes")
+        check(len(figs2["raw_vs_corrected"].axes) == 2, "raw_vs_corrected has exactly 2 axes")
+        check(len(figs2["evidence_guard"].axes) == 2, "evidence_guard has exactly 2 axes")
+        for name in ("region_ranking", "raw_vs_corrected", "evidence_guard"):
+            fig = figs2[name]
+            positions = [tuple(round(v, 6) for v in ax_.get_position().bounds)
+                        for ax_ in fig.axes]
+            check(len(positions) == len(set(positions)),
+                  f"{name}: no two axes share an identical bounding box "
+                  f"(dual-axis/twinx prohibition enforced, not just documented)")
+
+        print("\n[self-test] all-zero region (CEA) excluded from figures 1-3, never rendered")
+        for name in ("region_ranking", "raw_vs_corrected", "evidence_guard"):
+            fig = figs2[name]
+            yticklabels = [t.get_text() for ax_ in fig.axes for t in ax_.get_yticklabels()]
+            check("CEA" not in yticklabels, f"{name}: CEA (all-zero) absent from y tick labels")
+            footnote_text = " ".join(t.get_text() for t in fig.texts)
+            check("CEA" in footnote_text, f"{name}: exclusion footnote names CEA")
+
+        print("\n[self-test] 1-marker build_figures -- only evidence_guard + hemisphere_symmetry")
+        rolled1_full = rollup_animal(proj1, regions=["LA", "CA1", "BLA", "DG-mo"], roles=roles1)
+        figs1 = build_figures(rolled1_full, config1, roles1, per_slice=None,
+                              top_n=20, min_cells=15)
+        check(set(figs1.keys()) == {"evidence_guard", "hemisphere_symmetry"},
+              f"1-marker build_figures returns exactly evidence_guard + hemisphere_symmetry "
+              f"({sorted(figs1.keys())})")
+        for f in figs1.values():
+            plt.close(f)
+
+        print("\n[self-test] figure 4 -- role-correct per-slice reactivation + anti-averaging")
+        rolled2_la = rollup_animal(proj2, regions=["LA"], roles=roles2)
+        per_slice_la = creg.build_readout(proj2, regions=["LA"])
+        fig4 = plot_slice_spread(rolled2_la, per_slice_la, config2, roles2, top_n=8)
+
+        la_slices = per_slice_la[(per_slice_la.region_acronym == "LA")
+                                 & (per_slice_la.hemisphere == "both")]
+        expected_role_correct = (la_slices["Double+_count"] / la_slices["TdT+_count"]).to_numpy()
+        expected_declaration_order = la_slices["P(TdT+|Fos+)"].to_numpy()  # Double/Fos -- WRONG
+
+        dot_offsets = np.asarray(fig4.axes[0].collections[0].get_offsets())
+        plotted_dots = np.sort(dot_offsets[:, 0] / 100.0)
+        check(np.allclose(plotted_dots, np.sort(expected_role_correct), atol=1e-9),
+              "figure 4 per-slice dots equal Double+_count/TdT+_count (role-correct, recon 3)")
+        check(not np.allclose(plotted_dots, np.sort(expected_declaration_order), atol=1e-6),
+              "figure 4 per-slice dots differ from the declaration-order P(TdT+|Fos+) column")
+
+        pooled_offsets = np.asarray(fig4.axes[0].collections[1].get_offsets())
+        mean_offsets = np.asarray(fig4.axes[0].collections[2].get_offsets())
+        pooled_x = float(pooled_offsets[0, 0]) / 100.0
+        mean_x = float(mean_offsets[0, 0]) / 100.0
+        expected_pooled = float(rolled2_la[(rolled2_la.region_acronym == "LA")
+                                           & (rolled2_la.hemisphere == "both")]
+                                ["reactivation_rate"].iloc[0])
+        check(abs(pooled_x - expected_pooled) < 1e-9,
+              "figure 4 pooled marker equals the long table's reactivation_rate to 1e-9")
+        check(abs(pooled_x - mean_x) > 1e-6,
+              "figure 4 pooled marker differs from mean-of-slices by > 1e-6 (anti-averaging)")
+        plt.close(fig4)
+
+        print("\n[self-test] min_cells de-emphasis (kept labeled, never dropped)")
+        rolled2_4reg = rollup_animal(proj2, regions=["LA", "CA1", "BLA", "DG-mo"], roles=roles2)
+        fig3b = plot_evidence_guard(rolled2_4reg, config2, roles2, top_n=20, min_cells=30)
+        axL3b = fig3b.axes[0]
+        # collections[-1] is the scatter (added after the hlines LineCollection).
+        facecolors = axL3b.collections[-1].get_facecolor()
+        neutral_rgb = mcolors.to_rgb(COLOR_NEUTRAL)
+        n_neutral = sum(1 for row in facecolors if np.allclose(row[:3], neutral_rgb, atol=1e-6))
+        below_regions = {"CA1", "BLA"}  # pooled Double+_count 27 and 15, both < min_cells=30
+        check(n_neutral == len(below_regions),
+              f"evidence_guard: {n_neutral} de-emphasised (neutral) mark(s) == "
+              f"{len(below_regions)} below-min_cells region(s)")
+        yticklabels3b = {t.get_text() for t in axL3b.get_yticklabels()}
+        check(below_regions <= yticklabels3b,
+              "de-emphasised regions remain present/labeled in figure 3 (never dropped)")
+        plt.close(fig3b)
+
+        print("\n[self-test] save_figures")
+        saved = save_figures(figs2, base / "figout")
+        check(len(saved) == len(figs2), "save_figures writes one PNG per figure")
+        check(all(p.exists() and p.stat().st_size > 1000 for p in saved),
+              "every saved PNG exists and is > 1000 bytes")
+        for f in figs2.values():
+            plt.close(f)
+
+        print("\n[self-test] D-7 multi-animal fail-loud (figures)")
+        stacked_two_animal = pd.concat([rolled2, rolled1], ignore_index=True, sort=False)
+        try:
+            plot_region_ranking(stacked_two_animal, config2, roles2, animal=None)
+            check(False, "plot_region_ranking(animal=None) with 2 animals must raise ValueError")
+        except ValueError as exc:
+            check("Animal2M" in str(exc) and "Animal1M" in str(exc),
+                  f"multi-animal ValueError names both animals ({exc})")
+
     print()
     if failures:
         print(f"SELF-TEST FAILED ({len(failures)} check(s)):")
@@ -1216,6 +1633,14 @@ def main() -> None:
                     help="D-2: stack on the shared marker set instead of failing on a mismatch.")
     ap.add_argument("--out-dir", type=Path, default=Path("results/animal"),
                     help="Output directory for the long CSV + wide/ pivots (gitignored).")
+    ap.add_argument("--plots", action="store_true",
+                    help="Also build the interpretation-plot figures (see PLOTTING in "
+                        "--help) and save them as PNGs under <out-dir>/figures/.")
+    ap.add_argument("--top-n", type=int, default=DEFAULT_TOP_N,
+                    help=f"Region cap for the ranked figures (default: {DEFAULT_TOP_N}).")
+    ap.add_argument("--min-cells", type=int, default=DEFAULT_MIN_CELLS,
+                    help="Evidence-guard (figure 3) de-emphasis threshold "
+                        f"(default: {DEFAULT_MIN_CELLS}).")
     ap.add_argument("--self-test", action="store_true", help="Run the built-in self-test and exit.")
     args = ap.parse_args()
 
@@ -1278,6 +1703,21 @@ def main() -> None:
     print(f"\nWrote long table -> {long_path}")
     for wp in write_wide_pivots(combined, args.out_dir, hemisphere=args.hemisphere):
         print(f"Wrote wide pivot -> {wp}")
+
+    if args.plots:
+        config0 = creg.load_pipeline_config(args.project[0])
+        roles0 = resolve_roles(config0, tagged=args.tagged_marker, activity=args.activity_marker)
+        per_slice = None
+        if len(args.project) == 1:
+            per_slice = creg.build_readout(args.project[0], regions=regions)
+        else:
+            print("  --plots: more than one --project given -- skipping figure 4 "
+                 "(slice_spread needs a single project's per-slice readout).")
+        print("\nBuilding interpretation plots...")
+        figs = build_figures(combined, config0, roles0, per_slice=per_slice,
+                             top_n=args.top_n, min_cells=args.min_cells)
+        for p in save_figures(figs, args.out_dir):
+            print(f"Wrote figure -> {p}")
 
 
 if __name__ == "__main__":

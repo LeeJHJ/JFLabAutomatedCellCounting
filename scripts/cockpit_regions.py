@@ -483,6 +483,7 @@ def _synthetic_ontology_json() -> dict:
             node("AMY", "Amygdala", [
                 node("LA", "Lateral amygdalar nucleus", []),
                 node("BLA", "Basolateral amygdalar nucleus", []),
+                node("CEA", "Central amygdalar nucleus", []),
             ]),
         ]),
     ])}
