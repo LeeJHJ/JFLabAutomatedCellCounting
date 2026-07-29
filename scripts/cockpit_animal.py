@@ -292,8 +292,31 @@ def rollup_animal(project_dir: Path, regions: list[str] | None = None,
             grouped.loc[has_n, "N_source"] = "classifiable"
         grouped = grouped.drop(columns=["N_classifiable"])
 
+    _warn_empty_regions(grouped, anchor)
     add_metrics(grouped, config, roles)
     return grouped
+
+
+def _warn_empty_regions(df: pd.DataFrame, anchor: str) -> list[str]:
+    """Name regions that rolled up to zero anchor cells, and say why they usually do.
+
+    A requested region summing to 0 is almost never "no cells there" -- it is increment 2's
+    documented frontier-coverage caveat biting: the region's cells sit on the region's OWN
+    annotation, but the region is not a data-frontier leaf (it has a present ontology
+    descendant), so frontier summation reads the descendant instead. Verified live on M3:
+    `STRd` carries 41,761 anchor cells while its only present ontology child `CP` carries 0
+    at an identical area -- QuPath's annotation hierarchy does not match the Allen ontology.
+    Every metric for such a row is NaN, which is correct but silent; this makes it loud.
+    """
+    empty = sorted(df.loc[df[f"{anchor}_count"] == 0, "region_acronym"].unique())
+    if empty:
+        print(f"  WARNING: {len(empty)} region(s) rolled up to 0 {anchor} cells: "
+              f"{', '.join(empty)}", file=sys.stderr)
+        print("           A zero here usually means the cells sit on a non-frontier "
+              "intermediate annotation (increment 2's coverage caveat), NOT that the region "
+              "is empty. Check cockpit_regions.coverage_report() before reporting these.",
+              file=sys.stderr)
+    return empty
 
 
 def add_metrics(df: pd.DataFrame, config: creg.Config, roles: Roles) -> pd.DataFrame:
@@ -318,8 +341,13 @@ def add_metrics(df: pd.DataFrame, config: creg.Config, roles: Roles) -> pd.DataF
         df["overlap_above_chance"] = _safe_div(D * N, T * A)
 
         a, b, c, d = D, T - D, A - D, N - T - A + D
-        d_valid = d >= 0
-        n_bad = int((~d_valid).sum())
+        # N > 0 is required, not just d >= 0. An empty region (N==T==A==D==0) satisfies
+        # d >= 0, and the Haldane-Anscombe +0.5 correction then yields (0.5*0.5)/(0.5*0.5)
+        # = 1 -> log2 = 0.0 -- a real-looking "exactly at chance" value for a region that
+        # holds no cells at all. Every other metric NaNs out via _safe_div, so the odds
+        # ratios must too, or an empty region silently enters a t-test as a 0.
+        d_valid = (d >= 0) & (N > 0)
+        n_bad = int(((d < 0) & (N > 0)).sum())
         if n_bad:
             print(f"  WARNING: {n_bad} row(s) have d = N-T-A+D < 0 (N under-count relative to "
                   f"T+A) -- log2_odds_ratio(_hc) set to NaN for those rows", file=sys.stderr)
@@ -709,6 +737,26 @@ def _self_test() -> None:
         bla_or_hc = val("BLA", "both", "log2_odds_ratio_hc")
         check(not np.isfinite(bla_or), "BLA(both) log2_odds_ratio is NaN on a zero 2x2 cell (b=0)")
         check(np.isfinite(bla_or_hc), "BLA(both) log2_odds_ratio_hc stays finite (Haldane-Anscombe)")
+
+        # (8b) An all-zero region must NaN BOTH odds ratios. Haldane-Anscombe on
+        # N==T==A==D==0 yields (0.5*0.5)/(0.5*0.5) = 1 -> log2 = 0.0, which reads as
+        # "exactly at chance" for a region holding no cells. Found live on M3 (STRd).
+        empty_df = pd.DataFrame({
+            "N": [0.0], "TdT+_count": [0.0], "Fos+_count": [0.0], "Double+_count": [0.0],
+            "region_acronym": ["EMPTY"],
+        })
+        add_metrics(empty_df, config2, Roles(tagged="TdT", activity="Fos"))
+        check(not np.isfinite(empty_df["log2_odds_ratio_hc"].iloc[0]),
+              "all-zero region -> log2_odds_ratio_hc is NaN, not a spurious 0.0")
+        check(not np.isfinite(empty_df["log2_odds_ratio"].iloc[0]),
+              "all-zero region -> log2_odds_ratio is NaN")
+        check(not np.isfinite(empty_df["overlap_above_chance"].iloc[0]),
+              "all-zero region -> overlap_above_chance is NaN")
+
+        # (8c) Zero-cell regions are named out loud (increment 2 coverage caveat).
+        named = _warn_empty_regions(
+            pd.DataFrame({"DAPI_count": [0, 5], "region_acronym": ["ZED", "LA"]}), "DAPI")
+        check(named == ["ZED"], "_warn_empty_regions names only the zero-count region")
 
         # (8) N_source: classifiable for 'both' rows when percell exists.
         check(val("LA", "both", "N_source") == "classifiable",
