@@ -131,6 +131,71 @@ def load_config(path: Path) -> dict[str, Any]:
         if not isinstance(ring[key], (int, float)) or isinstance(ring[key], bool):
             _fail(f"'ring.{key}' must be numeric, got {type(ring[key]).__name__}")
 
+    # -- detection_threshold (anchor-channel intensity cut) --
+    #
+    # D-14 note: this does NOT violate "no BraiAnDetect detection params in
+    # pipeline.yml". What lives here is the RULE (which mode, and the span
+    # fraction) -- a pipeline policy that must be identical across a series.
+    # The resolved per-section threshold VALUE is never written to either YAML;
+    # run_braian_detection.groovy computes it from the section's own histogram and
+    # injects it into the BraiAn config object at runtime. BraiAn.yml's own
+    # `threshold` / `histogramThreshold` keys are consequently ignored for the
+    # anchor channel.
+    if "detection_threshold" not in config:
+        _fail(
+            "missing required top-level key 'detection_threshold' -- add the block "
+            "from the repo-root pipeline.yml. Without it, detection would fall back "
+            "to BraiAn.yml's absolute threshold, which does not transfer between "
+            "sections or acquisitions."
+        )
+    dt = config["detection_threshold"]
+    if not isinstance(dt, dict):
+        _fail(f"'detection_threshold' must be a mapping, got {type(dt).__name__}")
+
+    mode = dt.get("mode")
+    if mode not in ("span_fraction", "absolute"):
+        _fail(
+            f"'detection_threshold.mode' must be \"span_fraction\" or \"absolute\", "
+            f"got {mode!r}"
+        )
+
+    for key in ("resolution_level", "smooth_window"):
+        if key not in dt:
+            _fail(f"'detection_threshold.{key}' is required")
+        if not isinstance(dt[key], int) or isinstance(dt[key], bool):
+            _fail(f"'detection_threshold.{key}' must be an integer, got {type(dt[key]).__name__}")
+    if dt["resolution_level"] != 0:
+        _fail(
+            f"'detection_threshold.resolution_level' must be 0, got {dt['resolution_level']} -- "
+            "BraiAn's default of 4 is what produced the historical \"no valid peak\" failures"
+        )
+
+    if "peak_prominence" not in dt:
+        _fail("'detection_threshold.peak_prominence' is required")
+    if not isinstance(dt["peak_prominence"], (int, float)) or isinstance(dt["peak_prominence"], bool):
+        _fail("'detection_threshold.peak_prominence' must be numeric")
+
+    if mode == "span_fraction":
+        if "span_frac" not in dt:
+            _fail("'detection_threshold.span_frac' is required when mode is \"span_fraction\"")
+        frac = dt["span_frac"]
+        if not isinstance(frac, (int, float)) or isinstance(frac, bool):
+            _fail(f"'detection_threshold.span_frac' must be numeric, got {type(frac).__name__}")
+        if not 0.0 < frac < 1.0:
+            _fail(
+                f"'detection_threshold.span_frac' must be strictly between 0 and 1, got {frac} -- "
+                "0 is the background floor (detects noise as nuclei) and 1 is the bright peak "
+                "(drops every dim nucleus)"
+            )
+    else:
+        if dt.get("absolute") is None:
+            _fail(
+                "'detection_threshold.absolute' is required when mode is \"absolute\" "
+                "(and note that an absolute cut does not generalize across sections)"
+            )
+        if not isinstance(dt["absolute"], (int, float)) or isinstance(dt["absolute"], bool):
+            _fail("'detection_threshold.absolute' must be numeric")
+
     # -- D-14 negative check: no BraiAnDetect detection params leaked in here --
     leaked = [k for k in _FORBIDDEN_DETECTION_KEYS if k in config]
     if leaked:
@@ -190,7 +255,14 @@ def derive_contract(config: dict[str, Any]) -> dict[str, Any]:
 
 def _print_contract(config: dict[str, Any], contract: dict[str, Any]) -> None:
     print(f"anchor: {contract['anchor_name']!r} (channel {contract['anchor_channel']!r})")
-    print(f"k_robust: {config['k_robust']}")
+    print(f"k_robust: {config['k_robust']}   (marker-positivity cut)")
+    dt = config["detection_threshold"]
+    if dt["mode"] == "span_fraction":
+        print(f"detection_threshold: span_fraction, span_frac={dt['span_frac']}   "
+              f"(anchor cut = floor + {dt['span_frac']} x (bright_peak - floor), per slice)")
+    else:
+        print(f"detection_threshold: ABSOLUTE {dt['absolute']}   "
+              f"** does not transfer between sections/acquisitions **")
     print(f"ring: gap_um={config['ring']['gap_um']}, width_um={config['ring']['width_um']}")
     print(f"exclude_acronyms: {config['exclude_acronyms']}")
     print()
@@ -216,6 +288,14 @@ def _build_synthetic_config(tmpdir: Path, marker_names_channels_compartments: li
         "exclude_acronyms": ["DG-sg", "VS"],
         "k_robust": 3.0,
         "ring": {"gap_um": 1.0, "width_um": 8.0},
+        "detection_threshold": {
+            "mode": "span_fraction",
+            "span_frac": 0.25,
+            "absolute": None,
+            "resolution_level": 0,
+            "smooth_window": 15,
+            "peak_prominence": 100,
+        },
     }
     path = tmpdir / f"synthetic_{'_'.join(n for n, _, _ in marker_names_channels_compartments)}.yml"
     with open(path, "w") as f:

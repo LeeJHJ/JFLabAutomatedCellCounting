@@ -50,6 +50,19 @@ exclude_acronyms: ["DG-sg", "VS"]
 # on imaging-parameter drift (Phase 7 IMG-01).
 k_robust: 3.0
 
+# Anchor-channel detection threshold, unchanged from pipeline.yml -- see that
+# file's block for the full rationale (why `histogramThreshold` cannot work on
+# our data, why absolute 700 does not generalize, and why span_frac 0.25
+# reproduces the operator's own visual call in a transferable form).
+#   threshold = floor + span_frac * (bright_peak - floor), re-measured per slice.
+detection_threshold:
+  mode: "span_fraction"
+  span_frac: 0.25
+  absolute: null
+  resolution_level: 0
+  smooth_window: 15
+  peak_prominence: 100
+
 # D-09: cytoplasmic expansion ring geometry, unchanged from pipeline.yml.
 # gap_um = annular gap left between the nucleus boundary and the inner edge
 # of the measurement ring; width_um = the ring's radial thickness. Used only

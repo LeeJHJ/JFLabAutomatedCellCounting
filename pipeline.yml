@@ -67,6 +67,54 @@ exclude_acronyms: ["DG-sg", "VS"]
 # measure. [ASSUMED] seed value -- re-sweep on imaging-parameter drift (Phase 7 IMG-01).
 k_robust: 3.0
 
+# ── Detection threshold (anchor channel) — ACQUISITION-AGNOSTIC ──────────────
+# The intensity cut that decides which pixels are nucleus, on the anchor channel.
+# This is NOT the marker-positivity cut (that is `k_robust` above); it is the
+# upstream BraiAnDetect watershed threshold, and it is the single biggest
+# obstacle to running this pipeline on anyone else's images.
+#
+# HISTORY (read before changing): BraiAn.yml offers two native options and BOTH
+# fail to generalize on our data:
+#   * `histogramThreshold` (self-calibrating) needs a distinct DIM-NUCLEI peak.
+#     Our sections do not have one -- a sweep on M3 Hipp1 s? (2026-07-28) found
+#     only a background floor (162) and a bright-nuclei peak (2268). The method
+#     could therefore return only 162 (floods noise) or ~2268 (drops every dim
+#     nucleus). It is unusable here.
+#   * `threshold` (absolute) was set to 700 as a result. It works on the section
+#     it was tuned on and silently UNDER-DETECTS on any dimmer section, animal,
+#     or acquisition. That is a comparability bug, not a preference.
+#
+# THE RULE USED INSTEAD: place the cut a fixed FRACTION of the way up the span
+# between the two peaks that ARE reliably findable:
+#
+#     threshold = floor + span_frac * (bright_peak - floor)
+#
+# Both endpoints are re-measured PER SECTION from that section's own histogram,
+# so the cut tracks staining and laser drift automatically -- the property that
+# makes cross-section and cross-animal comparison valid -- while needing no dim
+# peak to exist.
+#
+# WHY span_frac 0.25: it reproduces the operator's own visual judgement on the
+# section where 700 was chosen by eye. floor=162, bright=2268, so
+# (700-162)/(2268-162) = 0.256. The absolute value 700 was a correct call about
+# THAT section; 0.25 is that same call expressed in a form that transfers.
+#
+# TO ADJUST: raise span_frac -> stricter (fewer, brighter nuclei); lower it ->
+# catches dimmer nuclei, toward the background floor. Visualize where the cut
+# lands on the real histogram before changing it:
+#   1. QuPath: run scripts/calibrate_threshold.groovy on one slice
+#   2. notebooks/01_calibrate.ipynb section 3 plots the histogram + the sweep
+detection_threshold:
+  mode: "span_fraction"       # "span_fraction" (recommended) | "absolute" (escape hatch, does NOT generalize)
+  span_frac: 0.25             # [ASSUMED] seed -- reproduces the 2026-07-28 operator visual call; re-check per slice-set
+  absolute: null              # used ONLY when mode is "absolute"; null otherwise
+  # Peak-finding params handed to BraiAnDetect's findThreshold for BOTH endpoints.
+  # resolution_level MUST be 0 -- BraiAn's default of 4 is what produced the
+  # historical "no valid peak" errors.
+  resolution_level: 0
+  smooth_window: 15
+  peak_prominence: 100
+
 # D-09: cytoplasmic expansion ring geometry, migrated from the GAP_UM /
 # RING_WIDTH_UM literals (scripts/02_detect_classify.groovy lines 143-144).
 # gap_um = the annular gap left between the nucleus boundary and the inner
