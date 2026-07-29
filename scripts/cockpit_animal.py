@@ -740,7 +740,10 @@ def _log2_ratio_axis(ax: plt.Axes, values: np.ndarray) -> None:
     ax.set_xticks(ticks)
     ax.set_xticklabels(labels)
     ax.axvline(0, color=COLOR_NEUTRAL, ls="--", lw=1.0, zorder=1)
-    ax.set_xlabel("log2(overlap_above_chance)  [display transform of overlap_above_chance]")
+    # Short label -- the D-2 display-transform note lives in the docstring/module PLOTTING
+    # section, not here. A long label clips off the right edge of a NARROW two-panel figure
+    # when rendered inline in a notebook (no bbox_inches="tight" to crop it, unlike savefig).
+    ax.set_xlabel("log2(overlap_above_chance)")
 
 
 def _reserve_chrome(n_rows: int, per_row: float, header_in: float, footer_in: float,
