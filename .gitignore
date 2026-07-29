@@ -41,3 +41,6 @@ __pycache__/
 Thumbs.db
 *.swp
 *~
+
+# ── GSD research cache (regenerable hashed web-fetch blobs) ──
+.planning/research/.cache/
