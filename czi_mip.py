@@ -24,12 +24,18 @@ Output filenames are 1-based (`s1..sN`) while the Python scene loop is
 anterior->posterior order -- this script only proves scene->file identity;
 AP ordering is handled downstream (DeepSlice, Phase 6).
 
+Pixel size is read from the CZI's own Scaling metadata -- never defaulted. The
+stamped PhysicalSizeX is what every downstream micron-denominated parameter
+(sigmaMicrons, minAreaMicrons, cellExpansionMicrons, atlas coordinates) is scaled
+by, so a hardcoded value corrupts all of them on any acquisition it was not
+written for. --pixel-um overrides it explicitly and reports any disagreement.
+
 Usage:
   conda run -n braian python3 czi_mip.py --check-scenes \
       --czi "in.czi"
   conda run -n braian python3 czi_mip.py \
       --czi "in.czi" --outdir "out_dir" \
-      --channels "AF568-T2" "AF488-T3" "DAPI-T4" --pixel-um 0.6905355 \
+      --channels "AF568-T2" "AF488-T3" "DAPI-T4" \
       --animal-prefix wBA1-3
 """
 
@@ -46,7 +52,12 @@ from scipy import ndimage as ndi
 
 
 DEFAULT_CHANNELS = ["AF568-T2", "AF488-T3", "DAPI-T4"]
-DEFAULT_PIXEL_UM = 0.6905355   # server.json PhysicalSizeX of the registered production MIP
+# Pixel size is READ FROM THE CZI (see _czi_scaling_um / _resolve_pixel_um) rather
+# than defaulted.
+# It used to default to one acquisition's value (0.6905355), which silently stamped
+# the wrong PhysicalSizeX into the OME-XML of any file acquired at a different
+# sampling -- and QuPath/BraiAnDetect trust that number for every micron-denominated
+# detection parameter. --pixel-um remains available as an explicit override.
 DEFAULT_ANIMAL_PREFIX = "wBA1-3"
 DEFAULT_FEATHER_MARGIN = 130   # px; ~ the real ZEN mosaic tile overlap (x-step 1382 on 1512px
                                 # tiles); operator-tunable via _stitch_scene_tiles(feather_margin=)
@@ -65,8 +76,10 @@ def parse_args() -> argparse.Namespace:
                         "(required unless --check-scenes or --self-test)")
     p.add_argument("--channels", nargs="+", default=DEFAULT_CHANNELS,
                    help=f"channel names in physical read order (default {DEFAULT_CHANNELS})")
-    p.add_argument("--pixel-um", type=float, default=DEFAULT_PIXEL_UM,
-                   help=f"pixel size um/px (default {DEFAULT_PIXEL_UM})")
+    p.add_argument("--pixel-um", type=float, default=None,
+                   help="pixel size um/px. DEFAULT: read from the CZI's own Scaling "
+                        "metadata (authoritative). Pass this only to override a CZI "
+                        "whose metadata is known wrong -- a mismatch is reported.")
     p.add_argument("--animal-prefix", default=DEFAULT_ANIMAL_PREFIX,
                    help=f"filename prefix, output pattern <prefix>_s{{N}}_MIP.ome.tiff (default {DEFAULT_ANIMAL_PREFIX})")
     p.add_argument("--check-scenes", action="store_true",
@@ -365,6 +378,81 @@ def _read_channel_stacks_region(czi: aicspylibczi.CziFile, region: tuple[int, in
         channel_stacks.append(stack)
         print(f"    Channel {c} read done ({n_z} planes).", flush=True)
     return channel_stacks
+
+
+def _czi_scaling_um(czi: aicspylibczi.CziFile) -> dict[str, float]:
+    """Read physical scaling from the CZI's own metadata, in microns.
+
+    ZEN writes Metadata/Scaling/Items/Distance[@Id="X"|"Y"|"Z"]/Value in METRES,
+    so each is multiplied by 1e6. Returns only the axes actually present, e.g.
+    {"x": 0.460357, "y": 0.460357, "z": 2.0}.
+
+    This is the authoritative source for pixel size. Everything downstream that is
+    denominated in microns -- sigmaMicrons, minAreaMicrons, cellExpansionMicrons,
+    atlas coordinates -- is scaled by the PhysicalSizeX that gets stamped into the
+    OME-XML here, so a hardcoded value silently corrupts all of them on any
+    acquisition it was not written for.
+    """
+    out: dict[str, float] = {}
+    try:
+        meta = czi.meta
+    except Exception as e:  # pragma: no cover -- defensive; malformed CZI metadata
+        print(f"  WARNING: could not read CZI metadata ({e})")
+        return out
+    if meta is None:
+        return out
+    for dist in meta.findall(".//Scaling/Items/Distance"):
+        axis = (dist.get("Id") or "").strip().lower()
+        node = dist.find("Value")
+        if axis not in ("x", "y", "z") or node is None or not (node.text or "").strip():
+            continue
+        try:
+            metres = float(node.text)
+        except ValueError:
+            continue
+        if metres > 0:
+            out[axis] = metres * 1e6
+    return out
+
+
+def _resolve_pixel_um(czi: aicspylibczi.CziFile, override: float | None) -> float:
+    """Decide the pixel size to stamp into the OME-XML, and say why.
+
+    Precedence: an explicit --pixel-um wins (with a loud mismatch report), otherwise
+    the CZI's own metadata. If neither is available there is no safe default, so this
+    exits rather than guessing -- guessing is what produced mislabelled MIPs before.
+    """
+    scaling = _czi_scaling_um(czi)
+    meta_x = scaling.get("x")
+    meta_y = scaling.get("y")
+
+    if meta_x is not None:
+        print(f"  CZI metadata pixel size: {meta_x:.7g} um/px (X)"
+              + (f", {meta_y:.7g} um/px (Y)" if meta_y is not None else ""))
+        if meta_y is not None and abs(meta_x - meta_y) / meta_x > 1e-6:
+            print(f"  WARNING: non-square pixels (X {meta_x:.7g} != Y {meta_y:.7g} um). "
+                  "Downstream code assumes square pixels; X is used.")
+    if "z" in scaling:
+        print(f"  CZI metadata z-step: {scaling['z']:.7g} um")
+
+    if override is not None:
+        if meta_x is not None and abs(override - meta_x) / meta_x > 1e-3:
+            print(f"  WARNING: --pixel-um {override:.7g} disagrees with CZI metadata "
+                  f"{meta_x:.7g} by {100 * abs(override - meta_x) / meta_x:.2f}%.")
+            print("           Using the override. Verify this is deliberate -- an incorrect")
+            print("           pixel size mis-scales every micron-denominated detection param.")
+        print(f"  pixel size in use: {override:.7g} um/px (--pixel-um override)")
+        return override
+
+    if meta_x is None:
+        sys.exit(
+            "ERROR: this CZI carries no Scaling metadata and no --pixel-um was given.\n"
+            "       Refusing to guess: a wrong PhysicalSizeX silently mis-scales every\n"
+            "       micron-denominated detection parameter downstream. Read the correct\n"
+            "       value off the acquisition and pass --pixel-um."
+        )
+    print(f"  pixel size in use: {meta_x:.7g} um/px (from CZI metadata)")
+    return meta_x
 
 
 def _preflight_scenes(czi: aicspylibczi.CziFile) -> tuple[dict, list[tuple[int, int]]]:
@@ -847,6 +935,8 @@ def main() -> None:
     n_z = _extent(dim0, "Z")
     print(f"  Channels={n_c}  Z-planes={n_z}")
 
+    pixel_um = _resolve_pixel_um(czi, args.pixel_um)
+
     bboxes, overlapping_pairs = _preflight_scenes(czi)
     mode = _resolve_isolation_mode(args.isolate, overlapping_pairs)
     print(f"Isolation mode resolved: {mode} (requested={args.isolate}, "
@@ -915,7 +1005,7 @@ def main() -> None:
         print(f"  Identity thumbnail: {thumb_path}")
 
         image_name = f"{args.animal_prefix}_s{N}"
-        ome_xml = _build_ome_xml(args.channels, X, Y, args.pixel_um, image_name, dapi_z)
+        ome_xml = _build_ome_xml(args.channels, X, Y, pixel_um, image_name, dapi_z)
         out_path = args.outdir / f"{args.animal_prefix}_s{N}_MIP.ome.tiff"
         print(f"  Writing {out_path} ...")
         tifffile.imwrite(
@@ -928,7 +1018,7 @@ def main() -> None:
 
         with tifffile.TiffFile(str(out_path)) as tf:
             ome_meta = tf.ome_metadata
-        expected_tag = f'PhysicalSizeX="{args.pixel_um}"'
+        expected_tag = f'PhysicalSizeX="{pixel_um}"'
         if expected_tag not in ome_meta:
             raise SystemExit(
                 f"Scene {scene_idx}: written OME-XML missing {expected_tag!r} -- pixel size did not round-trip"
