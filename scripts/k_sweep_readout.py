@@ -50,8 +50,14 @@ import numpy as np
 import pandas as pd
 import yaml
 import matplotlib
-matplotlib.use("Agg")
-import matplotlib.pyplot as plt  # noqa: E402  (must follow matplotlib.use("Agg"))
+# Claim the headless backend ONLY when run as a CLI. At module scope `__name__` is
+# "__main__" only in that case, so the import path is left alone. As an imported
+# library this must not touch the backend: cockpit_checks imports this module, so an
+# unconditional matplotlib.use("Agg") silently clobbered the notebooks' inline backend
+# and every plt.show() rendered nothing ("FigureCanvasAgg is non-interactive").
+if __name__ == "__main__":
+    matplotlib.use("Agg")
+import matplotlib.pyplot as plt  # noqa: E402  (must follow the matplotlib.use above)
 
 # ---------------------------------------------------------------------------
 # Built-in amygdala nucleus groups (LA is the amygdala nucleus, NOT "LAT" thalamus).
