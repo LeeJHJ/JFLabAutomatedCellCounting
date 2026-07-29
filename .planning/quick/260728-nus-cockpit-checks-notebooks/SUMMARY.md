@@ -64,6 +64,17 @@ Each opens with a single editable `PARAMS` dict.
   `cockpit_regions` (57 rows over LA/BLA/BMA/HPF/CA1).
 - **PARAMS drives behavior**: default thresholds → 5/5 FLAG; loosened thresholds → 5/5 PASS.
 
+## Follow-up commits (operator calls made after the initial three)
+
+| Commit | Change |
+|---|---|
+| `9618458` | `GateThresholds.advisory_gates` — park white-matter + ventricle as advisory. They still compute and still report FLAG (tagged `[demoted to advisory]`), but no longer drive the verdict. Not a deletion and not a threshold fudge. **Consequence: DAPI densities untrustworthy while parked**; ratio readouts (P(Fos+\|TdT+)) unaffected — no DAPI denominator. Remove the entry to re-arm. |
+| `fee7a1a` | Nucleus-area band lower bound 50 → **25 µm²**, as the DEFAULT. Operator domain call: 50–150 was M3-derived (over-projected DAPI merged/inflated nuclei) and never matched what the images showed. Thin Z deblends, so 27–32 µm² peaks (~5.9–6.4 µm equiv. diameter) are real, not fragmentation. Floor still catches genuine over-splitting (over-split fixture peaks 17.5 µm² and still FLAGs). |
+
+**Final QC state — both fixtures 5/5 PASS:** wBA1-3 peaks 27.5–32.5 µm², tdt-only 32.5 µm².
+The table is now at a clean baseline, so the next FLAG means something actually changed
+rather than being steady-state noise. Self-test still all-pass; both notebooks 0 errors.
+
 ## Findings for the operator (real, not test artifacts)
 
 Both wBA fixtures FLAG the same three gates on every slice:
