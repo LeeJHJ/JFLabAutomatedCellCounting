@@ -68,6 +68,29 @@ Every QC gate in `scripts/cockpit_checks.py` is tagged with its tier and prints 
 - **Pixel size comes from the CZI, never a default.** `czi_mip.py` reads `Scaling/Items/Distance` and stamps it into the OME-XML; every micron-denominated detection parameter is scaled by that number downstream. `--pixel-um` overrides explicitly and reports disagreement.
 - **One classification path.** Marker classification happens only in `02_detect_classify.groovy` from `pipeline.yml`. Every project's `BraiAn.yml` `classifiers:` block is empty by design — do not repopulate it, or classification silently happens twice by two different rules.
 
+## Comparability boundary — one acquisition regime per comparison (2026-07-30)
+
+The self-calibrating thresholds (`span_frac` for the anchor cut, `k_robust` for marker
+positivity) rescale with the data, so they absorb **overall brightness drift** — staining,
+laser power, exposure. That is what makes sections within a run comparable, and it works:
+M3 Hipp1 cut at 688, M3 Hipp2 at 798, same `span_frac`.
+
+They do **not** absorb changes in **separability or geometry**:
+- SNR changes — `k` is in robust SDs of the population; a narrower background distribution
+  moves the cut relative to the actual biological populations, calling a different fraction
+- saturation/clipping — changes histogram *shape*, not just scale
+- pixel size, Z-slab depth, projection method — change what a cell physically *is*, so
+  area/expansion params do not carry
+- spatially-structured artifacts (e.g. per-tile shading gradients)
+
+**Consequence, binding:** animals acquired under different imaging parameters are NOT
+directly comparable, and `k`/`span_frac` tuned on one regime do not transfer to another.
+Group comparisons require one settled acquisition regime across every animal in the
+comparison — otherwise imaging is confounded with biology, and the confound sits in the
+same direction as the effect. Record the acquisition regime alongside any reported number,
+and state the `k` it was measured at (**operator, 2026-07-30**: imaging parameters are still
+being tuned, so cross-run numbers to date are methods validation, not cohort data).
+
 ## Stats conventions for BraiAnalyse work
 - **Aggregate to the animal level before any group comparison** — sections are not independent; never pseudoreplicate on section- or cell-level n.
 - Report **effect sizes (Hedges' g)** alongside p-values; prefer **Welch's t-test** (unequal variance) for two-group region comparisons.
