@@ -250,7 +250,15 @@ if (availableAtlases.isEmpty()) {
 println "Found ABBA registrations: ${availableAtlases}"
 
 // ── runtime classifier-JSON base dir (Gson; no groovy.json in QuPath) ───────
+// QuPath only creates classifiers/object_classifiers/ once a classifier has been
+// saved from the GUI, so on a FRESH project it does not exist and writing the
+// runtime classifier JSON below fails with FileNotFoundException. Create it here
+// rather than requiring the operator to save a throwaway classifier by hand.
 def base = new File(getProject().getBaseDirectory(), "classifiers/object_classifiers")
+if (!base.isDirectory() && !base.mkdirs()) {
+    println "ERROR: could not create ${base} -- classifier JSONs cannot be written."
+    return
+}
 def readSpec = { fn ->
     def o = JsonParser.parseString(new File(base, fn).text).getAsJsonObject().getAsJsonObject("function")
     [meas: o.get("measurement").getAsString(), thr: o.get("threshold").getAsDouble()]
