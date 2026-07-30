@@ -102,8 +102,9 @@ operator can do this against the slide. AP order is *not* implied by the `sN` nu
 
 1. Create a QuPath project, e.g. `M3 Hipp2 072526/M3 Hipp2 QuPath/`.
 2. **Import the images FROM the QuPath project** — see the hard-won constraint below.
-3. Register in ABBA: DeepSlice → manual DV/ML tilt adjust → BigWarp refinement →
-   elastix Affine(structural channel)+Spline.
+3. Register in ABBA: DeepSlice → manual DV/ML tilt adjust → elastix
+   Affine(atlas **Nissl Ch0** // section **DAPI**) + Spline(15 pts) → BigWarp refine
+   via "Edit last registration".
 4. Export back to QuPath, then run `01_load_abba_rois.groovy` per entry.
 
 Three things that will cost hours if forgotten:
@@ -114,11 +115,28 @@ Three things that will cost hours if forgotten:
   `feedback-abba-import-from-qupath-first`)
 - **Adjust DV/ML tilt BEFORE Affine+Spline**, not more spline control points. Lateral
   structure misalignment is a tilt problem. (memory `feedback-abba-tilt`)
-- **Do not register on DAPI.** Phase 06 REG-05 found the structural/Nissl-like channel
-  markedly better at the region boundary, and the reference paper reports Dice ~0.30
-  for DAPI vs ~0.49–0.55 for Fos/NeuN. Set the moving-channel index deliberately — a
-  wrong index presents as "missing channels" in BigWarp/elastix (memory
+- **The channel that matters is the ATLAS one, not the section one.** Set the *fixed*
+  image to the atlas **Nissl (Ch0)** — NOT Label Borders (Ch2), which is a region-outline
+  line drawing with no intensity correspondence to tissue. That single change is what
+  made in-GUI elastix Affine+Spline work and overturned the earlier "elastix degrades"
+  conclusion (`.planning/phases/06-registration-speedup/06-REG05-FINDINGS.md`, operator,
+  5 sections, 2026-07-20).
+
+  The *moving* image is the section's **DAPI** channel — that is what the validated
+  wBA1-3 pipeline used, and it works. Set the moving-channel index deliberately: DAPI is
+  index **2** in these 3-channel MIPs (`AF568-T2`=0, `AF488-T3`=1, `DAPI-T4`=2). Index 0
+  presents as "missing channels" in BigWarp/elastix (memory
   `feedback-abba-channel-index`).
+
+  > **Corrected 2026-07-30.** An earlier draft of this file said "do not register on
+  > DAPI", conflating the atlas-side finding above with a separate *literature* claim —
+  > Cabrera et al. (bioRxiv 2024.09.16.611953) report Dice ~0.30 for DAPI vs ~0.49–0.55
+  > for Fos/NeuN. That comparison has never been tested on our data, and it probably does
+  > not transfer: their alternative is **NeuN, a pan-neuronal stain**, whereas our 488 is
+  > **Fos**, which is activity-sparse (2–28% of nuclei by region in the M3 Hipp1 readout;
+  > TdT sparser still at ~1–5%). Neither of our marker channels gives continuous
+  > structural texture. DAPI is the closest thing we have to their NeuN, not the thing
+  > they warned against.
 
 ---
 

@@ -127,14 +127,31 @@ magnitude coarser than counting needs.
 
 Practical notes from our own registration work:
 
-- **DAPI is a poor registration channel.** Phase 06 (REG-05) found that registering on the
-  structural/Nissl-like channel rather than DAPI markedly improved the LA/BA fit; the reference
-  workflow (Cabrera et al., bioRxiv 2024.09.16.611953 / F1000Research 15:410) reports Dice ~0.30
-  for DAPI vs ~0.49–0.55 for Fos/NeuN. If any channel is dropped to save time, **do not drop the
-  one registration depends on.**
-- This also means a **cheap dedicated registration channel is viable** — a fast, coarse,
+- **We register on DAPI, and it works.** Phase 06 (REG-05) found that the decisive variable was
+  the **atlas-side fixed channel**: switching it from Label Borders (Ch2, a region-outline line
+  drawing with no intensity correspondence to tissue) to **Nissl (Ch0)** made in-GUI elastix
+  Affine+Spline work and overturned the earlier "elastix degrades" conclusion. The section-side
+  moving channel in that validated pipeline was **DAPI (Ch2)**
+  (`.planning/phases/06-registration-speedup/06-REG05-FINDINGS.md`, operator, 5 sections,
+  2026-07-20). So DAPI carries registration for us today.
+- **The literature caveat, and why it likely does not apply.** The reference workflow (Cabrera et
+  al., bioRxiv 2024.09.16.611953 / F1000Research 15:410) reports Dice ~0.30 for DAPI vs ~0.49–0.55
+  for Fos/NeuN. That is **untested on our data**, and their alternative is **NeuN — a pan-neuronal
+  stain with continuous structural texture**. Our 488 channel is **Fos**, which is
+  activity-sparse (2–28% of nuclei by region in the M3 Hipp1 readout; TdT sparser still, ~1–5%).
+  Neither of our marker channels is a structural stain, so "use Fos instead of DAPI" is not the
+  same proposition as the paper's. Treat the Dice figures as a reason to *test* a structural
+  channel, not as a reason to stop registering on DAPI.
+
+  > **Corrected 2026-07-30.** This bullet previously read "DAPI is a poor registration channel"
+  > and attributed it to REG-05. That merged our own atlas-side finding with the borrowed
+  > literature claim, and inverted what REG-05 actually concluded.
+- If any channel is dropped to save time, **do not drop the one registration depends on** — which,
+  on the current pipeline, is DAPI.
+- A **cheap dedicated registration channel is still worth considering** — a fast, coarse,
   single-plane structural scan could serve registration while the expensive sampling is reserved
-  for the counting channels. Worth discussing as a longer-term option.
+  for the counting channels. That is the clean way to actually test the Cabrera claim on our
+  tissue, rather than inferring it.
 
 ---
 
