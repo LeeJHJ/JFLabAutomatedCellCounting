@@ -96,6 +96,12 @@ def load_config(path: Path) -> dict[str, Any]:
             _fail(f"'markers[{i}].name' must be a non-empty string")
         if not isinstance(m["channel"], str) or not m["channel"].strip():
             _fail(f"'markers[{i}].channel' must be a non-empty string")
+        if "k_robust" in m:
+            km = m["k_robust"]
+            if not isinstance(km, (int, float)) or isinstance(km, bool):
+                _fail(f"'markers[{i}].k_robust' must be numeric, got {type(km).__name__}")
+            if km <= 0:
+                _fail(f"'markers[{i}].k_robust' must be > 0, got {km}")
         if m["compartment"] not in _VALID_COMPARTMENTS:
             _fail(
                 f"'markers[{i}].compartment' = {m['compartment']!r} is invalid; "
@@ -256,6 +262,10 @@ def derive_contract(config: dict[str, Any]) -> dict[str, Any]:
 def _print_contract(config: dict[str, Any], contract: dict[str, Any]) -> None:
     print(f"anchor: {contract['anchor_name']!r} (channel {contract['anchor_channel']!r})")
     print(f"k_robust: {config['k_robust']}   (marker-positivity cut)")
+    for m in config["markers"]:
+        if "k_robust" in m:
+            print(f"  {m['name']}: k_robust {m['k_robust']}   "
+                  f"(PER-MARKER override; global {config['k_robust']} does not apply to it)")
     dt = config["detection_threshold"]
     if dt["mode"] == "span_fraction":
         print(f"detection_threshold: span_fraction, span_frac={dt['span_frac']}   "

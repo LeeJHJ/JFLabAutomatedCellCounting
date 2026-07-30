@@ -65,6 +65,13 @@ exclude_acronyms: ["DG-sg", "VS"]
 # the K_ROBUST literal (scripts/02_detect_classify.groovy line 286). Threshold
 # = median + k_robust * 1.4826 * MAD on the per-marker background-subtracted
 # measure. [ASSUMED] seed value -- re-sweep on imaging-parameter drift (Phase 7 IMG-01).
+#
+# This is the DEFAULT for every marker. A marker may override it with its own
+# `k_robust:` in the markers block above -- markers do not separate from
+# background equally well, and one shared cut can be right for a clean nuclear
+# marker while dropping dim positives of a whole-cell one. LOWER k -> catches
+# dimmer positives; RAISE -> stricter. Tune it while looking at the marker
+# channel with detections overlaid, not from the counts alone.
 k_robust: 3.0
 
 # ── Detection threshold (anchor channel) — ACQUISITION-AGNOSTIC ──────────────

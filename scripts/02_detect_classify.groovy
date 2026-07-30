@@ -163,8 +163,14 @@ while (i < nLines) {
             } else if (current != null) {
                 def mChan = (t =~ /^channel:\s*"([^"]+)"/)
                 def mComp = (t =~ /^compartment:\s*"([^"]+)"/)
+                // OPTIONAL per-marker k_robust override. Markers differ in how cleanly
+                // they separate from background -- a nuclear marker can sit well above
+                // it while a whole-cell one has dim positives that a shared cut drops.
+                // Absent here, the top-level k_robust applies (unchanged behaviour).
+                def mKm = (t =~ /^k_robust:\s*([0-9.eE+-]+)/)
                 if (mChan.find()) current.channel = mChan.group(1)
                 if (mComp.find()) current.compartment = mComp.group(1)
+                if (mKm.find()) current.k_robust = mKm.group(1) as Double
             }
             j++
         }
@@ -570,8 +576,10 @@ markers.each { m ->
     String bgsubKey = "${label}: ${m.channel} mean (bg-sub)"
     def values = classifiable.collect { it.getMeasurements().get(bgsubKey)?.doubleValue() }.findAll { it != null && !Double.isNaN(it) }
     markerBgValues[m.name] = values
-    markerThresholds[m.name] = robustThreshold(values, kRobust)
-    println "Re-derived ${m.name} threshold (bg-sub measure, median + ${kRobust}*1.4826*MAD): ${markerThresholds[m.name]}"
+    double kM = (m.k_robust != null) ? m.k_robust : kRobust
+    markerThresholds[m.name] = robustThreshold(values, kM)
+    println "Re-derived ${m.name} threshold (bg-sub measure, median + ${kM}*1.4826*MAD): ${markerThresholds[m.name]}" +
+            ((m.k_robust != null) ? "   [per-marker k_robust override; global is ${kRobust}]" : "")
 }
 
 println "Self-check (D-05 redesign): robust-threshold sanity band on the bg-sub population, per marker"
@@ -586,7 +594,9 @@ markers.each { m ->
     String fn = "${m.name}_Classifier_bgsub.json"
     double thr = markerThresholds[m.name]
     if (!Double.isNaN(thr)) {
-        writeBgsubClassifierSpec(fn, bgsubKey, thr, kRobust)
+        // Record the k this marker was ACTUALLY cut with, not the global default --
+        // the JSON's note is the provenance a later re-read depends on.
+        writeBgsubClassifierSpec(fn, bgsubKey, thr, (m.k_robust != null) ? m.k_robust : kRobust)
     } else {
         println "  WARNING: ${m.name} bg-sub threshold re-derivation failed (NaN) -- keeping existing ${fn} unchanged."
     }
