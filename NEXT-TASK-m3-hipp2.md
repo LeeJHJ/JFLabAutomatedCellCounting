@@ -102,9 +102,10 @@ operator can do this against the slide. AP order is *not* implied by the `sN` nu
 
 1. Create a QuPath project, e.g. `M3 Hipp2 072526/M3 Hipp2 QuPath/`.
 2. **Import the images FROM the QuPath project** — see the hard-won constraint below.
-3. Register in ABBA: DeepSlice → manual DV/ML tilt adjust → elastix
-   Affine(atlas **Nissl Ch0** // section **DAPI**) + Spline(15 pts) → BigWarp refine
-   via "Edit last registration".
+3. Register in ABBA (**fully manual after DeepSlice**, revised 2026-07-30): DeepSlice →
+   Review/positioning mode for position + tilt → **Affine tab: match the slice to the
+   overlay by hand** (angle, X, Y, scale) → **Spline tab: manual BigWarp** to finalize.
+   Match against the **Label Borders** overlay. elastix is not used.
 4. Export back to QuPath, then run `01_load_abba_rois.groovy` per entry.
 
 Three things that will cost hours if forgotten:
@@ -115,18 +116,17 @@ Three things that will cost hours if forgotten:
   `feedback-abba-import-from-qupath-first`)
 - **Adjust DV/ML tilt BEFORE Affine+Spline**, not more spline control points. Lateral
   structure misalignment is a tilt problem. (memory `feedback-abba-tilt`)
-- **The channel that matters is the ATLAS one, not the section one.** Set the *fixed*
-  image to the atlas **Nissl (Ch0)** — NOT Label Borders (Ch2), which is a region-outline
-  line drawing with no intensity correspondence to tissue. That single change is what
-  made in-GUI elastix Affine+Spline work and overturned the earlier "elastix degrades"
-  conclusion (`.planning/phases/06-registration-speedup/06-REG05-FINDINGS.md`, operator,
-  5 sections, 2026-07-20).
+- **Match against the Label Borders overlay, by hand.** The registration is manual after
+  DeepSlice (see step 3), so the overlay you want is the **region-outline drawing** — you
+  are aligning boundaries to anatomy by eye. The section's own channel is **DAPI**, index
+  **2** in these 3-channel MIPs (`AF568-T2`=0, `AF488-T3`=1, `DAPI-T4`=2); index 0
+  presents as "missing channels" in BigWarp (memory `feedback-abba-channel-index`).
 
-  The *moving* image is the section's **DAPI** channel — that is what the validated
-  wBA1-3 pipeline used, and it works. Set the moving-channel index deliberately: DAPI is
-  index **2** in these 3-channel MIPs (`AF568-T2`=0, `AF488-T3`=1, `DAPI-T4`=2). Index 0
-  presents as "missing channels" in BigWarp/elastix (memory
-  `feedback-abba-channel-index`).
+  If elastix is ever reintroduced, its *fixed* channel must be atlas **Nissl (Ch0)**, NOT
+  Label Borders — an intensity-based optimizer needs intensity correspondence, and a line
+  drawing gives it none. That is the same fact that makes Label Borders the *right*
+  choice for a human. (`06-REG05-FINDINGS.md`; superseded as the standard chain
+  2026-07-30.)
 
   > **Corrected 2026-07-30.** An earlier draft of this file said "do not register on
   > DAPI", conflating the atlas-side finding above with a separate *literature* claim —

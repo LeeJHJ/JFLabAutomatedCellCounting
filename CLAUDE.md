@@ -57,14 +57,17 @@ conda activate deepslice   # optional local DeepSlice (else use online)
 - [x] Test: ZEN export → QuPath import on ONE section — 2026-06-20 (M3 hippocampus ~+1.4mm bregma, 10x confocal, 3ch: DAPI/Ch0, Fos-488/Ch1, TdTomato-568/Ch2)
 - [x] First registered section (DeepSlice + Affine + Spline, Allen CCFv3 regions loaded) — 2026-06-20
 - [x] 20x CZI → MIP pipeline (`czi_mip.py`, repo root — there is no `czi_to_mip.py`); channel names are `AF568-T2` (TdTomato) / `AF488-T3` (Fos) / `DAPI-T4`; pass `--channels` in physical read order (aicspylibczi order ≠ metadata order) — 2026-06-22, corrected 2026-07-29
-- [x] 20x section ABBA registration — 2026-06-23, **REVISED 2026-07-20 (Phase 06 REG-05)**.
-      Current workflow: DeepSlice → single global slicing angle → elastix **Affine(atlas Nissl
-      Ch0 // section DAPI Ch2)** → elastix Spline(15 pts) → BigWarp "Edit last registration"
-      refine. The 2026-06-23 "no Affine/Spline, elastix degrades" conclusion was **substantially
-      a wrong-atlas-channel artifact** — Label Borders (Ch2) is a region-outline line drawing
-      with no intensity correspondence to tissue. With Nissl (Ch0) as fixed, in-GUI elastix
-      works and improves the fit. Register the section on **DAPI**; the moving-channel index is
-      **2** in these 3-channel MIPs.
+- [x] 20x section ABBA registration — **CURRENT WORKFLOW (revised 2026-07-30, operator, M3
+      Hipp2 all 6 sections): fully manual after DeepSlice.**
+      DeepSlice → Review/positioning mode (position + tilt) → **Affine tab: match the slice to
+      the overlay BY HAND** (angle, X, Y, scale) → **Spline tab: manual BigWarp** to finalize →
+      export. Match against the **Label Borders** overlay: you are aligning boundaries by eye.
+      **elastix is NO LONGER in the chain.** This reverses the 2026-07-20 REG-05 "KEEP elastix
+      Affine+Spline" decision, under that decision's own quality-first / time-irrelevant rule.
+      If elastix is ever used again, its fixed channel must be atlas **Nissl (Ch0)**, never
+      Label Borders — an intensity optimizer needs intensity correspondence, which is precisely
+      why the human-facing overlay choice is the opposite one. Section moving channel = DAPI,
+      index **2** in these 3-channel MIPs.
 - [x] First registered series + animal-level readout (wBA1-3, LA/BA amygdala) — 2026-07-23
 - [x] Generalization pass — 2026-07-29:
       - self-calibrating relative detection threshold (`detection_threshold` in `pipeline.yml`), replacing absolute `threshold: 700`

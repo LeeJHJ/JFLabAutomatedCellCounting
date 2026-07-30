@@ -63,15 +63,16 @@ working slicing angle for this animal).
      region (e.g. amygdala) after tilt is usually a genuine through-plane
      cutting-angle issue, not something a Spline can fix by adding control
      points.
-   - If elastix registration is used at all, point the **fixed (atlas)
-     channel at Nissl (Ch0)**, never Label Borders (Ch2) — Label Borders is a
-     line-drawing with no intensity correspondence to DAPI, so
-     intensity-based registration cannot lock onto it.
-5. **Refine with BigWarp** if hippocampal/cortical subfields still don't
-   line up after tilt + AP adjustment: place 4-6 landmarks on stable
-   anatomical features (e.g. CA1/CA3 boundary, DG tip, ventral edge, dorsal
-   cortex margin), then run BigWarp from the adjusted state.
-6. **Export the registration to the QuPath project:**
+5. **Affine tab — match the slice to the overlay BY HAND.** Use the affine
+   transformation controls to move the slice onto the atlas overlay: adjust
+   **angle, X, Y, and scale** until it sits as well as you can get it. Match
+   against the **Label Borders** overlay — the region-outline drawing — because
+   you are aligning *boundaries* to anatomy by eye.
+6. **Spline tab — finish with manual BigWarp.** Place landmarks on stable
+   anatomical features (CA1/CA3 boundary, DG tip, ventral edge, dorsal cortex
+   margin) and work the overlay until the region boundaries sit on the tissue.
+   This is the step that earns the final fit; expect it to take a while.
+7. **Export the registration to the QuPath project:**
    ```
    Plugins > Atlas > Multi Image To Atlas > Export
      -> "ABBA - Export Registrations To QuPath Project"
@@ -80,6 +81,26 @@ working slicing angle for this animal).
 ![DeepSlice panel](../assets/reg-01-deepslice.png)
 ![Review Mode tilt adjustment](../assets/reg-02-review-mode.png)
 ![ABBA export dialog](../assets/reg-03-export.png)
+
+!!! info "Why this workflow is manual, and why elastix is no longer in it"
+    **Superseded 2026-07-30 (operator, M3 Hipp2, all 6 sections).** The previous
+    workflow ran ABBA's *automated* `Elastix 2D Affine` + `Elastix 2D Spline` and used
+    BigWarp only to refine the result. Registering the same sections with a **manual
+    affine + manual BigWarp** instead produced a visibly better overlay throughout, so
+    elastix is no longer part of the standard chain. This reverses the Phase 06 REG-05
+    "KEEP elastix" decision of 2026-07-20, under that decision's own stated rule:
+    quality is judged by the operator's eye, and time is explicitly not a factor.
+
+    **The atlas overlay you match against flipped with it, and that is not a
+    contradiction.** elastix needed the **Nissl (Ch0)** channel because an
+    intensity-based optimizer has to have intensity correspondence to lock onto —
+    against Label Borders, a line drawing, it has nothing to optimize and degrades.
+    A human has the opposite requirement: you read anatomy directly and align
+    *boundaries*, which is exactly what **Label Borders** shows and what Nissl
+    obscures. The channel that breaks the optimizer is the right one for manual work.
+
+    If you ever do run elastix (it remains installed and pinned at 5.2.0), the old
+    rule still applies: fixed channel = atlas **Nissl (Ch0)**, never Label Borders.
 
 ## Outputs consumed downstream
 
@@ -98,7 +119,7 @@ two files via `AtlasTools.loadWarpedAtlasAnnotations(...)` and calls
 
 ## Channel-index reminder
 
-If a registration step (BigWarp or elastix) throws a "missing channels"
+If a registration step (BigWarp, or elastix if used) throws a "missing channels"
 error, it's almost always a channel-**index** mismatch in the registration
 dialog, not a data problem — the moving/fixed "channels to use" fields are
 0-based indices, and they don't carry over between datasets with different
