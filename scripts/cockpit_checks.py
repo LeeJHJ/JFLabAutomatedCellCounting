@@ -407,6 +407,40 @@ def find_slices(project_dir: Path, results_dir: Path | None = None) -> list[Slic
     return [slices[k] for k in sorted(slices)]
 
 
+def label_from_entry_name(entry_name: str) -> str:
+    """Slice label from a QuPath image-entry name.
+
+    QuPath names an imported entry `<file> - <image name>`, e.g.
+    `M3-hipp2_s3_MIP.ome.tiff - M3-hipp2_s3`. The trailing part is the label the
+    export tables are keyed by, so this is the inverse of the `endswith(label)`
+    match callers use to go from a slice back to its `--image` argument.
+    """
+    return entry_name.rsplit(" - ", 1)[-1].strip() if " - " in entry_name else entry_name.strip()
+
+
+def find_candidate_slices(project_dir: Path,
+                          results_dir: Path | None = None) -> tuple[list[SliceFiles], bool]:
+    """Slices available to work on, whether or not anything has been exported yet.
+
+    `find_slices` groups EXPORT tables, so on a brand-new project it finds nothing --
+    which made the calibrate notebook circular: you could not pick a slice to detect
+    on until a detection had already been exported for it. Here the QuPath project's
+    own image entries are the fallback, so a fresh project can be calibrated.
+
+    Returns (slices, from_exports). `from_exports` is False when the list came from
+    project entries, i.e. the SliceFiles carry no tables yet and any gate needing
+    per-cell data will (correctly) report N/A rather than crash.
+    """
+    try:
+        exported = find_slices(project_dir, results_dir)
+    except FileNotFoundError:
+        exported = []
+    if exported:
+        return exported, True
+    return [SliceFiles(label=label_from_entry_name(n))
+            for n in project_image_names(project_dir)], False
+
+
 # ---------------------------------------------------------------------------
 # Table loading
 # ---------------------------------------------------------------------------
@@ -913,6 +947,29 @@ def _self_test() -> None:
         slices = find_slices(proj)
         check([s.label for s in slices] == ["syn_s1", "syn_s2"], "find_slices groups by label")
         check(all(s.complete for s in slices), "both synthetic slices complete")
+
+        # find_candidate_slices: a project WITH exports is unchanged; a FRESH project
+        # (no results/ at all) still yields its entries, which is what makes the
+        # calibrate notebook runnable before anything has been detected.
+        cand, from_exports = find_candidate_slices(proj)
+        check([s.label for s in cand] == ["syn_s1", "syn_s2"] and from_exports,
+              "find_candidate_slices prefers exports when they exist")
+        check(label_from_entry_name("M3-hipp2_s3_MIP.ome.tiff - M3-hipp2_s3") == "M3-hipp2_s3",
+              "label_from_entry_name strips the QuPath '<file> - <name>' prefix")
+        check(label_from_entry_name("no_separator_name") == "no_separator_name",
+              "label_from_entry_name passes through a name with no separator")
+        import json as _json
+        with tempfile.TemporaryDirectory() as fresh_dir:
+            fresh = Path(fresh_dir)
+            (fresh / "project.qpproj").write_text(_json.dumps({"images": [
+                {"entryID": 1, "imageName": "a_MIP.ome.tiff - a_s1"},
+                {"entryID": 2, "imageName": "b_MIP.ome.tiff - b_s2"},
+            ]}))
+            fresh_slices, fresh_from_exports = find_candidate_slices(fresh)
+            check([s.label for s in fresh_slices] == ["a_s1", "b_s2"] and not fresh_from_exports,
+                  "find_candidate_slices falls back to project entries on a fresh project")
+            check(all(s.percell_tsv is None for s in fresh_slices),
+                  "fallback slices carry no tables (gates report N/A rather than crash)")
 
         good, bad = slices[0], slices[1]
 
