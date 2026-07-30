@@ -62,6 +62,23 @@ PASS = "PASS"
 FLAG = "FLAG"
 NA = "N/A"
 
+# ── Gate provenance tiers (project rule: SEEN > STRUCTURAL > ASSUMED) ────────
+# What the operator can see with detections overlaid outranks any number here.
+# These tags say how much authority a gate's own band carries, so a violation of
+# anatomy never reads the same as a deviation from a band borrowed off a paper.
+#
+#   ANATOMICAL -- true regardless of acquisition, stain, or microscope.
+#                 Ventricles are CSF-filled; white matter is sparsely nucleated
+#                 compared with cortex. Breaking one of these is real.
+#   INTERNAL   -- measured from THIS dataset; checks self-consistency, asserts
+#                 no outside expectation (e.g. is the readout stable across k).
+#   ASSUMED    -- a band carried in from another acquisition or a paper, never
+#                 validated against hand counts on our own images. Informative,
+#                 NOT authoritative. A FLAG here is a prompt to go and LOOK.
+ANATOMICAL = "anatomical"
+INTERNAL = "internal"
+ASSUMED = "assumed"
+
 
 # ---------------------------------------------------------------------------
 # Tunable gate thresholds -- every limit lives here, none inside a gate body
@@ -146,6 +163,7 @@ class GateResult(NamedTuple):
     status: str
     detail: str = ""
     advisory: bool = False
+    basis: str = ASSUMED
 
     @property
     def is_flag(self) -> bool:
@@ -155,7 +173,8 @@ class GateResult(NamedTuple):
         tag = f"{self.status}{' (advisory)' if self.advisory and self.status == FLAG else ''}"
         val = "n/a" if self.value is None or (isinstance(self.value, float)
                                               and not np.isfinite(self.value)) else f"{self.value:,.1f}"
-        return f"  [{tag:>16}] {self.name:<26} = {val:>10}   {self.detail}"
+        return (f"  [{tag:>16}] {self.name:<26} = {val:>10}  "
+                f"{'<' + self.basis + '>':<12} {self.detail}")
 
 
 def _verdict(ok: bool, advisory: bool = False) -> str:
@@ -547,7 +566,7 @@ def gate_nucleus_area_peak(percell: pd.DataFrame,
               f"{th.area_peak_min:g}-{th.area_peak_max:g} um^2"
               + ("" if ok else "  <-- over-splitting / noise" if peak < th.area_peak_min
                  else "  <-- under-splitting / merged nuclei"))
-    return GateResult(name, peak, _verdict(ok), detail)
+    return GateResult(name, peak, _verdict(ok), detail, basis=ASSUMED)
 
 
 def gate_white_matter(regions: pd.DataFrame,
@@ -587,7 +606,7 @@ def gate_white_matter(regions: pd.DataFrame,
     detail = (f"worst='{worst_acr}' {worst:,.0f}/mm^2 vs cortex {cortex:,.0f}/mm^2 "
               f"(ratio {ratio:.2f})"
               + ("" if ok else "  <-- " + "; ".join(why) + "; DAPI haze likely"))
-    return GateResult(name, worst, _verdict(ok), detail)
+    return GateResult(name, worst, _verdict(ok), detail, basis=ANATOMICAL)
 
 
 def gate_ventricle(regions: pd.DataFrame,
@@ -605,7 +624,7 @@ def gate_ventricle(regions: pd.DataFrame,
     ok = worst <= th.ventricle_density_max
     detail = (f"'{worst_acr}'; expect <= {th.ventricle_density_max:g}/mm^2"
               + ("" if ok else "  <-- detections inside ventricle"))
-    return GateResult(name, worst, _verdict(ok), detail)
+    return GateResult(name, worst, _verdict(ok), detail, basis=ANATOMICAL)
 
 
 def gate_grey_matter_density(regions: pd.DataFrame,
@@ -631,7 +650,7 @@ def gate_grey_matter_density(regions: pd.DataFrame,
     detail = (f"{in_band}/{len(per)} regions inside "
               f"{th.grey_density_min:g}-{th.grey_density_max:g}/mm^2 "
               f"({', '.join(f'{a} {d:,.0f}' for a, d in per)})")
-    return GateResult(name, median, _verdict(ok), detail, advisory=True)
+    return GateResult(name, median, _verdict(ok), detail, advisory=True, basis=ASSUMED)
 
 
 def gate_total_count(regions: pd.DataFrame,
@@ -653,7 +672,7 @@ def gate_total_count(regions: pd.DataFrame,
     ok = th.total_density_min <= dens <= th.total_density_max
     detail = (f"{count:,.0f} detections over {area:,.1f} mm^2 registered; expect "
               f"{th.total_density_min:g}-{th.total_density_max:g}/mm^2")
-    return GateResult(name, dens, _verdict(ok), detail, advisory=True)
+    return GateResult(name, dens, _verdict(ok), detail, advisory=True, basis=ASSUMED)
 
 
 # --- k-sweep stability -------------------------------------------------------
@@ -736,7 +755,7 @@ def gate_k_stability(percell: pd.DataFrame, config: creg.Config,
                       for k in th.k_values)
     detail = (f"P({target}+|{condition}+) [{shown}]; max swing "
               f"{th.k_swing_max_pp:g} pp" + ("" if ok else "  <-- cut is unstable"))
-    return GateResult(name, swing_pp, _verdict(ok), detail)
+    return GateResult(name, swing_pp, _verdict(ok), detail, basis=INTERNAL)
 
 
 # ---------------------------------------------------------------------------

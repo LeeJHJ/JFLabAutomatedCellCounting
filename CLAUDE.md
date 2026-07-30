@@ -32,6 +32,32 @@ conda activate brainrender # 3D point cloud in Allen space
 conda activate deepslice   # optional local DeepSlice (else use online)
 ```
 
+## Evidence hierarchy — WHAT THE OPERATOR SEES OUTRANKS WHAT WE EXPECTED (2026-07-30)
+
+When an observation and an expectation disagree, **the observation wins.** Rank evidence:
+
+1. **SEEN** — what the operator observes on the actual image with detections overlaid.
+   Highest authority, always. If the operator says TdT+ cells are being missed, they are
+   being missed, regardless of what any band, seed value, or reference paper says.
+2. **STRUCTURAL** — facts true regardless of acquisition, stain, or microscope (ventricles
+   are CSF-filled and near-empty; white matter is sparsely nucleated relative to cortex).
+   Violating one of these is a real defect, not a threshold-tuning preference.
+3. **ASSUMED** — bands and seeds carried in from another acquisition or a paper, never
+   validated against hand counts on our own images. **Informative, never authoritative.**
+   A deviation here is a prompt to go and LOOK, not a verdict that the data is wrong.
+
+Every QC gate in `scripts/cockpit_checks.py` is tagged with its tier and prints it
+(`<anatomical>` / `<internal>` / `<assumed>`). Consequences that are binding:
+
+- **Never tune a parameter to move an ASSUMED number into its expected band.** Tune only
+  to match what is visible on the image. If the numbers then sit outside a borrowed band,
+  that is a fact about the band, not a problem with the run.
+- **Never tell the operator their observation conflicts with an expected value as though
+  the expected value settles it.** Report the disagreement, name the tier, and defer.
+- When a seed or band is cited anywhere, say where it came from and whether it was ever
+  checked on our data. An unattributed number reads as authority it has not earned.
+- Values marked `[ASSUMED]` in `pipeline.yml`/`BraiAn.yml` are tier-3 by definition.
+
 ## Analysis correctness rules (bake into every detection/registration script)
 - **Nucleus-anchored colocalization only.** A cell is TdT+/Fos+/double+ iff the detected nucleus *contains* the marker centroid — never proximity/overlap heuristics.
 - **DAPI-nucleus-anchored detection; whole-cell TdTomato measurement (REVISED 2026-07-25):** detect nuclei on DAPI (unchanged — still nucleus-anchored, no proximity/overlap heuristics). Measure TdTomato on the **whole cell** (nucleus + cytoplasmic expansion ring), QuPath's area-weighted whole-cell mean — the operator confirmed (2026-07-25) TdTomato fills the whole cell in this line/prep, so ring-only measurement under-counts it. This revises the former "cytoplasmic-ring-only, non-negotiable" wording; the **cytoplasmic-ring compartment remains available** (config option, `compartment: cytoplasmic`) for any future strictly-cytosolic marker. Classify Fos on the nuclear compartment (unchanged).

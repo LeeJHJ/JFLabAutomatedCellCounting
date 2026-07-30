@@ -110,6 +110,83 @@ rather than a blending one — re-cut the same scene with `--no-flat-field` and 
 
 ---
 
+## How much authority does a number have?
+
+Gates print a tier next to their value. It says how much the gate's *own expected band*
+is worth — never how much your eyes are worth.
+
+| Tier | Meaning | What a FLAG means |
+|---|---|---|
+| `<anatomical>` | True regardless of acquisition, stain, or scope — ventricles are CSF-filled, white matter is sparsely nucleated vs cortex | **A real defect.** Something is being detected that is not there |
+| `<internal>` | Measured from this dataset; checks self-consistency only (e.g. is the readout stable across `k`) | The result is fragile — treat the number as provisional |
+| `<assumed>` | A band carried in from another acquisition or a paper, never checked against hand counts on our images | **Go and look.** It may be the band that is wrong |
+
+**The operator's eye outranks all three.** If you can see that cells are being missed or
+invented, that settles it — do not tune a parameter to move an `<assumed>` number into
+its expected range. Tune to match the image.
+
+---
+
+## Marker+ cells are being missed (or over-called)
+
+The symptom: cells you can see are clearly marker-positive are labelled `Negative`, or
+are DAPI+/Fos+ but never called TdT+ / Double+.
+
+First, work out which of two different failures it is:
+
+- **Was the nucleus detected at all?** Classification is nucleus-anchored — a cell whose
+  nucleus was never segmented can never be called positive for anything. If the cell has
+  no outline, this is a *detection* problem: `span_frac` / `sigmaMicrons`.
+- **Nucleus detected, marker not called?** A *classification* problem. Everything below.
+
+### The levers, in the order worth trying
+
+| # | Lever | Where | Effect |
+|---|---|---|---|
+| 1 | **`k_robust` for that marker** | `pipeline.yml`, inside the marker entry | LOWER catches dimmer positives. Per-marker, so loosening TdT does not touch Fos |
+| 2 | `cellExpansionMicrons` | `BraiAn.yml` | Larger ring captures more cytoplasmic signal for dim whole-cell markers |
+| 3 | `compartment` | `pipeline.yml` | `whole-cell` averages nucleus + ring by area. If a marker is bright in cytoplasm but absent from the nucleus, that average *dilutes* it — `cytoplasmic` (ring only) can be more sensitive |
+| 4 | `backgroundRadiusMicrons` | `BraiAn.yml` | If background is estimated too locally, a cell sitting in marker-positive neuropil has its own signal subtracted away |
+
+Sweep `k` before changing anything, straight off the per-cell export — no QuPath needed:
+
+```python
+import pandas as pd, numpy as np
+df = pd.read_csv(percell_tsv, sep="\t")
+v = pd.to_numeric(df["TdT_bgsub"], errors="coerce").dropna()
+med, rsd = np.median(v), 1.4826 * np.median(np.abs(v - np.median(v)))
+for k in (3.0, 2.5, 2.0, 1.5):
+    print(k, round(med + k*rsd, 1), int((v > med + k*rsd).sum()))
+```
+
+Then set it per marker:
+
+```yaml
+markers:
+  - name: "TdT"
+    channel: "AF568-T2"
+    compartment: "whole-cell"
+    k_robust: 2.5          # this marker only; global k_robust still applies to the rest
+```
+
+!!! warning "The trade on whole-cell markers"
+    Whole-cell TdTomato measurement picks up **passing axons**, which can mark a
+    bystander nucleus as positive. Lowering `k` increases that. The counter-lever is
+    `cellExpansionMicrons` **down**, not `k` back up — shrinking the ring keeps dim real
+    cells while cutting the axon contribution. Which way to trade is a judgment call
+    about your biology: over-calling inflates the tagged population, under-calling biases
+    reactivation estimates conservative.
+
+### What cannot be fixed after imaging
+
+If a cell's marker signal is at or below the noise floor, no threshold recovers it —
+lowering `k` far enough to catch it will pull in noise everywhere else. That is an
+**acquisition** fix: longer exposure or higher gain on that channel, or more Z coverage
+if the signal sits outside the imaged slab. Record it and change the protocol; do not
+chase it with `k`.
+
+---
+
 ## A tuning round, end to end
 
 1. `--list` — see where everything currently sits
