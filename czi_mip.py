@@ -91,12 +91,41 @@ def parse_args() -> argparse.Namespace:
                         "tiles = force per-scene tile-stitch (always safe on overlap)")
     p.add_argument("--self-test", action="store_true",
                    help="run the built-in synthetic hybrid-projection self-test and exit (no --czi needed)")
+    # ── Operator tuning knobs (see docs/tuning.md; scripts/cockpit_tune.py --list) ──
+    # These were previously module constants / unconditional behavior, reachable only
+    # by editing this file. Omitting all four reproduces the historical behavior byte
+    # for byte, so MIPs cut before and after this change stay comparable.
+    p.add_argument("--feather-margin", type=int, default=DEFAULT_FEATHER_MARGIN,
+                   help=f"px; seam blend width for the per-scene tile stitch (default "
+                        f"{DEFAULT_FEATHER_MARGIN}, ~ the real ZEN mosaic tile overlap). RAISE to "
+                        f"soften visible seams, LOWER to keep tile edges crisp. --isolate tiles only.")
+    p.add_argument("--no-flat-field", action="store_true",
+                   help="disable the per-channel retrospective flat-field shading correction "
+                        "(default: enabled). Use to check whether shading estimation is itself "
+                        "creating the banding you are looking at. --isolate tiles only.")
+    p.add_argument("--dapi-z", type=int, default=None,
+                   help="force the anchor (DAPI) focus plane to this 0-based Z index instead of "
+                        "the automatic sharpest-plane pick (var-of-Laplacian). DEFAULT: automatic. "
+                        "Markers are full-Z max-projected either way.")
+    p.add_argument("--scenes", nargs="+", type=int, default=None,
+                   help="1-based scene numbers to convert (matching the s{N} output labels), e.g. "
+                        "--scenes 3 re-cuts only s3. DEFAULT: all scenes. Use this to iterate on "
+                        "one scene while tuning instead of re-cutting the whole series.")
     args = p.parse_args()
     if not args.self_test:
         if args.czi is None:
             p.error("--czi is required unless --self-test is set")
         if not args.check_scenes and args.outdir is None:
             p.error("--outdir is required unless --check-scenes or --self-test is set")
+    if args.feather_margin < 0:
+        p.error("--feather-margin must be >= 0")
+    if args.dapi_z is not None and args.dapi_z < 0:
+        p.error("--dapi-z must be a non-negative 0-based Z index")
+    if args.scenes is not None:
+        if not args.scenes:
+            p.error("--scenes was given with no scene numbers")
+        if any(n < 1 for n in args.scenes):
+            p.error("--scenes takes 1-based scene numbers (matching the s{N} labels); got a value < 1")
     return args
 
 
@@ -311,6 +340,7 @@ def _scene_tile_geometry(czi: aicspylibczi.CziFile, scene_idx: int, n_tiles: int
 def _read_channel_stacks_tiles(
     czi: aicspylibczi.CziFile, scene_idx: int, n_tiles: int,
     tile_boxes: list[tuple[int, int]], n_c: int, n_z: int,
+    feather_margin: int = DEFAULT_FEATHER_MARGIN, flat_field: bool = True,
 ) -> list[list[np.ndarray]]:
     """Read one scene's channel stacks via per-tile reads, per-channel
     retrospective flat-field shading correction, and feathered
@@ -344,19 +374,27 @@ def _read_channel_stacks_tiles(
                 shape_counts[data.shape] = shape_counts.get(data.shape, 0) + 1
             raw_by_z.append(tiles)
 
-        modal_shape = max(shape_counts, key=shape_counts.get)
-        pooled = [data for tiles in raw_by_z for (_x, _y, data) in tiles if data.shape == modal_shape]
-        print(f"    Channel {c}: estimating flat-field shading from {len(pooled)} pooled tiles "
-              f"(modal shape {modal_shape})...", flush=True)
-        field = _estimate_shading_field(pooled)
+        if flat_field:
+            modal_shape = max(shape_counts, key=shape_counts.get)
+            pooled = [data for tiles in raw_by_z for (_x, _y, data) in tiles if data.shape == modal_shape]
+            print(f"    Channel {c}: estimating flat-field shading from {len(pooled)} pooled tiles "
+                  f"(modal shape {modal_shape})...", flush=True)
+            field = _estimate_shading_field(pooled)
+        else:
+            field = None
+            print(f"    Channel {c}: flat-field shading correction DISABLED (--no-flat-field)", flush=True)
 
+        note = ("flat-field + feather" if flat_field else "feather only, NO flat-field")
         stack = []
         for z in range(n_z):
-            corrected_tiles = [(x, y, _apply_shading(data, field)) for (x, y, data) in raw_by_z[z]]
-            stitched = _stitch_scene_tiles(corrected_tiles)
+            if field is None:
+                corrected_tiles = raw_by_z[z]
+            else:
+                corrected_tiles = [(x, y, _apply_shading(data, field)) for (x, y, data) in raw_by_z[z]]
+            stitched = _stitch_scene_tiles(corrected_tiles, feather_margin=feather_margin)
             stack.append(stitched)
             print(f"      z={z} shape={stitched.shape} dtype={stitched.dtype} "
-                  f"(stitched from {n_tiles} tiles, flat-field + feather)", flush=True)
+                  f"(stitched from {n_tiles} tiles, {note}, margin={feather_margin}px)", flush=True)
         channel_stacks.append(stack)
         print(f"    Channel {c} read done ({n_z} planes).", flush=True)
     return channel_stacks
@@ -544,7 +582,7 @@ def _sharpest_plane_from_stack(stack: list[np.ndarray]) -> tuple[int, list[float
 
 
 def _hybrid_scene_projection(
-    channel_stacks: list[list[np.ndarray]], dapi_idx: int
+    channel_stacks: list[list[np.ndarray]], dapi_idx: int, force_z: int | None = None
 ) -> tuple[list[np.ndarray], int, list[float]]:
     """Pure per-scene hybrid projection -- no CZI read, unit-testable on synthetic arrays.
 
@@ -554,8 +592,21 @@ def _hybrid_scene_projection(
     max projection over ALL its planes (deliberately the full stack, not a
     Z0-2 sub-range, to capture the observed 2-4 um axial offset between the
     DAPI-sharp plane and marker signal peak). Physical channel order is
-    preserved in `out_channels`."""
+    preserved in `out_channels`.
+
+    `force_z` (operator knob, --dapi-z) overrides the automatic pick with an
+    explicit 0-based Z index. The focus scores are still computed and returned
+    so the caller can print what the automatic pick WOULD have been -- an
+    override should be visible next to the evidence it overrides, not silent."""
     dapi_z, dapi_scores = _sharpest_plane_from_stack(channel_stacks[dapi_idx])
+    if force_z is not None:
+        n_z = len(channel_stacks[dapi_idx])
+        if not 0 <= force_z < n_z:
+            raise SystemExit(
+                f"--dapi-z {force_z} is out of range: this scene's anchor channel has "
+                f"{n_z} Z-plane(s) (valid 0..{n_z - 1})."
+            )
+        dapi_z = force_z
     out_channels: list[np.ndarray] = [None] * len(channel_stacks)
     for c, stack in enumerate(channel_stacks):
         if c == dapi_idx:
@@ -887,6 +938,68 @@ def _self_test() -> None:
         "PhysicalSizeX round-trip must still pass -- Color is an additive attribute"
     )
 
+    # (j) OPERATOR TUNING KNOBS. The contract that matters is that omitting a knob
+    # reproduces the historical behavior exactly -- MIPs cut before and after this
+    # change must stay comparable, or the knobs silently break series comparability.
+    #
+    # (j1) --dapi-z: forcing a plane overrides the automatic pick, and the DEFAULT
+    # (force_z=None) is byte-identical to the pre-knob call signature.
+    out_auto_j, z_auto_j, scores_j = _hybrid_scene_projection(channel_stacks_e, dapi_idx_e)
+    out_def_j, z_def_j, _ = _hybrid_scene_projection(channel_stacks_e, dapi_idx_e, force_z=None)
+    assert z_def_j == z_auto_j and np.array_equal(out_def_j[dapi_idx_e], out_auto_j[dapi_idx_e]), (
+        "force_z=None must be byte-identical to the automatic pick (default-path regression)"
+    )
+    forced_z_j = 1 - z_auto_j   # the plane the automatic metric did NOT choose
+    out_forced_j, z_forced_j, _ = _hybrid_scene_projection(
+        channel_stacks_e, dapi_idx_e, force_z=forced_z_j
+    )
+    assert z_forced_j == forced_z_j, f"--dapi-z must override the automatic pick, got {z_forced_j}"
+    assert np.array_equal(out_forced_j[dapi_idx_e], anchor_stack_e[forced_z_j]), (
+        "forced anchor output must be byte-identical to that exact stitched plane"
+    )
+    assert np.array_equal(out_forced_j[0], out_auto_j[0]), (
+        "--dapi-z must not disturb marker channels (they are full-Z max-projected either way)"
+    )
+    try:
+        _hybrid_scene_projection(channel_stacks_e, dapi_idx_e, force_z=99)
+        raise AssertionError("expected SystemExit for an out-of-range --dapi-z")
+    except SystemExit:
+        pass
+
+    # (j2) --feather-margin: the default argument reproduces DEFAULT_FEATHER_MARGIN
+    # exactly, and a different margin actually changes the seam ramp.
+    seam_tiles_j = [
+        (0, 0, np.full((30, 40), 100, dtype=np.uint16)),
+        (20, 0, np.full((30, 40), 200, dtype=np.uint16)),
+    ]
+    assert np.array_equal(
+        _stitch_scene_tiles(seam_tiles_j),
+        _stitch_scene_tiles(seam_tiles_j, feather_margin=DEFAULT_FEATHER_MARGIN),
+    ), "the default feather_margin must equal DEFAULT_FEATHER_MARGIN (default-path regression)"
+    narrow_j = _stitch_scene_tiles(seam_tiles_j, feather_margin=2)
+    wide_j = _stitch_scene_tiles(seam_tiles_j, feather_margin=18)
+    assert not np.array_equal(narrow_j, wide_j), (
+        "--feather-margin must actually change the stitch; a knob that does nothing is worse "
+        "than no knob (the operator would tune it and see no effect)"
+    )
+    for canvas_j, label_j in ((narrow_j, "narrow"), (wide_j, "wide")):
+        assert canvas_j.min() >= 100 and canvas_j.max() <= 200, (
+            f"{label_j} feather blend must stay within the two source tile values"
+        )
+
+    # (j3) --no-flat-field: skipping shading correction must leave tile data untouched,
+    # i.e. stitching raw tiles == stitching tiles through the flat_field=False path.
+    vign_tiles_j = [(0, 0, (vignette * tissue_value).astype(np.uint16)),
+                    (40, 0, (vignette * tissue_value).astype(np.uint16))]
+    raw_stitch_j = _stitch_scene_tiles(vign_tiles_j)
+    field_j = _estimate_shading_field([t[2] for t in vign_tiles_j])
+    corrected_stitch_j = _stitch_scene_tiles(
+        [(x, y, _apply_shading(d, field_j)) for (x, y, d) in vign_tiles_j]
+    )
+    assert not np.array_equal(raw_stitch_j, corrected_stitch_j), (
+        "flat-field ON vs OFF must differ on a vignetted input, else --no-flat-field is a no-op"
+    )
+
     # _resolve_isolation_mode: auto/region/tiles decision table.
     assert _resolve_isolation_mode("auto", []) == "region"
     assert _resolve_isolation_mode("auto", [(0, 1)]) == "tiles"
@@ -912,6 +1025,10 @@ def _self_test() -> None:
         "(f) flat-field shading correction flattens a known radial vignette "
         f"(boundary/interior ratio {ratio_before:.3f} -> {ratio_after:.3f}); "
         "(g) feathered blending ramps smoothly across a seam (no hard brighter-wins step); "
+        "(j) operator tuning knobs behave: --dapi-z overrides the automatic plane pick "
+        "(and force_z=None stays byte-identical to it), --feather-margin actually changes "
+        "the seam ramp while its default equals DEFAULT_FEATHER_MARGIN, and --no-flat-field "
+        "measurably differs from the corrected path; "
         "(h) cross-scene isolation re-proven under the feathered blend path; "
         "(i) OME channel colors -- DAPI->blue, AF568->red, AF488->green -- with "
         "PhysicalSizeX round-trip intact; "
@@ -953,6 +1070,33 @@ def main() -> None:
     dims_all = czi.get_dims_shape()
     scene_keys = sorted(bboxes)
 
+    # ── Operator tuning knobs: report what is in force, and refuse silent no-ops ──
+    if mode != "tiles" and (args.feather_margin != DEFAULT_FEATHER_MARGIN or args.no_flat_field):
+        print(f"  WARNING: --feather-margin/--no-flat-field apply to the tile-stitch path only, "
+              f"but isolation resolved to '{mode}' (read_mosaic does its own stitching). "
+              f"These flags will have NO effect on this run.")
+    if args.feather_margin != DEFAULT_FEATHER_MARGIN:
+        print(f"  feather margin: {args.feather_margin} px (default {DEFAULT_FEATHER_MARGIN})")
+    if args.no_flat_field:
+        print("  flat-field shading correction: DISABLED (--no-flat-field)")
+    if args.dapi_z is not None:
+        print(f"  anchor focus plane: FORCED to Z={args.dapi_z} (--dapi-z; automatic pick overridden)")
+
+    # 1-based --scenes maps onto the 0-based scene keys via key = N - 1, the same
+    # off-by-one convention the s{N} output labels use (D-05).
+    if args.scenes is not None:
+        requested = sorted(set(args.scenes))
+        selected = [n - 1 for n in requested]
+        unknown = [n for n, k in zip(requested, selected) if k not in bboxes]
+        if unknown:
+            raise SystemExit(
+                f"--scenes {unknown} not present in this CZI: it has {n_scenes} scene(s), "
+                f"so valid 1-based values are 1..{n_scenes}."
+            )
+        scene_keys = selected
+        print(f"  scene subset: converting {len(scene_keys)} of {n_scenes} scene(s) -> "
+              f"{', '.join(f's{n}' for n in requested)} (--scenes)")
+
     for scene_idx in scene_keys:
         b = bboxes[scene_idx]
         N = scene_idx + 1
@@ -971,17 +1115,28 @@ def main() -> None:
                     f"for this file, or fall back to --isolate region if bboxes don't overlap."
                 )
             tile_boxes = _scene_tile_geometry(czi, scene_idx, n_tiles)
-            channel_stacks = _read_channel_stacks_tiles(czi, scene_idx, n_tiles, tile_boxes, n_c, n_z)
+            channel_stacks = _read_channel_stacks_tiles(
+                czi, scene_idx, n_tiles, tile_boxes, n_c, n_z,
+                feather_margin=args.feather_margin, flat_field=not args.no_flat_field,
+            )
         else:
             channel_stacks = _read_channel_stacks_region(czi, region, n_c, n_z)
         print(f"  scene {scene_idx} (s{N}) isolated via {mode}", flush=True)
 
-        out_channels, dapi_z, dapi_scores = _hybrid_scene_projection(channel_stacks, dapi_idx)
+        out_channels, dapi_z, dapi_scores = _hybrid_scene_projection(
+            channel_stacks, dapi_idx, force_z=args.dapi_z
+        )
         score_str = ", ".join(f"Z{z}={s:.3g}" for z, s in enumerate(dapi_scores))
         print(f"    anchor channel {dapi_idx} ({args.channels[dapi_idx]}) focus (var-of-Laplacian) "
               f"by Z: {score_str}")
-        print(f"    scene {scene_idx} (s{N}): sharpest anchor plane -> Z={dapi_z} "
-              f"(markers full-Z max-projected)", flush=True)
+        if args.dapi_z is None:
+            print(f"    scene {scene_idx} (s{N}): sharpest anchor plane -> Z={dapi_z} "
+                  f"(markers full-Z max-projected)", flush=True)
+        else:
+            auto_z = int(np.argmax(dapi_scores))
+            print(f"    scene {scene_idx} (s{N}): anchor plane FORCED -> Z={dapi_z} "
+                  f"(automatic pick would have been Z={auto_z}; markers full-Z max-projected)",
+                  flush=True)
 
         mip = np.stack(out_channels, axis=0)   # (C, Y, X)
         C, Y, X = mip.shape
