@@ -330,6 +330,7 @@ dets.each { d ->
 }
 
 def percellFile = new File(buildPathInProject("results", "${stem}__percell_export.tsv"))
+percellFile.getParentFile().mkdirs()   // fresh project: results/ may not exist yet
 // centroid_*_px are IMAGE-space pixel coordinates (not CCFv3 atlas microns) — the _px suffix keeps
 // that explicit per CLAUDE.md's micron-export rule; they are diagnostic only, unused downstream.
 def percellHeader = (["class", "region_label", "nucleus_area_um2", "centroid_x_px", "centroid_y_px"] +
@@ -447,6 +448,7 @@ regionAnnotations.each { ann ->
 def regionHeader = (["region_label", "hemisphere", "acronym", "is_leaf", "area_mm2"] +
         CATEGORIES.collectMany { cat -> ["${columnPrefixFor(cat)}_count", "${columnPrefixFor(cat)}_density"] }).join("\t")
 def regionFile = new File(buildPathInProject("results", "${stem}__region_table.tsv"))
+regionFile.getParentFile().mkdirs()   // fresh project: results/ may not exist yet
 def regionSb = new StringBuilder()
 regionSb.append(regionHeader).append("\n")
 regionRows.each { row ->

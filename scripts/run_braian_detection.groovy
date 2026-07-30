@@ -258,15 +258,22 @@ if (AtlasManager.isImported(atlasName, hierarchy)) {
     var atlas = new AtlasManager(atlasName, hierarchy)
     def invalidChars = (['<', '>', ':', '"', '/', '\\', '|', '?', '*'] as Set).collect { java.util.regex.Pattern.quote(it) }.join('|')
     def imageName = getProjectEntry().getImageName().replaceAll(invalidChars, '')
+    // A FRESH project has no results/ or regions_to_exclude/ directory -- nothing
+    // creates them until something writes there, so ensure them before every write
+    // rather than relying on an earlier stage having run first (a batch run starts
+    // at detection, with no calibration step ahead of it to make results/).
     var resultsFile = new File(buildPathInProject("results", imageName + "_regions.tsv"))
+    resultsFile.getParentFile().mkdirs()
     atlas.saveResults(allDetections + overlaps, resultsFile)
     def exclusionsFile = new File(buildPathInProject("regions_to_exclude", imageName + "_regions_to_exclude.txt"))
+    exclusionsFile.getParentFile().mkdirs()
     atlas.fixExclusions()
     atlas.saveExcludedRegions(exclusionsFile)
 
     // Provenance: the threshold actually used, next to the counts it produced.
     // Without this, a re-run months later cannot tell which cut made which numbers.
     def provFile = new File(buildPathInProject("results", imageName + "__detection_threshold.tsv"))
+    provFile.getParentFile().mkdirs()
     provFile.text = "image\tanchor_channel\tmode\tspan_frac\tthreshold\n" +
             "${getProjectEntry().getImageName()}\t${anchorChannel}\t${thrMode}\t" +
             "${thrMode == 'span_fraction' ? spanFrac : ''}\t${resolvedThreshold}\n"
