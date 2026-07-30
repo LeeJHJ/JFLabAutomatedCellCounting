@@ -107,6 +107,14 @@ def parse_args() -> argparse.Namespace:
                    help="force the anchor (DAPI) focus plane to this 0-based Z index instead of "
                         "the automatic sharpest-plane pick (var-of-Laplacian). DEFAULT: automatic. "
                         "Markers are full-Z max-projected either way.")
+    p.add_argument("--marker-z", nargs="+", type=int, default=None,
+                   help="0-based Z indices to include in the MARKER max projection "
+                        "(anchor channel is unaffected -- it is always a single plane). "
+                        "DEFAULT: all planes. Use this to match a thinner acquisition: a "
+                        "4-plane stack processed with --marker-z 0 1 samples the same axial "
+                        "depth as a 2-plane one, which is the only way to compare runs "
+                        "acquired at different stack depths (you can discard planes, never "
+                        "add them).")
     p.add_argument("--scenes", nargs="+", type=int, default=None,
                    help="1-based scene numbers to convert (matching the s{N} output labels), e.g. "
                         "--scenes 3 re-cuts only s3. DEFAULT: all scenes. Use this to iterate on "
@@ -121,6 +129,13 @@ def parse_args() -> argparse.Namespace:
         p.error("--feather-margin must be >= 0")
     if args.dapi_z is not None and args.dapi_z < 0:
         p.error("--dapi-z must be a non-negative 0-based Z index")
+    if args.marker_z is not None:
+        if not args.marker_z:
+            p.error("--marker-z was given with no plane indices")
+        if any(z < 0 for z in args.marker_z):
+            p.error("--marker-z takes non-negative 0-based Z indices")
+        if len(set(args.marker_z)) != len(args.marker_z):
+            p.error("--marker-z has duplicate plane indices")
     if args.scenes is not None:
         if not args.scenes:
             p.error("--scenes was given with no scene numbers")
@@ -582,7 +597,8 @@ def _sharpest_plane_from_stack(stack: list[np.ndarray]) -> tuple[int, list[float
 
 
 def _hybrid_scene_projection(
-    channel_stacks: list[list[np.ndarray]], dapi_idx: int, force_z: int | None = None
+    channel_stacks: list[list[np.ndarray]], dapi_idx: int, force_z: int | None = None,
+    marker_z: list[int] | None = None,
 ) -> tuple[list[np.ndarray], int, list[float]]:
     """Pure per-scene hybrid projection -- no CZI read, unit-testable on synthetic arrays.
 
@@ -612,7 +628,23 @@ def _hybrid_scene_projection(
         if c == dapi_idx:
             out_channels[c] = stack[dapi_z]
         else:
-            out_channels[c] = np.max(stack, axis=0)
+            # `marker_z` restricts the axial depth the max projection samples. This is
+            # the ONLY way to compare runs acquired at different stack depths: a max
+            # over 4 planes samples ~3x the cell volume a max over 2 does, so marker
+            # positivity is biased between them in a way no threshold can undo. Planes
+            # can be discarded to match a thinner acquisition; they can never be added.
+            if marker_z is None:
+                sel = stack
+            else:
+                n_z = len(stack)
+                bad = [z for z in marker_z if z >= n_z]
+                if bad:
+                    raise SystemExit(
+                        f"--marker-z {bad} out of range: this scene has {n_z} Z-plane(s) "
+                        f"(valid 0..{n_z - 1})."
+                    )
+                sel = [stack[z] for z in sorted(marker_z)]
+            out_channels[c] = np.max(sel, axis=0)
     return out_channels, dapi_z, dapi_scores
 
 
@@ -966,6 +998,38 @@ def _self_test() -> None:
     except SystemExit:
         pass
 
+    # (j1b) --marker-z: restricting the marker projection depth. The anchor channel
+    # must be untouched (it is a single plane either way), the default must stay
+    # byte-identical to a full-stack max, and a restricted max must equal the max over
+    # exactly those planes -- this is the knob that lets a 4-plane run be compared to a
+    # 2-plane one, so a silent off-by-one here would corrupt a cross-arm comparison.
+    out_allz_j, _, _ = _hybrid_scene_projection(channel_stacks_e, dapi_idx_e, marker_z=None)
+    assert np.array_equal(out_allz_j[0], np.max(marker_stack_e, axis=0)), (
+        "marker_z=None must equal the full-stack max (default-path regression)"
+    )
+    out_z0_j, _, _ = _hybrid_scene_projection(channel_stacks_e, dapi_idx_e, marker_z=[0])
+    assert np.array_equal(out_z0_j[0], marker_stack_e[0]), (
+        "marker_z=[0] must equal that single plane, not the full-stack max"
+    )
+    assert np.array_equal(out_z0_j[dapi_idx_e], out_allz_j[dapi_idx_e]), (
+        "--marker-z must NOT touch the anchor channel (it is a single plane either way)"
+    )
+    # Order must not matter: the selection is a set, taken via a sorted max.
+    assert np.array_equal(
+        _hybrid_scene_projection(channel_stacks_e, dapi_idx_e, marker_z=[1, 0])[0][0],
+        _hybrid_scene_projection(channel_stacks_e, dapi_idx_e, marker_z=[0, 1])[0][0],
+    ), "--marker-z must be order-independent"
+    # A thinner selection can never exceed the full-stack max -- the direction of the
+    # bias between a 2-plane and a 4-plane acquisition, asserted rather than assumed.
+    assert np.all(out_z0_j[0] <= out_allz_j[0]), (
+        "a restricted marker max must be <= the full-stack max everywhere"
+    )
+    try:
+        _hybrid_scene_projection(channel_stacks_e, dapi_idx_e, marker_z=[99])
+        raise AssertionError("expected SystemExit for an out-of-range --marker-z")
+    except SystemExit:
+        pass
+
     # (j2) --feather-margin: the default argument reproduces DEFAULT_FEATHER_MARGIN
     # exactly, and a different margin actually changes the seam ramp.
     seam_tiles_j = [
@@ -1081,6 +1145,9 @@ def main() -> None:
         print("  flat-field shading correction: DISABLED (--no-flat-field)")
     if args.dapi_z is not None:
         print(f"  anchor focus plane: FORCED to Z={args.dapi_z} (--dapi-z; automatic pick overridden)")
+    if args.marker_z is not None:
+        print(f"  marker max projection RESTRICTED to Z={sorted(args.marker_z)} of {n_z} "
+              f"(--marker-z; matches a {len(set(args.marker_z))}-plane acquisition)")
 
     # 1-based --scenes maps onto the 0-based scene keys via key = N - 1, the same
     # off-by-one convention the s{N} output labels use (D-05).
@@ -1124,7 +1191,7 @@ def main() -> None:
         print(f"  scene {scene_idx} (s{N}) isolated via {mode}", flush=True)
 
         out_channels, dapi_z, dapi_scores = _hybrid_scene_projection(
-            channel_stacks, dapi_idx, force_z=args.dapi_z
+            channel_stacks, dapi_idx, force_z=args.dapi_z, marker_z=args.marker_z
         )
         score_str = ", ".join(f"Z{z}={s:.3g}" for z, s in enumerate(dapi_scores))
         print(f"    anchor channel {dapi_idx} ({args.channels[dapi_idx]}) focus (var-of-Laplacian) "
