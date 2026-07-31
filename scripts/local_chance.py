@@ -184,30 +184,39 @@ def build(project_dir: Path, regions: list[str] | None = None, k: int = DEFAULT_
             f"resolved tagged={roles.tagged!r} activity={roles.activity!r}.")
     d = _flags(load_percell(project_dir), roles.tagged, roles.activity)
 
-    if regions:
-        # region_label in the per-cell export is the LEAF region a cell was assigned to,
-        # so a parent acronym ('SSp', 'BLA') matches nothing -- its cells are labelled
-        # with descendants ('SSp-bfd', 'BLAa'). Say so instead of silently returning
-        # fewer rows than were asked for.
-        present = set(d["region_label"].unique())
-        missing = [r for r in regions if r not in present]
-        if missing:
-            print(f"  NOTE: no cells carry these labels: {missing}")
-            print(f"        per-cell region_label is the LEAF region; a parent acronym will")
-            print(f"        not match. Use the leaf acronyms, e.g. "
-                  f"{sorted(a for a in present if any(a.startswith(m) for m in missing))[:6]}")
-        d = d[d["region_label"].isin(regions)]
     rng = np.random.default_rng(seed)
     rows = []
-    for region, sub in d.groupby("region_label"):
-        if regions is None and len(sub) < 500:
-            continue
-        r = region_local_chance(sub, k=k, n_boot=n_boot, rng=rng)
-        r["region_acronym"] = region
-        rows.append(r)
+
+    if regions:
+        # region_label in the per-cell export is the LEAF region a cell was assigned to,
+        # so matching a requested acronym literally makes a parent ('SSp', 'BLA') select
+        # nothing -- its cells carry descendant labels ('SSp-bfd', 'BLAa'). Roll each
+        # requested region down to its ontology descendants, the same containment
+        # cockpit_regions uses, so a region-level question gets a region-level answer
+        # regardless of whether the caller happened to name a leaf.
+        ontology = creg.load_ontology(Path(project_dir))
+        present = set(d["region_label"].dropna().unique())
+        for region in regions:
+            members = ontology.descendants_or_self(region) & present
+            if not members:
+                print(f"  NOTE: '{region}' matched no cells (not present in these sections)")
+                continue
+            sub = d[d["region_label"].isin(members)]
+            r = region_local_chance(sub, k=k, n_boot=n_boot, rng=rng)
+            r["region_acronym"] = region
+            r["n_leaves"] = len(members)
+            rows.append(r)
+    else:
+        for region, sub in d.groupby("region_label"):
+            if len(sub) < 500:
+                continue
+            r = region_local_chance(sub, k=k, n_boot=n_boot, rng=rng)
+            r["region_acronym"] = region
+            r["n_leaves"] = 1
+            rows.append(r)
     out = pd.DataFrame(rows)
-    cols = ["region_acronym", "n_sections", "tagged_n", "observed", "local_chance",
-            "above_chance_local", "ci_lo", "ci_hi", "ci_scheme"]
+    cols = ["region_acronym", "n_leaves", "n_sections", "tagged_n", "observed",
+            "local_chance", "above_chance_local", "ci_lo", "ci_hi", "ci_scheme"]
     return out[cols].sort_values("above_chance_local", ascending=False) if len(out) else out
 
 
