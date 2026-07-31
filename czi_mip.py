@@ -540,8 +540,19 @@ def _preflight_scenes(czi: aicspylibczi.CziFile) -> tuple[dict, list[tuple[int, 
                     f"  OVERLAP: scene {scene_ids[i]} and scene {scene_ids[j]} bounding "
                     f"boxes overlap -- region-based isolation is unsafe for this pair"
                 )
-    if n_scenes < 2:
-        raise SystemExit(f"Expected a multi-scene CZI (>=2 scenes), found {n_scenes}")
+    if n_scenes < 1:
+        raise SystemExit(
+            f"No scenes found in this CZI (get_all_mosaic_scene_bounding_boxes returned "
+            f"{n_scenes}). Nothing to convert."
+        )
+    if n_scenes == 1:
+        # A single-scene mosaic is a legitimate acquisition -- one section imaged on its
+        # own -- and every downstream step (tile-stitch, hybrid projection, s{N} naming)
+        # already handles it. The old `< 2` guard rejected such files outright, which
+        # blocked M5's single-scene hippocampus session (2026-07-31). Nothing about the
+        # scene-isolation logic requires a second scene to compare against.
+        print("  NOTE: single-scene CZI -- converting it as s1. Scene isolation is "
+              "trivially satisfied (no neighbouring scene to leak from).")
     if overlapping_pairs:
         print(f"  {len(overlapping_pairs)} overlapping scene-bbox pair(s) found")
     else:
