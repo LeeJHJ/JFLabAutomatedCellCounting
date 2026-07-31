@@ -117,7 +117,8 @@ def _tick_label(acr: str, names: dict[str, str], width: int = 16) -> str:
 
 def build_figure(df: pd.DataFrame, group_label: str = "", subtitle: str = "",
                  thin_threshold: int = THIN_EVIDENCE, sort_by: str = "overlap_above_chance",
-                 names: dict[str, str] | None = None, only: str | None = None):
+                 names: dict[str, str] | None = None, only: str | None = None,
+                 ymax: dict[str, float] | None = None):
     """Four stacked panels sharing a region axis, sorted by `sort_by` descending."""
     d = _add_dapi_fractions(df[df["hemisphere"] == "both"].copy())
     if d.empty:
@@ -159,7 +160,10 @@ def build_figure(df: pd.DataFrame, group_label: str = "", subtitle: str = "",
                        else title)
         ax.set_title(panel_title, fontsize=11.5, color=INK, loc="left", pad=10)
         ax.set_ylabel(ylab, fontsize=9, color=INK_MUTED)
-        ax.set_ylim(0, vmax * 1.22)
+        # A shared y-limit per metric keeps two groups' panels visually comparable.
+        # Without it a lower-valued group's bars fill its panel just as fully and
+        # read as equal -- the small-multiples scale trap.
+        ax.set_ylim(0, (ymax or {}).get(col, vmax * 1.22))
         ax.yaxis.grid(True, color=GRID, lw=0.8, zorder=0)
         ax.set_axisbelow(True)
         for side in ("top", "right"):
@@ -233,6 +237,10 @@ def parse_args() -> argparse.Namespace:
     p.add_argument("--separate", action="store_true",
                    help="write ONE PNG PER PANEL into --out (treated as a directory) so "
                         "every graph carries its own region labels")
+    p.add_argument("--ymax", default=None,
+                   help="comma-separated metric=value to LOCK a panel's y-limit, e.g. "
+                        "'overlap_above_chance=8'. Use the same values for both groups "
+                        "so their panels are visually comparable.")
     p.add_argument("--self-test", action="store_true")
     a = p.parse_args()
     if not a.self_test and (a.long is None or a.out is None):
@@ -247,6 +255,11 @@ def main() -> int:
         return 0
     df = pd.read_csv(a.long)
     names = load_region_names(a.ontology)
+    ymax = {}
+    if a.ymax:
+        for pair in a.ymax.split(','):
+            k, _, v = pair.partition('=')
+            ymax[k.strip()] = float(v)
     if names:
         print(f"  region names loaded: {len(names)} acronyms")
 
@@ -254,7 +267,7 @@ def main() -> int:
         a.out.mkdir(parents=True, exist_ok=True)
         for i, (col, title, _ylab, _c, _s) in enumerate(PANELS, 1):
             fig, _ = build_figure(df, group_label=a.group_label, subtitle=a.subtitle,
-                                  names=names, only=col)
+                                  names=names, only=col, ymax=ymax)
             slug = col.lstrip("_").replace("_per_", "_over_")
             path = a.out / f"{i}_{slug}.png"
             fig.savefig(path, facecolor=fig.get_facecolor(), bbox_inches="tight")
@@ -262,7 +275,8 @@ def main() -> int:
             print(f"  wrote {path}")
         return 0
 
-    fig, _ = build_figure(df, group_label=a.group_label, subtitle=a.subtitle, names=names)
+    fig, _ = build_figure(df, group_label=a.group_label, subtitle=a.subtitle, names=names,
+                          ymax=ymax)
     a.out.parent.mkdir(parents=True, exist_ok=True)
     fig.savefig(a.out, facecolor=fig.get_facecolor(), bbox_inches="tight")
     print(f"  wrote {a.out}")
