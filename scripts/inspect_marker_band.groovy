@@ -12,11 +12,16 @@
  * with a large false-positive tail. Summary numbers cannot separate those. Looking
  * at the cells can (CLAUDE.md evidence hierarchy: SEEN outranks inferred).
  *
- * Read-only with respect to your data in the sense that matters: it only sets a
- * PathClass on existing detections and never re-runs detection, never re-derives a
- * threshold, and never writes a config. It DOES overwrite the class of the
- * detections it tags, so re-run 02_detect_classify.groovy afterwards to restore the
- * real classification before exporting anything.
+ * NON-DESTRUCTIVE: tags with a DERIVED class ("Fos+: InspectBand"), so the existing
+ * call is preserved and still visible. It never re-runs detection, never re-derives a
+ * threshold, and never writes a config. Measurements are never touched, so
+ * 02_detect_classify.groovy restores a pristine classification at any time.
+ *
+ * HISTORY: the first version called setPathClass() outright, replacing the class.
+ * Run across a whole project (2026-07-31) that wiped Fos+/Double+ on every cell in
+ * the band and presented as a real drop in Fos. Exports were unaffected (they
+ * predated it) but the scare was real. A diagnostic must never be mistakable for a
+ * finding.
  *
  * Usage: edit MARKER / LOW / HIGH below, run on ONE image, then in QuPath's
  * Annotations pane show only the "InspectBand" class and zoom in.
@@ -76,14 +81,21 @@ println "  band: ${LOW} < value <= ${HIGH}"
 def detections = getDetectionObjects()
 if (detections.isEmpty()) { println "ERROR: no detections -- run detection first."; return }
 
-def bandClass = PathClassFactory.getPathClass("InspectBand")
+// Tag with a DERIVED class ("Fos+: InspectBand") rather than replacing the class.
+// An earlier version called setPathClass() outright, which DESTROYED the existing
+// call -- run across a whole project it silently wiped Fos+/Double+ labels on every
+// cell in the band and looked exactly like a real drop in Fos (2026-07-31). A
+// diagnostic must never be able to be mistaken for a finding.
 int tagged = 0, missing = 0
 detections.each { d ->
     def v = d.getMeasurements().get(key)
     if (v == null) { missing++; return }
     double val = v.doubleValue()
     if (!Double.isNaN(val) && val > LOW && val <= HIGH) {
-        d.setPathClass(bandClass)
+        def existing = d.getPathClass()
+        d.setPathClass(existing == null
+                ? PathClassFactory.getPathClass("InspectBand")
+                : PathClassFactory.getDerivedPathClass(existing, "InspectBand", null))
         tagged++
     }
 }
