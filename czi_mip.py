@@ -1030,6 +1030,22 @@ def _self_test() -> None:
     except SystemExit:
         pass
 
+    # (j1c) --scenes must not break tile counting. _scene_tile_count aligns a
+    # per-scene dims dict by POSITION in the key list, trusting it only when the
+    # lengths match -- so it must always be handed the FULL scene key list. Passing a
+    # --scenes-filtered list returns -1 for every scene and aborts the run (real bug,
+    # 2026-07-31: --scenes 3 on the 6-scene M3 file died with "tile count unknown").
+    dims_6 = [{"M": (0, 180)}, {"M": (0, 167)}, {"M": (0, 176)},
+              {"M": (0, 171)}, {"M": (0, 158)}, {"M": (0, 154)}]
+    keys_all_j = [0, 1, 2, 3, 4, 5]
+    assert _scene_tile_count(dims_6, keys_all_j, 2) == 176, (
+        "tile count must align by position in the FULL key list"
+    )
+    assert _scene_tile_count(dims_6, [2], 2) == -1, (
+        "a filtered key list must be REFUSED (-1), never silently mis-aligned -- this "
+        "is what caught the --scenes bug rather than reporting a wrong tile count"
+    )
+
     # (j2) --feather-margin: the default argument reproduces DEFAULT_FEATHER_MARGIN
     # exactly, and a different margin actually changes the seam ramp.
     seam_tiles_j = [
@@ -1132,7 +1148,13 @@ def main() -> None:
     args.outdir.mkdir(parents=True, exist_ok=True)
     dapi_idx = _dapi_index(args.channels)
     dims_all = czi.get_dims_shape()
-    scene_keys = sorted(bboxes)
+    # ALL scene keys, always. _scene_tile_count aligns a per-scene dims dict by
+    # POSITION in this list and only trusts the alignment when its length matches the
+    # scene count -- so it must see the full set even when only a subset is being
+    # converted. Passing a --scenes-filtered list here makes every tile count come
+    # back -1 and aborts the run (found 2026-07-31, --scenes 3 on the 6-scene M3 file).
+    all_scene_keys = sorted(bboxes)
+    scene_keys = list(all_scene_keys)
 
     # ── Operator tuning knobs: report what is in force, and refuse silent no-ops ──
     if mode != "tiles" and (args.feather_margin != DEFAULT_FEATHER_MARGIN or args.no_flat_field):
@@ -1172,7 +1194,7 @@ def main() -> None:
               f"bbox=(x={b.x}, y={b.y}, w={b.w}, h={b.h})")
 
         print(f"  Generating hybrid projection for scene {scene_idx} (s{N}) via {mode}...")
-        n_tiles = _scene_tile_count(dims_all, scene_keys, scene_idx)
+        n_tiles = _scene_tile_count(dims_all, all_scene_keys, scene_idx)
         if mode == "tiles":
             if n_tiles == -1:
                 raise SystemExit(
@@ -1220,7 +1242,7 @@ def main() -> None:
 
         # ── Scene-identity artifact (CONV-02, D-01/D-02/D-05) ────────────────
         # Reuse the anchor channel's already-computed single sharpest plane -- no extra CZI read.
-        M = _scene_tile_count(dims_all, scene_keys, scene_idx)
+        M = _scene_tile_count(dims_all, all_scene_keys, scene_idx)
         _scene_identity_record(scene_idx, N, b, M, (b.h, b.w))
         thumb_path = args.outdir / f"{args.animal_prefix}_s{N}_identity.png"
         _save_identity_thumbnail(out_channels[dapi_idx], thumb_path)
