@@ -60,7 +60,9 @@ PANELS = [
     ("_fos_per_dapi",    "Fos+ / DAPI   (active at recall)",    "% of DAPI+ cells",  C_RATE, 100.0),
     ("_double_per_dapi", "Double+ / DAPI   (tagged AND active)", "% of DAPI+ cells", C_RATE, 100.0),
     ("reactivation_rate", "Reactivation   Double+ / TdT+",      "% of TdT+ cells",   C_RATE, 100.0),
-    ("overlap_above_chance", "Above-chance overlap",            "x chance",          C_RATIO, 1.0),
+    ("overlap_above_chance",
+     "Above-chance overlap   =   P(Fos+ | TdT+)  /  P(Fos+ | all cells)",
+     "x chance", C_RATIO, 1.0),
 ]
 
 
@@ -79,8 +81,43 @@ def _add_dapi_fractions(d: pd.DataFrame) -> pd.DataFrame:
     return d
 
 
+def load_region_names(ontology: Path | None) -> dict[str, str]:
+    """acronym -> full Allen name, from the project's own ontology JSON.
+
+    Read from the project rather than hardcoded: the acronym set is atlas-version
+    specific, and a stale built-in table would silently mislabel a region.
+    """
+    if ontology is None or not Path(ontology).exists():
+        return {}
+    import json
+    doc = json.loads(Path(ontology).read_text())
+    out: dict[str, str] = {}
+
+    def walk(node):
+        dat = node.get("data", {}) or {}
+        a, nm = dat.get("acronym"), dat.get("name")
+        if a and nm:
+            out[a] = nm
+        for c in node.get("children", []) or []:
+            walk(c)
+
+    walk(doc.get("root", doc))
+    return out
+
+
+def _tick_label(acr: str, names: dict[str, str], width: int = 16) -> str:
+    """Acronym on line 1, wrapped full name beneath. Keeps every panel readable on
+    its own -- the reason the panels are also written as separate PNGs."""
+    import textwrap
+    nm = names.get(acr)
+    if not nm:
+        return acr
+    return acr + "\n" + "\n".join(textwrap.wrap(nm, width))
+
+
 def build_figure(df: pd.DataFrame, group_label: str = "", subtitle: str = "",
-                 thin_threshold: int = THIN_EVIDENCE, sort_by: str = "overlap_above_chance"):
+                 thin_threshold: int = THIN_EVIDENCE, sort_by: str = "overlap_above_chance",
+                 names: dict[str, str] | None = None, only: str | None = None):
     """Four stacked panels sharing a region axis, sorted by `sort_by` descending."""
     d = _add_dapi_fractions(df[df["hemisphere"] == "both"].copy())
     if d.empty:
@@ -90,12 +127,16 @@ def build_figure(df: pd.DataFrame, group_label: str = "", subtitle: str = "",
     thin = (d.get("Double+_count", pd.Series([0] * len(d))).fillna(0).astype(int)
             < thin_threshold).tolist()
     x = np.arange(len(regions))
+    names = names or {}
+    panels = [pp for pp in PANELS if only is None or pp[0] == only]
 
-    fig, axes = plt.subplots(len(PANELS), 1, figsize=(max(7.5, 0.62 * len(regions) + 3.2), 13.6),
-                             dpi=200, sharex=True)
+    fig, axes = plt.subplots(len(panels), 1, figsize=(max(8.0, 0.92 * len(regions) + 2.6),
+                                      3.9 if len(panels) == 1 else 13.6),
+                             dpi=200, sharex=True, squeeze=False)
+    axes = axes[:, 0]
     fig.patch.set_facecolor(SURFACE)
 
-    for ax, (col, title, ylab, color, scale) in zip(axes, PANELS):
+    for ax, (col, title, ylab, color, scale) in zip(axes, panels):
         vals = (d[col] * scale).tolist()
         ax.set_facecolor(SURFACE)
         for xi, v, is_thin in zip(x, vals, thin):
@@ -110,16 +151,9 @@ def build_figure(df: pd.DataFrame, group_label: str = "", subtitle: str = "",
 
         if col == "overlap_above_chance":
             ax.axhline(1.0, color=INK_MUTED, lw=1.4, ls="--", zorder=2)
-            ax.text(-0.45, 1.0, "chance ", fontsize=8.5,
-                    color=INK_MUTED, va="center", ha="right")
-            # Upper-RIGHT: regions are sorted descending, so the tallest bar (and its
-            # value label) is always at the left. Anchoring the formula left collided
-            # with it.
-            ax.text(0.985, 0.95,
-                    r"$\dfrac{P(\mathrm{Fos+}\,|\,\mathrm{TdT+})}"
-                    r"{P(\mathrm{Fos+}\,|\,\mathrm{all\ cells})}$",
-                    transform=ax.transAxes, fontsize=11, color=INK,
-                    va="top", ha="right")
+            ax.text(0.008, 1.0, "chance", transform=ax.get_yaxis_transform(),
+                    fontsize=8.5, color=INK_MUTED, va="bottom", ha="left")
+
 
         ax.set_title(title, fontsize=11, color=INK, loc="left", pad=8)
         ax.set_ylabel(ylab, fontsize=9, color=INK_MUTED)
@@ -133,12 +167,13 @@ def build_figure(df: pd.DataFrame, group_label: str = "", subtitle: str = "",
         ax.tick_params(colors=INK_MUTED, labelsize=9)
 
     axes[-1].set_xticks(x)
-    axes[-1].set_xticklabels(regions, rotation=45, ha="right", fontsize=10, color=INK)
+    axes[-1].set_xticklabels([_tick_label(r, names) for r in regions],
+                             rotation=0, ha="center", fontsize=8, color=INK)
 
     head = " — ".join(p for p in (group_label, "engram reactivation by region") if p)
-    fig.suptitle(head, fontsize=13.5, color=INK, x=0.012, ha="left", y=0.995)
-    if subtitle:
-        fig.text(0.012, 0.973, subtitle, fontsize=9.5, color=INK_MUTED, ha="left")
+    fig.suptitle(head + (f"\n{subtitle}" if subtitle else ""), fontsize=12.5,
+                 color=INK, x=0.012, ha="left", va="top", y=0.995,
+                 linespacing=1.9)
 
     if any(thin):
         axes[0].legend(handles=[mpatches.Patch(facecolor="white", edgecolor=INK_MUTED,
@@ -147,7 +182,7 @@ def build_figure(df: pd.DataFrame, group_label: str = "", subtitle: str = "",
                                                      f"— low evidence")],
                        frameon=False, fontsize=8.5, loc="upper right", labelcolor=INK)
 
-    fig.tight_layout(rect=[0, 0, 1, 0.965])
+    fig.tight_layout(rect=[0, 0, 1, 0.90 if len(panels) == 1 else 0.955])
     return fig, axes
 
 
@@ -189,6 +224,12 @@ def parse_args() -> argparse.Namespace:
     p.add_argument("--out", type=Path, default=None, help="output PNG")
     p.add_argument("--group-label", default="", help="e.g. 'M5'")
     p.add_argument("--subtitle", default="", help="e.g. '8 sections · preliminary'")
+    p.add_argument("--ontology", type=Path, default=None,
+                   help="allen_mouse_10um_java-Ontology.json from the QuPath project; "
+                        "supplies the full region names printed under each acronym")
+    p.add_argument("--separate", action="store_true",
+                   help="write ONE PNG PER PANEL into --out (treated as a directory) so "
+                        "every graph carries its own region labels")
     p.add_argument("--self-test", action="store_true")
     a = p.parse_args()
     if not a.self_test and (a.long is None or a.out is None):
@@ -201,8 +242,24 @@ def main() -> int:
     if a.self_test:
         _self_test()
         return 0
-    fig, _ = build_figure(pd.read_csv(a.long), group_label=a.group_label,
-                          subtitle=a.subtitle)
+    df = pd.read_csv(a.long)
+    names = load_region_names(a.ontology)
+    if names:
+        print(f"  region names loaded: {len(names)} acronyms")
+
+    if a.separate:
+        a.out.mkdir(parents=True, exist_ok=True)
+        for i, (col, title, _ylab, _c, _s) in enumerate(PANELS, 1):
+            fig, _ = build_figure(df, group_label=a.group_label, subtitle=a.subtitle,
+                                  names=names, only=col)
+            slug = col.lstrip("_").replace("_per_", "_over_")
+            path = a.out / f"{i}_{slug}.png"
+            fig.savefig(path, facecolor=fig.get_facecolor(), bbox_inches="tight")
+            plt.close(fig)
+            print(f"  wrote {path}")
+        return 0
+
+    fig, _ = build_figure(df, group_label=a.group_label, subtitle=a.subtitle, names=names)
     a.out.parent.mkdir(parents=True, exist_ok=True)
     fig.savefig(a.out, facecolor=fig.get_facecolor(), bbox_inches="tight")
     print(f"  wrote {a.out}")
