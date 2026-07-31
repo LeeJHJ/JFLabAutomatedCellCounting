@@ -131,7 +131,7 @@ def build_figure(df: pd.DataFrame, group_label: str = "", subtitle: str = "",
     panels = [pp for pp in PANELS if only is None or pp[0] == only]
 
     fig, axes = plt.subplots(len(panels), 1, figsize=(max(8.0, 0.92 * len(regions) + 2.6),
-                                      3.9 if len(panels) == 1 else 13.6),
+                                      5.6 if len(panels) == 1 else 13.6),
                              dpi=200, sharex=True, squeeze=False)
     axes = axes[:, 0]
     fig.patch.set_facecolor(SURFACE)
@@ -155,7 +155,9 @@ def build_figure(df: pd.DataFrame, group_label: str = "", subtitle: str = "",
                     fontsize=8.5, color=INK_MUTED, va="bottom", ha="left")
 
 
-        ax.set_title(title, fontsize=11, color=INK, loc="left", pad=8)
+        panel_title = (f"{group_label} — {title}" if (group_label and len(panels) == 1)
+                       else title)
+        ax.set_title(panel_title, fontsize=11.5, color=INK, loc="left", pad=10)
         ax.set_ylabel(ylab, fontsize=9, color=INK_MUTED)
         ax.set_ylim(0, vmax * 1.22)
         ax.yaxis.grid(True, color=GRID, lw=0.8, zorder=0)
@@ -170,10 +172,11 @@ def build_figure(df: pd.DataFrame, group_label: str = "", subtitle: str = "",
     axes[-1].set_xticklabels([_tick_label(r, names) for r in regions],
                              rotation=0, ha="center", fontsize=8, color=INK)
 
-    head = " — ".join(p for p in (group_label, "engram reactivation by region") if p)
-    fig.suptitle(head + (f"\n{subtitle}" if subtitle else ""), fontsize=12.5,
-                 color=INK, x=0.012, ha="left", va="top", y=0.995,
-                 linespacing=1.9)
+    if len(panels) > 1:
+        head = " — ".join(p for p in (group_label, "engram reactivation by region") if p)
+        fig.suptitle(head + (f"\n{subtitle}" if subtitle else ""), fontsize=12.5,
+                     color=INK, x=0.012, ha="left", va="top", y=0.995,
+                     linespacing=1.9)
 
     if any(thin):
         axes[0].legend(handles=[mpatches.Patch(facecolor="white", edgecolor=INK_MUTED,
@@ -182,7 +185,7 @@ def build_figure(df: pd.DataFrame, group_label: str = "", subtitle: str = "",
                                                      f"— low evidence")],
                        frameon=False, fontsize=8.5, loc="upper right", labelcolor=INK)
 
-    fig.tight_layout(rect=[0, 0, 1, 0.90 if len(panels) == 1 else 0.955])
+    fig.tight_layout(rect=[0, 0, 1, 1.0 if len(panels) == 1 else 0.955])
     return fig, axes
 
 
