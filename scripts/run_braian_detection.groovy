@@ -162,11 +162,11 @@ if (thrMode == "span_fraction" && spanFrac == null) missing << "detection_thresh
 if (thrMode == "absolute" && absoluteThr == null)   missing << "detection_threshold.absolute (required when mode=absolute)"
 if (!missing.isEmpty()) {
     println "ERROR: pipeline.yml missing/invalid key(s): ${missing}. Aborting."
-    return
+    throw new RuntimeException("run_braian_detection: invalid pipeline.yml -- see message above")
 }
 if (!(thrMode in ["span_fraction", "absolute"])) {
     println "ERROR: detection_threshold.mode='${thrMode}' -- must be \"span_fraction\" or \"absolute\". Aborting."
-    return
+    throw new RuntimeException("run_braian_detection: invalid pipeline.yml -- see message above")
 }
 
 var anchorConf = config.channelDetections.find { it.name == anchorChannel }
@@ -203,7 +203,13 @@ if (thrMode == "absolute") {
         println "       (most common cause: peak_prominence too high, or resolution_level != 0)."
         println "       Refusing to fall back to a hardcoded value -- that is what made counts"
         println "       incomparable in the first place. Aborting."
-        return
+        // THROW, never return. A bare `return` exits the QuPath script with status 0,
+        // so a batch runner reads this abort as SUCCESS and proceeds to classify and
+        // export a section that has no detections (M5c_s3/M5c_s4, 2026-07-31). A
+        // fail-loud message that exits 0 is fail-silent to every caller.
+        throw new RuntimeException(
+            "threshold calibration failed on '${anchorChannel}' for " +
+            "${getProjectEntry().getImageName()} (floor=${floorVal}, bright=${brightVal})")
     }
     resolvedThreshold = Math.round(floorVal + spanFrac * (double) (brightVal - floorVal))
     println "THRESHOLD (mode=span_fraction) on ${anchorChannel}: ${resolvedThreshold}"
