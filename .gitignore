@@ -44,3 +44,7 @@ Thumbs.db
 
 # ── GSD research cache (regenerable hashed web-fetch blobs) ──
 .planning/research/.cache/
+
+# Session scratch: throwaway test fixtures, logs, and multi-GB intermediate exports.
+# Contains project-SHAPED directories that must never be treated as real projects.
+scratchpad/
