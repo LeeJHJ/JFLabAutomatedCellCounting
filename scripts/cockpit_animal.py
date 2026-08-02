@@ -1172,6 +1172,10 @@ def _k_split_counts(project_dir: Path, config: creg.Config, roles: Roles,
     Why not region_table.tsv: its counts are FROZEN at the single k baked in when QuPath
     classified. Varying k requires going back to the per-cell measures.
 
+    LIMITATION (2026-08-01): one k is applied to EVERY marker. With a per-marker
+    k_robust override declared in pipeline.yml, no point on the sweep reproduces the
+    locked configuration, and the function warns. Do not read the sweep as the result.
+
     LOCKED CORRECTNESS RULE: the cut applied inside a region is the SECTION-level threshold
     at that k (`ksr._threshold_at_k` over `ksr.analyze_section`). A threshold is NEVER
     re-derived from a region's own cells -- a small region would get its own noise-driven
@@ -1197,6 +1201,21 @@ def _k_split_counts(project_dir: Path, config: creg.Config, roles: Roles,
     """
     locked_k = float(ksr.load_pipeline_config(Path(project_dir) / "pipeline.yml")["k_robust"])
     compute_ks = sorted({float(k) for k in k_values} | {locked_k})
+
+    # A k-sweep applies ONE k to every marker. If any marker carries a per-marker
+    # k_robust override, no point on the sweep reproduces the actual configuration --
+    # the rollup used, say, TdT k=2.0 and Fos k=3.0, a combination the curve never
+    # visits. Saying so is the whole fix: a figure that silently contradicts the table
+    # printed beside it is worse than no figure.
+    _overrides = {m["name"]: m["k_robust"] for m in (config.markers or [])
+                  if m.get("k_robust") is not None}
+    if _overrides:
+        print(f"  WARNING: per-marker k_robust override(s) in effect {_overrides}, but a "
+              f"k-sweep varies ONE k across all markers.")
+        print(f"           No point on this series matches the configuration the tables "
+              f"were computed with (global k={locked_k:g}).")
+        print(f"           Read the sweep as a SENSITIVITY analysis only, never as the "
+              f"locked result.")
     tally: dict[tuple[str, float], dict[str, int]] = {
         (r, k): {"N": 0} for r in regions for k in compute_ks}
 
@@ -1256,7 +1275,9 @@ def _k_split_counts(project_dir: Path, config: creg.Config, roles: Roles,
 
 
 _QV_DODGE = 0.28
-_K_BASIS_NOTE = "k series recomputed from per-cell exports -- POOLED ACROSS HEMISPHERES."
+_K_BASIS_NOTE = ("k series recomputed from per-cell exports -- POOLED ACROSS HEMISPHERES. "
+                 "One k is applied to all markers; with a per-marker override in "
+                 "pipeline.yml no point here equals the locked configuration.")
 
 
 def _qv_regions(sub: pd.DataFrame, regions: list[str] | None) -> list[str]:

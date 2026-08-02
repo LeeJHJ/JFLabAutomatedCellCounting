@@ -54,6 +54,12 @@ markers:
   - name: "TdT"                 # engram marker (TdTomato) -- fills the whole cell, whole-cell area-weighted mean (CLAUDE.md, revised 2026-07-25, operator domain call)
     channel: "AF568-T2"         # matches BraiAn.yml classifiers[1].channel
     compartment: "whole-cell"
+    k_robust: 2.0               # PER-MARKER override, set 2026-08-01 to MATCH M3 Hipp2
+                                # and M5. Hipp1 previously ran at the global 3.0, which
+                                # made it non-comparable with them: the same sections
+                                # yield ~2x more TdT+ at k=2.0 (3.51% -> 6.84% measured
+                                # on Hipp2 s3). Same pixel size (0.460357) and sigma
+                                # (2.0) as Hipp2, so k was the only blocking difference.
 
 # D-09: region exclusions migrated out of the EXCLUDE_ACRONYMS literal
 # (scripts/02_detect_classify.groovy line 92). DG-sg = DG granule cell layer
