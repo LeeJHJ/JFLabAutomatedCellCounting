@@ -8,12 +8,12 @@ input's micron pixel calibration and channel names/order.
 
 CPU-only. Runs in the `braian` conda env.
 
-Usage:
-  conda run -n braian python3 /home/jflab/Analysis/scripts/crop_to_tissue.py \\
+Usage (from the repo root):
+  conda run -n braian python3 scripts/crop_to_tissue.py \\
       "/path/to/M3_20x_MIP.ome.tiff" -o "/path/to/M3_20x_MIP_cropped.ome.tiff"
 
   # Synthetic self-test (no large files needed):
-  conda run -n braian python3 /home/jflab/Analysis/scripts/crop_to_tissue.py --self-test
+  conda run -n braian python3 scripts/crop_to_tissue.py --self-test
 """
 
 from __future__ import annotations

@@ -43,6 +43,7 @@ Usage:
 from __future__ import annotations
 
 import argparse
+import os
 import sys
 from dataclasses import dataclass, field, replace
 from pathlib import Path
@@ -234,7 +235,13 @@ def detection_params(project_dir: Path) -> dict:
 # ---------------------------------------------------------------------------
 # QuPath headless plumbing (the EXPENSIVE half -- built here, run by the notebook)
 # ---------------------------------------------------------------------------
-QUPATH_BIN = Path("/home/jflab/section-pipeline/tools/QuPath/bin/QuPath")
+# Where QuPath is installed. The default is the layout SECTION_PIPELINE_SETUP.md
+# builds, under whichever home directory is running -- NOT a path with a username
+# baked into it, which failed immediately on any other machine. Override with
+# $QUPATH_BIN when QuPath lives elsewhere:
+#     export QUPATH_BIN=/opt/QuPath/bin/QuPath
+DEFAULT_QUPATH_BIN = Path.home() / "section-pipeline" / "tools" / "QuPath" / "bin" / "QuPath"
+QUPATH_BIN = Path(os.environ.get("QUPATH_BIN") or DEFAULT_QUPATH_BIN)
 
 
 def project_image_names(project_dir: Path) -> list[str]:

@@ -743,6 +743,97 @@ def _czi_scene_tile_count(ctx: Ctx) -> str:
 
 
 # ---------------------------------------------------------------------------
+# Checks -- portability (this machine is not the only machine)
+# ---------------------------------------------------------------------------
+def _home_path_literals(text: str) -> list[str]:
+    """Lines carrying an absolute path with a username baked into it.
+
+    `Path.home()` and `$HOME` are fine -- they resolve per machine. A literal
+    `/home/<someone>/` is not: it fails immediately on any other box, and in a
+    docstring it teaches the habit to whoever reads it next.
+    """
+    import re
+    pat = re.compile(r"/home/[A-Za-z0-9._-]+/")
+    return [ln.strip() for ln in text.splitlines() if pat.search(ln)]
+
+
+@check("portable_paths", "deploy", "no source carries a hardcoded home directory")
+def _portable_paths(ctx: Ctx) -> str:
+    files = (sorted((ctx.repo / "scripts").glob("*.py"))
+             + sorted((ctx.repo / "scripts").glob("*.groovy"))
+             + [ctx.repo / "czi_mip.py", ctx.repo / "czi_hybrid_mip.py",
+                ctx.repo / "run_pipeline.py"])
+    offenders = []
+    for f in files:
+        if not f.is_file():
+            continue
+        offenders += [f"{f.name}: {ln[:90]}" for ln in _home_path_literals(f.read_text())]
+
+    # Notebook SOURCE only. Outputs are a transcript of a past run on a real machine
+    # and legitimately contain that machine's paths; rewriting them would be falsifying
+    # a record for the sake of a lint.
+    for nb in sorted((ctx.repo / "notebooks").glob("*.ipynb")):
+        doc = json.loads(nb.read_text())
+        for i, cell in enumerate(doc.get("cells", [])):
+            src = "".join(cell.get("source", []))
+            offenders += [f"{nb.name} cell {i}: {ln[:90]}" for ln in _home_path_literals(src)]
+
+    _require(not offenders,
+             "absolute paths with a username in them (these fail on any other machine, "
+             "and a new user's first act should not be editing them):\n      "
+             + "\n      ".join(offenders))
+    return f"{len(files)} source files + notebook cells clean"
+
+
+@check("qupath_bin_env", "qc", "QUPATH_BIN is overridable by environment")
+def _qupath_bin_env(ctx: Ctx) -> str:
+    src = (ctx.repo / "scripts" / "cockpit_checks.py").read_text()
+    _require('os.environ.get("QUPATH_BIN")' in src,
+             "cockpit_checks no longer reads $QUPATH_BIN -- QuPath's location is "
+             "machine-specific and must not be a literal")
+    probe = ("import sys; sys.path.insert(0, 'scripts'); "
+             "import cockpit_checks as cc; print(cc.QUPATH_BIN)")
+    env = dict(os.environ, QUPATH_BIN="/opt/QuPath/bin/QuPath")
+    out = subprocess.run([sys.executable, "-c", probe], capture_output=True, text=True,
+                         cwd=str(ctx.repo), env=env, timeout=120)
+    _require(out.stdout.strip() == "/opt/QuPath/bin/QuPath",
+             f"$QUPATH_BIN was ignored; got {out.stdout.strip()!r}")
+    _require(str(cc.DEFAULT_QUPATH_BIN).startswith(str(Path.home())),
+             f"the default QuPath path is not under the running user's home "
+             f"({cc.DEFAULT_QUPATH_BIN})")
+    return "default under $HOME, $QUPATH_BIN wins"
+
+
+@check("notebooks_discover_repo", "qc", "notebooks find the repo instead of hardcoding it")
+def _notebooks_discover_repo(ctx: Ctx) -> str:
+    """The setup cell is executed from the notebooks/ directory, the way JupyterLab
+    runs it -- asserting the source merely CONTAINS a discovery helper would not
+    prove the helper works."""
+    checked = []
+    for nb in sorted((ctx.repo / "notebooks").glob("*.ipynb")):
+        doc = json.loads(nb.read_text())
+        setup = next((c for c in doc["cells"]
+                      if c.get("cell_type") == "code" and "PARAMS" in "".join(c["source"])), None)
+        _require(setup is not None, f"{nb.name} has no PARAMS setup cell")
+        src = "\n".join(ln for ln in "".join(setup["source"]).splitlines()
+                        if not ln.strip().startswith("%"))     # drop IPython magics
+        _require("_find_repo_root" in src,
+                 f"{nb.name}'s setup cell does not discover the repo root")
+        probe = ctx.tmp / f"probe_{nb.stem}.py"
+        probe.write_text(src + "\nprint('REPO=', REPO)\n")
+        out = subprocess.run([sys.executable, str(probe)], capture_output=True, text=True,
+                             cwd=str(ctx.repo / "notebooks"),
+                             env=dict(os.environ, MPLBACKEND="Agg"), timeout=300)
+        _require(out.returncode == 0,
+                 f"{nb.name}'s setup cell failed when run from notebooks/: "
+                 f"{(out.stderr or out.stdout).strip().splitlines()[-1:]}")
+        _require(f"REPO= {ctx.repo}" in out.stdout,
+                 f"{nb.name} resolved the repo root to something unexpected: {out.stdout!r}")
+        checked.append(nb.name)
+    return f"{len(checked)} notebooks resolve REPO from notebooks/ and run their setup cell"
+
+
+# ---------------------------------------------------------------------------
 # Checks -- install verification
 # ---------------------------------------------------------------------------
 def _self_testable_modules(repo: Path) -> list[Path]:
@@ -958,7 +1049,38 @@ def _self_test() -> int:
         finally:
             globals()["write_exported_project"] = real_writer
 
-        # 7. _expect_actionable must reject a bare IndexError as loudly as a success.
+        # 7. Portability: a repo carrying a hardcoded home directory must be caught,
+        #    as must a cockpit_checks with QUPATH_BIN back as a literal and a notebook
+        #    that hardcodes its sys.path.
+        # The poison path is ASSEMBLED at runtime, never written as a literal: this
+        # file is itself inside scripts/, so a literal here would make portable_paths
+        # fail against the real repo -- as it correctly did the first time.
+        poison = "/" + "home/" + "someone/" + "Analysis"
+        fake = base / "fake_repo"
+        (fake / "scripts").mkdir(parents=True)
+        (fake / "notebooks").mkdir(parents=True)
+        (fake / "scripts" / "poison.py").write_text(f'BIN = "{poison}/tools/QuPath"\n')
+        (fake / "scripts" / "cockpit_checks.py").write_text(
+            f'from pathlib import Path\nQUPATH_BIN = Path("{poison}/QuPath")\n')
+        (fake / "notebooks" / "x.ipynb").write_text(json.dumps({"cells": [{
+            "cell_type": "code",
+            "source": [f'PARAMS = {{"project": "{poison}/proj"}}\n',
+                       'import sys\n',
+                       f'sys.path.insert(0, "{poison}/scripts")\n'],
+        }]}))
+        ctx7 = build_context(base / "c7", run_self_tests=False)
+        ctx7.repo = fake
+        passed, detail = run_one("portable_paths", ctx7)
+        case("a hardcoded home directory in source is caught",
+             not passed and "poison.py" in detail, detail if passed else "")
+        passed, detail = run_one("qupath_bin_env", ctx7)
+        case("QUPATH_BIN back as a literal is caught",
+             not passed and "QUPATH_BIN" in detail, detail if passed else "")
+        passed, detail = run_one("notebooks_discover_repo", ctx7)
+        case("a notebook that hardcodes its sys.path is caught",
+             not passed and "discover" in detail, detail if passed else "")
+
+        # 8. _expect_actionable must reject a bare IndexError as loudly as a success.
         def bare() -> None:
             [][0]
         try:
@@ -973,7 +1095,7 @@ def _self_test() -> int:
         except SmokeFailure as exc:
             case("silently succeeding with no data is caught", "SUCCEEDED" in str(exc))
 
-        # 8. An unhelpful message (right exception, no path named) must still fail.
+        # 9. An unhelpful message (right exception, no path named) must still fail.
         def vague() -> None:
             raise FileNotFoundError("something went wrong")
         try:
