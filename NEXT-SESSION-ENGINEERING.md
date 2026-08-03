@@ -6,9 +6,27 @@ tasks that need no new imaging and no judgement calls about the biology.
 
 Read `NEXT-SESSION.md` first for context, then this.
 
+**Status 2026-08-03 (later the same day): Tasks 1 and 3 are DONE.** Remaining: Task 2
+(figures, scope-sensitive) and Task 4 (`render_engram_cloud.py`, a decision).
+
 ---
 
-## Task 1 — fresh-project smoke test  ★ highest value
+## Task 1 — fresh-project smoke test  ★ highest value  — ✅ DONE (`7496e90`)
+
+`scripts/smoke_test.py`, 24 checks, all ten of the bugs in the table below pinned by a
+named check. Run it after any pipeline change and on any new machine:
+
+```
+conda run -n braian python scripts/smoke_test.py          # 24 checks + 19 sibling self-tests
+conda run -n braian python scripts/smoke_test.py --list
+conda run -n braian python scripts/smoke_test.py --self-test   # proves the checks can go red
+```
+
+It found one real defect on its first run: `n_slices` under-reported whenever an animal's
+imaging sessions reuse slice numbering (M5: 4 where 6 sections were pooled). Counts were
+never affected — only the provenance attached to them. Fixed in `9fca3cb`.
+
+The original spec follows, for the record.
 
 **The problem it solves.** Ten bugs in four days were all the same shape: code that
 works on whatever state the workspace happens to be in, and fails on a genuinely new
@@ -78,7 +96,17 @@ it, a lower-valued group's bars fill its own panel and read as equal.
 
 ---
 
-## Task 3 — notebook portability
+## Task 3 — notebook portability  — ✅ DONE (`488074c`)
+
+All three notebooks discover the repo root by walking up from the working directory;
+`PARAMS` paths are repo-relative (an absolute path is still honoured, so data can live
+outside the repo). `QUPATH_BIN` comes from `$QUPATH_BIN`, defaulting to
+`~/section-pipeline/tools/QuPath/bin/QuPath`. Also cleaned the two one-off scripts that
+carried absolute paths in their usage examples. Three smoke-test checks keep it fixed —
+one of them executes each setup cell from `notebooks/`, so it cannot rot into a
+source-grep that passes while the notebook is broken.
+
+The original findings follow, for the record.
 
 `notebooks/01_calibrate.ipynb`, `02_batch.ipynb`, `03_animal.ipynb`:
 
@@ -124,6 +152,13 @@ marked clearly. It is currently `status: unwired` in `docs/pipeline-stages.yml`.
 
 ## Suggested order
 
-1, then 3, then 2, then 4. Task 1 protects everything else; task 3 is small and unblocks
-other machines; task 2 is quick but scope-sensitive; task 4 is a decision more than a
-build.
+~~1, then 3~~ (both done 2026-08-03), then 2, then 4. Task 2 is quick but scope-sensitive;
+task 4 is a decision more than a build.
+
+## Still open, found while doing 1 and 3
+
+- `scripts/cockpit_animal.py` carries `pool_same_animal` + its CLI wiring **uncommitted**
+  in the working tree, left by an earlier session. It works and the handoff already
+  describes it as shipped. Someone should review and commit it.
+- `docs/pipeline-stages.yml` has no entry for the smoke test. Left alone deliberately —
+  another session was editing `docs/` on 2026-08-03.
