@@ -5,6 +5,13 @@ wrote it. Supersedes `NEXT-TASK-m3-hipp2.md`, which is now history.
 
 Branch `generalize-pipeline-260729`, ~45 commits ahead of `main`, still unmerged.
 
+**Framing (operator, 2026-08-03): M3 and M5 were PROOF-OF-CONCEPT runs.** A fresh set
+of brains is being cut and imaged. Treat the M3/M5 numbers as pipeline validation, not
+as results to be rescued — the open questions in §2 are expected to be answered by the
+new cohort under a settled acquisition regime, not by further reanalysis of the pilots.
+What the pilots taught us about acquisition is distilled in `ACQUISITION-CHECKLIST.md`,
+which is the most actionable document in the repo right now.
+
 ---
 
 ## 1. What state the data is in
