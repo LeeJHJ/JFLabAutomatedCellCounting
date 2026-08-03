@@ -1,0 +1,297 @@
+# pipeline-stages.yml — machine-readable description of the section pipeline.
+#
+# PURPOSE. A single source of truth for "what are the stages, right now" that other
+# tools (a pipeline map, an interactive diagram, a launcher, onboarding docs) can read
+# instead of each re-deriving it from prose. docs/index.md is the human tutorial; this
+# is the structured version, and the two must not be allowed to disagree.
+#
+# BUILT FOR CHANGE. This pipeline is under active development and stages move in and
+# out — one was removed from the default path two days ago and may return. So every
+# stage carries an explicit `status`, and consumers MUST render by status rather than
+# assume every listed stage is active:
+#
+#   active      in the default path today
+#   optional    supported, run when needed, not part of every run
+#   standby     deliberately NOT in the default path, but kept working and expected to
+#               possibly return. Do not delete, do not present as retired.
+#   diagnostic  run to answer a question, never part of a production run
+#   unwired     code exists but nothing calls it; may be unfinished or abandoned
+#
+# Adding a stage: append an entry. Removing one: set status, never delete the entry —
+# the history of why something left the path is the useful part.
+#
+# schema_version bumps when field NAMES change, not when stages do.
+
+schema_version: 1
+updated: 2026-08-03
+pipeline: "TRAP2 / Airyscan coronal section pipeline"
+readout: "per-Allen-region TdT+ (engram) / Fos+ (recall) / Double+ (reactivated) counts"
+
+# Where a stage runs. `gui` stages cannot be automated -- they need a human to look at
+# an image and make a judgement (project rule: what the operator SEES outranks any
+# computed value).
+environments:
+  zen:      "Zeiss ZEN Blue on the Windows acquisition PC (not this machine)"
+  shell:    "conda env `braian`, python 3.11"
+  qupath:   "QuPath v0.6.0, scripts run headless or from the Script editor"
+  fiji:     "Fiji + ABBA plugin (PTBIOP update site)"
+  notebook: "JupyterLab in the `braian` env — the operator's self-serve surface"
+
+stages:
+
+  - id: acquire
+    name: "Acquisition"
+    status: active
+    kind: gui
+    environment: zen
+    outputs: ["multi-scene CZI mosaic"]
+    notes: >
+      Airyscan processing, tile stitching and Z-stack happen here. This machine only
+      ingests the exported CZI. Acquisition parameters are the single biggest
+      determinant of what the analysis can later answer — see stage `compare`.
+
+  - id: mip
+    name: "CZI → hybrid MIP"
+    status: active
+    kind: scriptable
+    environment: shell
+    entry: "czi_mip.py"
+    inputs: ["multi-scene CZI"]
+    outputs: ["one OME-TIFF per scene", "identity thumbnail PNG per scene"]
+    knobs: ["--feather-margin", "--no-flat-field", "--dapi-z", "--marker-z", "--scenes"]
+    notes: >
+      Projection is HYBRID and this is load-bearing: the anchor (DAPI) channel is a
+      single auto-selected sharpest Z plane, while marker channels are max-projected
+      over Z. A plain MIP over-projects DAPI and fuses touching nuclei. `--marker-z`
+      restricts the marker projection depth so a deeper acquisition can be processed
+      at a shallower one's depth — the only way to compare runs of different Z depth.
+      Pixel size is read from the CZI, never defaulted.
+
+  - id: project
+    name: "QuPath project + image import"
+    status: active
+    kind: gui
+    environment: qupath
+    notes: >
+      Create the project FIRST, then import into ABBA from it. Importing into ABBA via
+      Bio-Formats permanently blocks the registration export back to QuPath.
+
+  - id: register
+    name: "ABBA atlas registration"
+    status: active
+    kind: gui
+    environment: fiji
+    outputs: ["ABBA-Transform-*.json", "ABBA-RoiSet-*.zip (per entry)"]
+    chain:
+      - "DeepSlice — initial AP position"
+      - "Review/positioning mode — position and tilt"
+      - "Affine tab — match slice to overlay BY HAND (angle, X, Y, scale)"
+      - "Spline tab — manual BigWarp to finalise"
+      - "Export registrations to the QuPath project"
+    match_against: "Label Borders (region outline overlay)"
+    notes: >
+      Fully manual after DeepSlice as of 2026-07-30. Tilt is adjusted BEFORE any
+      warping — lateral misalignment is a tilt problem, not a spline problem.
+
+  - id: register_elastix
+    name: "elastix Affine + Spline (automated registration)"
+    status: standby
+    kind: gui
+    environment: fiji
+    fixed_channel: "atlas Nissl (Ch0) — NEVER Label Borders"
+    moving_channel: "section DAPI"
+    notes: >
+      NOT in the default path as of 2026-07-30: manual affine + manual BigWarp gave a
+      visibly better fit on M3 Hipp2. This is STANDBY, not retired — mounting and
+      slicing quality vary, and on cleanly mounted series the automated chain may be
+      preferable again. elastix stays installed and pinned at 5.2.0.
+      If reinstated, the fixed channel must be atlas Nissl: an intensity-based
+      optimiser needs intensity correspondence, and Label Borders is a line drawing
+      with none. Note this is the OPPOSITE of the human-facing overlay choice, and the
+      reason is the same fact seen from two sides.
+
+  - id: deploy
+    name: "Deploy pipeline into the project"
+    status: active
+    kind: scriptable
+    environment: shell
+    entry: "scripts/sync_project.py"
+    notes: >
+      Repo `scripts/` is SOURCE, `<project>/scripts/` is a DEPLOYED copy — QuPath can
+      only run scripts inside the project. Never hand-copy. `pipeline.yml` is MERGED,
+      never overwritten, so per-slice-set tuning survives. A directory containing
+      `.pipeline-nosync` is skipped.
+
+  - id: load_rois
+    name: "Load ABBA ROIs into QuPath"
+    status: active
+    kind: scriptable
+    environment: qupath
+    entry: "scripts/01_load_abba_rois.groovy"
+    notes: "Must run before detection — detection is confined to the atlas Root annotation."
+
+  - id: calibrate
+    name: "Threshold calibration"
+    status: active
+    kind: scriptable
+    environment: "qupath + notebook"
+    entry: ["scripts/calibrate_threshold.groovy", "scripts/cockpit_threshold.py"]
+    notes: >
+      Read-only. The anchor cut is RELATIVE — floor + span_frac x (bright_peak − floor),
+      re-measured from each section's own histogram — never absolute. Look at the
+      histogram before changing span_frac.
+
+  - id: detect
+    name: "Nucleus detection"
+    status: active
+    kind: scriptable
+    environment: qupath
+    entry: "scripts/run_braian_detection.groovy"
+    notes: >
+      DAPI-anchored. Aborts loudly (and non-zero) if the threshold cannot be
+      calibrated rather than falling back to a hardcoded value.
+
+  - id: classify
+    name: "Marker classification"
+    status: active
+    kind: scriptable
+    environment: qupath
+    entry: "scripts/02_detect_classify.groovy"
+    notes: >
+      THE single classification path — every project's BraiAn.yml `classifiers:` block
+      is empty by design. Per-marker robust cut: median + k x 1.4826 x MAD, with an
+      optional PER-MARKER `k_robust` override in pipeline.yml. Compartment per marker:
+      nuclear / cytoplasmic / whole-cell. Colocalization is nucleus-anchored only,
+      never proximity.
+
+  - id: export
+    name: "Per-cell + per-region export"
+    status: active
+    kind: scriptable
+    environment: qupath
+    entry: "scripts/03_export_region_table.groovy"
+    outputs: ["*__percell_export.tsv", "*__region_table.tsv", "*__detection_threshold.tsv"]
+    notes: >
+      Per-cell rows carry class, LEAF region label, nucleus area, centroid, anchor_mean
+      and one <marker>_bgsub column per marker. `anchor_mean` exists so a
+      negative-control pseudo-marker can be built downstream.
+
+  - id: export_coords
+    name: "Atlas-space coordinate export"
+    status: optional
+    kind: scriptable
+    environment: qupath
+    entry: "scripts/04_export_atlas_coords.groovy"
+    notes: "Micron CCFv3 coordinates for 3D visualisation. Not needed for region readouts."
+
+  - id: qc
+    name: "QC gates"
+    status: active
+    kind: scriptable
+    environment: "shell + notebook"
+    entry: "scripts/cockpit_checks.py"
+    notes: >
+      Every gate prints its measured number, a PASS/FLAG verdict, and its EVIDENCE TIER:
+      <anatomical> (true regardless of acquisition), <internal> (self-consistency),
+      <assumed> (a band borrowed from elsewhere, never validated here). Gates advise;
+      they do not block.
+
+  - id: rollup_region
+    name: "Per-region readout"
+    status: active
+    kind: scriptable
+    environment: shell
+    entry: "scripts/cockpit_regions.py"
+    notes: >
+      Owns the Allen ontology. Region membership is resolved through
+      descendants_or_self() against the PROJECT'S OWN ontology JSON — never a hardcoded
+      acronym table. Per-cell labels are LEAF regions, so a parent acronym matches
+      nothing unless rolled down.
+
+  - id: rollup_animal
+    name: "Animal-level rollup"
+    status: active
+    kind: scriptable
+    environment: "shell + notebook"
+    entry: "scripts/cockpit_animal.py"
+    notes: >
+      Pools counts across sections then recomputes every ratio — never a mean of
+      per-section ratios. `--pool-same-animal` merges projects declaring the same
+      animal (one brain imaged across several sessions).
+
+  - id: chance
+    name: "Chance-baseline analysis"
+    status: active
+    kind: scriptable
+    environment: shell
+    entry: ["scripts/local_chance.py", "scripts/expected_overlap.py", "scripts/chance_methods.py"]
+    notes: >
+      Colocalization is reported against a chance level, and the field's chance is
+      independence. Independence is violated in tissue by shared measurement pixels,
+      spatial structure and detection artifacts, so control regions land above 1.0.
+      These compute the same statistic several ways so the FLOOR is visible and a
+      conclusion can be shown not to depend on which definition was chosen.
+
+  - id: compare
+    name: "Cross-dataset comparability"
+    status: active
+    kind: scriptable
+    environment: shell
+    entry: "scripts/compare_datasets.py"
+    notes: >
+      ADVISORY. Measures declared and observed parameters across datasets and rates how
+      much weight each metric class can carry. Rank order of regions is the most robust
+      cross-dataset comparison; absolute densities the least. Never refuses.
+
+  - id: figures
+    name: "Figures"
+    status: active
+    kind: scriptable
+    environment: shell
+    entry: ["scripts/figure_region_panels.py", "scripts/figure_group_comparison.py"]
+    notes: "Low-evidence bars are hatched; shared y-scales across groups via --ymax."
+
+  - id: tune
+    name: "Parameter tuning"
+    status: active
+    kind: cross_cutting
+    environment: "shell + notebook"
+    entry: "scripts/cockpit_tune.py"
+    notes: >
+      One control surface over knobs that live in three places (czi_mip CLI, BraiAn.yml,
+      pipeline.yml). Configs stay split on disk; comments are preserved on write.
+
+  - id: inspect
+    name: "Visual inspection of a threshold decision"
+    status: diagnostic
+    kind: scriptable
+    environment: qupath
+    entry: "scripts/inspect_marker_band.groovy"
+    notes: >
+      Tags the cells a k_robust change would flip, so they can be LOOKED at rather than
+      argued about from counts. Uses a derived class so the existing call survives.
+
+  - id: render3d
+    name: "3D atlas-space point cloud"
+    status: unwired
+    kind: scriptable
+    environment: "conda env `brainrender`"
+    entry: "scripts/render_engram_cloud.py"
+    notes: >
+      Nothing currently calls this. Needs stage `export_coords`. Kept because the 3D
+      readout is a stated project goal, but treat as unfinished until wired up.
+
+# Cross-cutting rules a consumer may want to surface alongside the stages.
+principles:
+  evidence_hierarchy: >
+    SEEN (operator looking at the image) > STRUCTURAL (true regardless of acquisition)
+    > ASSUMED (a band borrowed from elsewhere). Never tune a parameter to move an
+    ASSUMED number into range.
+  advisory_not_refusal: >
+    Tooling advises and ranks; it does not block. Refuse only on "cannot be computed
+    correctly"; advise on "may not mean what you think".
+  comparability: >
+    Relative thresholds absorb brightness drift but NOT geometry (pixel size, Z depth)
+    or separability (SNR). One acquisition regime per comparison.
+  one_classification_path: >
+    Classification happens only in 02_detect_classify.groovy, driven by pipeline.yml.
