@@ -228,9 +228,9 @@ def classifiable_n_by_region(project_dir: Path, config: creg.Config,
     for pf in percell_files:
         pf = Path(pf)
         label = ksr.section_label(pf)
-        m = creg._SLICE_RE.match(label)
-        animal = config.animal or (m.group("animal") if m else label)
-        slice_id = f"s{m.group('n')}" if m else label
+        # Same rule as the region_table path -- do not fork it, or two sessions'
+        # s1 sections merge here while staying distinct there.
+        animal, slice_id = creg.resolve_slice_identity(label, config.animal)
 
         rt_path = region_table_files.get(label)
         if rt_path is None:

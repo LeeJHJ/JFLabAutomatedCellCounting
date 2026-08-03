@@ -211,26 +211,44 @@ def load_ontology(project_dir: Path) -> Ontology:
 _SLICE_RE = re.compile(r"^(?P<animal>.+)_s(?P<n>\d+)$")
 
 
+def resolve_slice_identity(entry: str, config_animal: str | None) -> tuple[str, str]:
+    """(animal, slice_id) from a clean entry name such as ``M5b_s2``.
+
+    The label's prefix normally IS the animal, so ``sN`` alone identifies the section.
+    But when ``pipeline.yml`` declares an ``animal:``, several session prefixes fold
+    into one subject (M5a/M5b/M5c -> M5), and sessions restart their slice numbering:
+    ``M5a_s1``, ``M5b_s1`` and ``M5c_s1`` are three DIFFERENT physical sections. Dropping
+    the prefix there would collapse them into one slice_id, which under-reports
+    ``n_slices`` (M5: 4 where 6 were pooled) and merges their dots in any per-slice
+    spread plot. Counts were never affected -- those are summed per region, not per
+    slice -- so this is a provenance bug, not a counting one.
+
+    So the prefix is retained exactly when it is load-bearing: with no declared animal
+    it is redundant, with one it is the only thing telling two sections apart.
+    """
+    m = _SLICE_RE.match(entry)
+    if not m:
+        return (config_animal or entry, entry)
+    prefix, n = m.group("animal"), m.group("n")
+    if config_animal is None:
+        return (prefix, f"s{n}")
+    return (config_animal, f"{prefix}_s{n}")
+
+
 def parse_slice_identity(region_table_path: Path, project_dir: Path,
                          config_animal: str | None) -> tuple[str, str, str]:
     """Return (project, animal, slice_id) from a region_table filename.
 
     Filename looks like ``<image name>__id<N>__region_table.tsv`` where the image name is
     e.g. ``wBA1-2_2-1_s1_MIP.ome.tiff - wBA1-2_2-1_s1``. We take the clean entry name (after
-    the last ``' - '``) and split a trailing ``_sN`` into animal prefix + ``sN``.
+    the last ``' - '``) and hand it to ``resolve_slice_identity``.
     """
     project = project_dir.name
     stem = region_table_path.name
     stem = stem.split("__id", 1)[0]                 # drop __id<N>__region_table.tsv
     stem = stem.split("__region_table", 1)[0]       # defensive (no __id case)
     entry = stem.split(" - ")[-1].strip()           # clean entry display name
-    m = _SLICE_RE.match(entry)
-    if m:
-        animal = config_animal or m.group("animal")
-        slice_id = f"s{m.group('n')}"
-    else:
-        animal = config_animal or entry
-        slice_id = entry
+    animal, slice_id = resolve_slice_identity(entry, config_animal)
     return project, animal, slice_id
 
 
