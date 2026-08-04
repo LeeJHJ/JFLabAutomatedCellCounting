@@ -288,6 +288,23 @@ stages:
       Tags the cells a k_robust change would flip, so they can be LOOKED at rather than
       argued about from counts. Uses a derived class so the existing call survives.
 
+  - id: handcount
+    name: "Hand-count check against the machine"
+    status: diagnostic
+    kind: gui
+    environment: qupath
+    entry: "scripts/qc_handcount.groovy"
+    notes: >
+      Places small boxes fully inside named regions and reports the machine count per
+      box, so a human can count the same box and compare. Exists because two
+      <anatomical> gates (white matter denser than cortex, ventricles not empty) have
+      flagged on EVERY section ever run here and have never been checked against a
+      human number -- without one, "over-detection" is an inference from a ratio.
+      Box size is adaptive (150 -> 40 um): cc and VS are thin, so a fixed square does
+      not fit inside precisely the two regions that flag. First run showed the
+      ventricle detections sit at the rim, not the lumen, and that they are excluded
+      downstream anyway -- see docs/runbook/04-qupath-gui.md section 2.
+
   - id: render3d
     name: "3D atlas-space point cloud"
     status: unwired

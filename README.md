@@ -77,6 +77,7 @@ override with `export QUPATH_BIN=/your/path/to/QuPath`.
 | run a dataset start to finish | `docs/runbook/00-run-a-new-dataset.md` |
 | the ABBA registration click-path | `docs/runbook/01-registration.md` |
 | QuPath detection detail | `docs/runbook/02-detection.md` |
+| working in the QuPath GUI | `docs/runbook/04-qupath-gui.md` |
 | a knob, and which way to turn it | `docs/runbook/03-tuning.md` |
 | what the stages are + their status | `docs/pipeline-stages.yml` |
 | how to image so the data is usable | `ACQUISITION-CHECKLIST.md` |

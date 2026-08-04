@@ -438,6 +438,7 @@ in `ACQUISITION-CHECKLIST.md`.
 | a knob and which way to turn it | `docs/runbook/03-tuning.md` |
 | ABBA click-path detail | `docs/runbook/01-registration.md` |
 | QuPath detection detail | `docs/runbook/02-detection.md` |
+| working in the QuPath GUI (looking, hand counting) | `docs/runbook/04-qupath-gui.md` |
 | what the stages are and their status | `docs/pipeline-stages.yml` |
 | acquisition targets and failure modes | `ACQUISITION-CHECKLIST.md` |
 | where the data currently stands | `NEXT-SESSION.md` |
