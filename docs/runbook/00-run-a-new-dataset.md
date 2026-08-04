@@ -176,41 +176,47 @@ where every config bug on the pilots lived.
 
 ### 5b. `<project>/BraiAn.yml`
 
-`sync_project` does **not** deploy this — it is per-acquisition.
+`sync_project` does **not** deploy this — it is per-acquisition. **Do not copy it by
+hand**: that is how M5 Hipp3 got M3's pixel size on 2026-08-04, a 33% error caught only
+because calibration happened to refuse.
 
-**Copy it from the project that shares this dataset's ACQUISITION REGIME — same pixel
-size and same Z depth — not from whichever project you looked at last.** The existing
-regimes:
+```bash
+# check what's there, or scaffold a new one from the matching regime
+$PY scripts/setup_braian_config.py --project "<project>" --audit
+$PY scripts/setup_braian_config.py --project "<project>" --scaffold --z-planes 2
+```
 
-| regime | pixel µm | Z | copy `BraiAn.yml` from |
+It reads pixel size, channel names and the anchor **off the images**, picks the template
+by matching **acquisition regime** rather than by you remembering which project is which,
+and then audits the result. `--list-regimes` shows what exists:
+
+| regime | pixel µm | Z | seeds come from |
 | --- | --- | --- | --- |
 | M3 family | 0.4603569878472219 | 4 | `M3 Hipp2 072526/M3 Hipp2 072526 QuPath/` |
 | M5 family | 0.690535481770835 | 2 | `M5 072526/M5 073026 QuPath/` |
 
-Step 2 told you which row you are in. Getting this wrong is the single most likely
-mistake at this step — it happened on M5 Hipp3 (2026-08-04), where M3's config was
-copied onto 0.69 µm/px images and the notebook refused at calibration.
+**Z depth cannot be derived** — a MIP has already collapsed it — so pass `--z-planes`; it
+is recorded in the header, never inferred. It matters because markers are max-projected,
+so 4 planes samples ~3× the cell volume of 2.
 
-Then set **`requestedPixelSizeMicrons`** to this project's exact pixel size. Read it
-straight off the image rather than retyping it:
+Scaffolding refuses to overwrite an existing file. To fix one that is wrong, audit it and
+edit the one line the audit names.
 
-```bash
-$PY -c "import tifffile,re,sys; print(re.findall(r'PhysicalSizeX=\"([^\"]+)\"',
-  tifffile.TiffFile(sys.argv[1]).ome_metadata)[0])" \
-  "M5 Hipp3 080326/mips/M5-hipp3_s1_MIP.ome.tiff"
-```
+The audit is also worth running on projects that already work — it caught a stale absolute
+`threshold:` in M3 Hipp1 (ignored for the anchor channel, so pure confusion) and flagged
+that several projects carry a *rounded* pixel size where the full-precision value is free.
 
-Paste the **full-precision** value. If it does not match, BraiAnDetect resamples and
-every nucleus area comes out wrong.
+Notebook equivalent: `notebooks/01_calibrate.ipynb` **section 0**.
 
-The micron-denominated seeds (`sigmaMicrons`, `minAreaMicrons`, `maxAreaMicrons`,
-`cellExpansionMicrons`) are in microns and nominally transfer between regimes — but a
-nucleus at 0.69 µm/px is **~2.25× fewer pixels** than at 0.46. If segmentation looks
-wrong on the calibration section, `sigmaMicrons` is the first knob, not the threshold.
+The micron-denominated seeds (`sigmaMicrons`, `min`/`maxAreaMicrons`,
+`cellExpansionMicrons`) are carried from the template unchanged — they belong to a regime,
+not to a file. But a nucleus at 0.69 µm/px is **~2.25× fewer pixels** than at 0.46, so if
+segmentation looks wrong on the calibration section, `sigmaMicrons` is the first knob, not
+the threshold.
 
-Leave `classifiers: []` empty. That is deliberate — there is **one** classification
-path, in `02_detect_classify.groovy` driven by `pipeline.yml`. Repopulating it makes
-classification happen twice by two different rules.
+Leave `classifiers: []` empty. That is deliberate — there is **one** classification path,
+in `02_detect_classify.groovy` driven by `pipeline.yml`. Repopulating it makes
+classification happen twice by two different rules, and the audit reports it as an ERROR.
 
 ### 5c. Validate
 
