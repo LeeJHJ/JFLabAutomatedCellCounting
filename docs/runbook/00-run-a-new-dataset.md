@@ -176,17 +176,37 @@ where every config bug on the pilots lived.
 
 ### 5b. `<project>/BraiAn.yml`
 
-`sync_project` does **not** deploy this — it is per-acquisition. Copy it from the
-nearest matching acquisition and edit:
+`sync_project` does **not** deploy this — it is per-acquisition.
+
+**Copy it from the project that shares this dataset's ACQUISITION REGIME — same pixel
+size and same Z depth — not from whichever project you looked at last.** The existing
+regimes:
+
+| regime | pixel µm | Z | copy `BraiAn.yml` from |
+| --- | --- | --- | --- |
+| M3 family | 0.4603569878472219 | 4 | `M3 Hipp2 072526/M3 Hipp2 072526 QuPath/` |
+| M5 family | 0.690535481770835 | 2 | `M5 072526/M5 073026 QuPath/` |
+
+Step 2 told you which row you are in. Getting this wrong is the single most likely
+mistake at this step — it happened on M5 Hipp3 (2026-08-04), where M3's config was
+copied onto 0.69 µm/px images and the notebook refused at calibration.
+
+Then set **`requestedPixelSizeMicrons`** to this project's exact pixel size. Read it
+straight off the image rather than retyping it:
 
 ```bash
-cp "M3 Hipp2 072526/M3 Hipp2 072526 QuPath/BraiAn.yml" \
-   "M5 Hipp3 080326/M5 Hipp3 080326 QuPath/BraiAn.yml"
+$PY -c "import tifffile,re,sys; print(re.findall(r'PhysicalSizeX=\"([^\"]+)\"',
+  tifffile.TiffFile(sys.argv[1]).ome_metadata)[0])" \
+  "M5 Hipp3 080326/mips/M5-hipp3_s1_MIP.ome.tiff"
 ```
 
-Then change **`requestedPixelSizeMicrons`** to this project's pixel size from step 2.
-If it does not match `server.json` exactly, BraiAnDetect resamples and every nucleus
-area comes out wrong.
+Paste the **full-precision** value. If it does not match, BraiAnDetect resamples and
+every nucleus area comes out wrong.
+
+The micron-denominated seeds (`sigmaMicrons`, `minAreaMicrons`, `maxAreaMicrons`,
+`cellExpansionMicrons`) are in microns and nominally transfer between regimes — but a
+nucleus at 0.69 µm/px is **~2.25× fewer pixels** than at 0.46. If segmentation looks
+wrong on the calibration section, `sigmaMicrons` is the first knob, not the threshold.
 
 Leave `classifiers: []` empty. That is deliberate — there is **one** classification
 path, in `02_detect_classify.groovy` driven by `pipeline.yml`. Repopulating it makes
