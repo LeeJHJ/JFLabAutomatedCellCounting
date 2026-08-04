@@ -53,5 +53,6 @@ for (d in dets) {
 def invalid = (['<','>',':','"','/','\\','|','?','*'] as Set).collect { java.util.regex.Pattern.quote(it) }.join('|')
 def stem = getProjectEntry().getImageName().replaceAll(invalid, '')
 def f = new File(buildPathInProject("results", stem + "__atlas_cells.tsv"))
+f.getParentFile().mkdirs()   // fresh project: results/ may not exist yet
 f.text = sb.toString()
 println "Wrote ${n} cells with atlas-µm coords -> ${f.name}"

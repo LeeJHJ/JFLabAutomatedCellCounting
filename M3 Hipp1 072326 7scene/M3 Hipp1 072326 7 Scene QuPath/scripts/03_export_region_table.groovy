@@ -24,7 +24,8 @@
  * sanitized running entry name + stable entry id, so "Run for project"
  * never truncates/clobbers across entries):
  *   1. results/<stem>__percell_export.tsv — one row per detection: class,
- *      region_label, nucleus_area_um2, centroid_x_px, centroid_y_px, then one
+ *      region_label, nucleus_area_um2, centroid_x_px, centroid_y_px, anchor_mean,
+ *      then one
  *      "<marker>_bgsub" column PER declared non-anchor marker (D-04 — no
  *      fixed Fos/TdT pair; a TdT-only config emits only a TdT_bgsub column).
  *   2. results/<stem>__region_table.tsv — one row per atlas-region
@@ -316,7 +317,15 @@ dets.each { d ->
     def r = d.getROI()
     double cx = r != null ? r.getCentroidX() : Double.NaN
     double cy = r != null ? r.getCentroidY() : Double.NaN
-    def row = [cls, label, areaUm2, cx, cy]
+    // Anchor-channel nuclear intensity. NOT a marker -- it is exported so a
+    // NEGATIVE-CONTROL pseudo-marker can be built downstream: threshold the anchor at
+    // the same k and measure its "overlap" with a real marker. The anchor has no
+    // biological relationship to marker co-expression, so whatever overlap it shows is
+    // the TECHNICAL FLOOR (brightness, focus, section thickness, detection) that every
+    // real marker pair also travels. Without it, the floor has to be modelled instead
+    // of measured (see scripts/expected_overlap.py).
+    def anchorMean = numOrNaN(m, "Nucleus: ${anchorChannel} mean")
+    def row = [cls, label, areaUm2, cx, cy, anchorMean]
     // One <marker>_bgsub column PER declared non-anchor marker (D-04) -- never a fixed
     // two-column fos/tdt read; a TdT-only config emits only a TdT_bgsub column here.
     markers.each { marker ->
@@ -330,18 +339,20 @@ dets.each { d ->
 }
 
 def percellFile = new File(buildPathInProject("results", "${stem}__percell_export.tsv"))
+percellFile.getParentFile().mkdirs()   // fresh project: results/ may not exist yet
 // centroid_*_px are IMAGE-space pixel coordinates (not CCFv3 atlas microns) — the _px suffix keeps
 // that explicit per CLAUDE.md's micron-export rule; they are diagnostic only, unused downstream.
-def percellHeader = (["class", "region_label", "nucleus_area_um2", "centroid_x_px", "centroid_y_px"] +
-        markers.collect { "${it.name}_bgsub" }).join("\t")
+def percellHeader = (["class", "region_label", "nucleus_area_um2", "centroid_x_px", "centroid_y_px",
+        "anchor_mean"] + markers.collect { "${it.name}_bgsub" }).join("\t")
 def percellSb = new StringBuilder()
 percellSb.append(percellHeader).append("\n")
 percellRows.each { row ->
     def fixedCols = [row[0], row[1],
         Double.isNaN(row[2]) ? "" : String.format('%.4f', row[2]),
         Double.isNaN(row[3]) ? "" : String.format('%.3f', row[3]),
-        Double.isNaN(row[4]) ? "" : String.format('%.3f', row[4])]
-    def markerCols = (5..<row.size()).collect { idx -> Double.isNaN(row[idx]) ? "" : String.format('%.4f', row[idx]) }
+        Double.isNaN(row[4]) ? "" : String.format('%.3f', row[4]),
+        Double.isNaN(row[5]) ? "" : String.format('%.4f', row[5])]
+    def markerCols = (6..<row.size()).collect { idx -> Double.isNaN(row[idx]) ? "" : String.format('%.4f', row[idx]) }
     percellSb.append((fixedCols + markerCols).join("\t")).append("\n")
 }
 // Overwrite (truncate) each run — this is a per-run snapshot, not a growing cross-image reference.
@@ -447,6 +458,7 @@ regionAnnotations.each { ann ->
 def regionHeader = (["region_label", "hemisphere", "acronym", "is_leaf", "area_mm2"] +
         CATEGORIES.collectMany { cat -> ["${columnPrefixFor(cat)}_count", "${columnPrefixFor(cat)}_density"] }).join("\t")
 def regionFile = new File(buildPathInProject("results", "${stem}__region_table.tsv"))
+regionFile.getParentFile().mkdirs()   // fresh project: results/ may not exist yet
 def regionSb = new StringBuilder()
 regionSb.append(regionHeader).append("\n")
 regionRows.each { row ->

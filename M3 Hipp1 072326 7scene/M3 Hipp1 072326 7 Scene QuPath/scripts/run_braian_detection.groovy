@@ -162,11 +162,11 @@ if (thrMode == "span_fraction" && spanFrac == null) missing << "detection_thresh
 if (thrMode == "absolute" && absoluteThr == null)   missing << "detection_threshold.absolute (required when mode=absolute)"
 if (!missing.isEmpty()) {
     println "ERROR: pipeline.yml missing/invalid key(s): ${missing}. Aborting."
-    return
+    throw new RuntimeException("run_braian_detection: invalid pipeline.yml -- see message above")
 }
 if (!(thrMode in ["span_fraction", "absolute"])) {
     println "ERROR: detection_threshold.mode='${thrMode}' -- must be \"span_fraction\" or \"absolute\". Aborting."
-    return
+    throw new RuntimeException("run_braian_detection: invalid pipeline.yml -- see message above")
 }
 
 var anchorConf = config.channelDetections.find { it.name == anchorChannel }
@@ -203,7 +203,13 @@ if (thrMode == "absolute") {
         println "       (most common cause: peak_prominence too high, or resolution_level != 0)."
         println "       Refusing to fall back to a hardcoded value -- that is what made counts"
         println "       incomparable in the first place. Aborting."
-        return
+        // THROW, never return. A bare `return` exits the QuPath script with status 0,
+        // so a batch runner reads this abort as SUCCESS and proceeds to classify and
+        // export a section that has no detections (M5c_s3/M5c_s4, 2026-07-31). A
+        // fail-loud message that exits 0 is fail-silent to every caller.
+        throw new RuntimeException(
+            "threshold calibration failed on '${anchorChannel}' for " +
+            "${getProjectEntry().getImageName()} (floor=${floorVal}, bright=${brightVal})")
     }
     resolvedThreshold = Math.round(floorVal + spanFrac * (double) (brightVal - floorVal))
     println "THRESHOLD (mode=span_fraction) on ${anchorChannel}: ${resolvedThreshold}"
@@ -258,15 +264,22 @@ if (AtlasManager.isImported(atlasName, hierarchy)) {
     var atlas = new AtlasManager(atlasName, hierarchy)
     def invalidChars = (['<', '>', ':', '"', '/', '\\', '|', '?', '*'] as Set).collect { java.util.regex.Pattern.quote(it) }.join('|')
     def imageName = getProjectEntry().getImageName().replaceAll(invalidChars, '')
+    // A FRESH project has no results/ or regions_to_exclude/ directory -- nothing
+    // creates them until something writes there, so ensure them before every write
+    // rather than relying on an earlier stage having run first (a batch run starts
+    // at detection, with no calibration step ahead of it to make results/).
     var resultsFile = new File(buildPathInProject("results", imageName + "_regions.tsv"))
+    resultsFile.getParentFile().mkdirs()
     atlas.saveResults(allDetections + overlaps, resultsFile)
     def exclusionsFile = new File(buildPathInProject("regions_to_exclude", imageName + "_regions_to_exclude.txt"))
+    exclusionsFile.getParentFile().mkdirs()
     atlas.fixExclusions()
     atlas.saveExcludedRegions(exclusionsFile)
 
     // Provenance: the threshold actually used, next to the counts it produced.
     // Without this, a re-run months later cannot tell which cut made which numbers.
     def provFile = new File(buildPathInProject("results", imageName + "__detection_threshold.tsv"))
+    provFile.getParentFile().mkdirs()
     provFile.text = "image\tanchor_channel\tmode\tspan_frac\tthreshold\n" +
             "${getProjectEntry().getImageName()}\t${anchorChannel}\t${thrMode}\t" +
             "${thrMode == 'span_fraction' ? spanFrac : ''}\t${resolvedThreshold}\n"
