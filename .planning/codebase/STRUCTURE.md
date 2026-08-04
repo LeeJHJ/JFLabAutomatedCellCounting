@@ -8,7 +8,7 @@
 /home/jflab/Analysis/                         # Project root — all analysis work
 ├── czi_mip.py                                # CZI mosaic → MIP OME-TIFF conversion script
 ├── CLAUDE.md                                 # Project memory / rules-of-the-road for Claude Code
-├── SECTION_PIPELINE_SETUP (1).md             # Full install runbook (tools, conda envs, GUI steps)
+├── SECTION_PIPELINE_SETUP.md             # Full install runbook (tools, conda envs, GUI steps)
 ├── Analysis.code-workspace                   # VS Code workspace file
 │
 ├── Automated Cell Counting/                  # Intermediate / working image files
@@ -181,7 +181,7 @@ deepslice/   # Python 3.10 — DeepSlice local AP estimation (optional; online p
 - `<project>/allen_mouse_10um_java-Ontology.json`: Allen CCFv3 region hierarchy
 
 **Documentation:**
-- `/home/jflab/Analysis/SECTION_PIPELINE_SETUP (1).md`: Full install + configuration runbook
+- `/home/jflab/Analysis/SECTION_PIPELINE_SETUP.md`: Full install + configuration runbook
 - `/home/jflab/Analysis/CLAUDE.md`: Durable project rules and constraints
 - `/home/jflab/Analysis/presentation_screenshots/SCREENSHOT_INDEX.md`: Slide asset checklist
 

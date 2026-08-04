@@ -83,7 +83,7 @@ End-to-end TRAP2 cell classification pipeline for the first real section run: M3
 - `LD_LIBRARY_PATH=$HOME/section-pipeline/tools/elastix/lib` — required for elastix shared libraries; set in `~/.bashrc`
 - `DISPLAY=:0` — X display for GUI tools
 - `-Xmx32G` set in `$HOME/section-pipeline/tools/QuPath/lib/app/QuPath.cfg`
-- `SECTION_PIPELINE_SETUP (1).md` — full runbook for initial install
+- `SECTION_PIPELINE_SETUP.md` — full runbook for initial install
 - `CLAUDE.md` — durable rules and constraints
 
 ## Platform Requirements

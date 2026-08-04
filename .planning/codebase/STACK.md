@@ -95,7 +95,7 @@
 - `-Xmx32G` set in `$HOME/section-pipeline/tools/QuPath/lib/app/QuPath.cfg`
 
 **Build / setup:**
-- `SECTION_PIPELINE_SETUP (1).md` — full runbook for initial install
+- `SECTION_PIPELINE_SETUP.md` — full runbook for initial install
 - `CLAUDE.md` — durable rules and constraints
 
 ## Platform Requirements

@@ -30,7 +30,7 @@
 **GitHub Releases (install-time only):**
 - QuPath releases: `https://api.github.com/repos/qupath/qupath/releases/tags/v0.6.0`
 - elastix releases: `https://api.github.com/repos/SuperElastix/elastix/releases/tags/5.2.0`
-- Used only during initial `SECTION_PIPELINE_SETUP (1).md` install; not a runtime dependency
+- Used only during initial `SECTION_PIPELINE_SETUP.md` install; not a runtime dependency
 
 **Fiji Update Sites (install-time only):**
 - PTBIOP update site: provides ABBA plugin and BigWarp for Fiji
