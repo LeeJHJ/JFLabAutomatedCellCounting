@@ -24,8 +24,17 @@
  *      Double-click one to zoom to it.
  *   3. Count nuclei by eye in the DAPI channel with the detection overlay OFF
  *      (View > Show detections), then turn it back ON and compare.
- *   4. Record both numbers. Two or three boxes per region is enough to tell a
- *      2x over-count from a 10% one, which is the distinction that matters.
+ *   4. Write your number into the `human` column of the tally sheet this writes,
+ *      results/<image>__handcount.tsv, then read it back with
+ *          python3 scripts/qc_handcount.py --project "<project dir>"
+ *      Two or three boxes per region is enough to tell a 2x over-count from a
+ *      10% one, which is the distinction that matters.
+ *
+ *   Hand counts are the only tier-1 evidence this pipeline can produce about
+ *   detection accuracy, and they cost real minutes of a human's attention. So a
+ *   re-run NEVER overwrites a sheet that already has human numbers in it -- it
+ *   writes alongside and says so. The RNG seed is fixed, so the boxes are the
+ *   same ones and the two sheets are directly mergeable by (region, box).
  *
  * WHAT COUNTS AS A RESULT
  *   machine/human ~ 1.0        detection is sound; the gates' BANDS are what is wrong
@@ -138,6 +147,41 @@ REGIONS.each { acronym ->
 
 fireHierarchyUpdate()
 
+// ── Tally sheet ─────────────────────────────────────────────────────────────────
+// The machine's half, written to disk so the human's half can be added next to it
+// and the ratio computed by scripts/qc_handcount.py rather than in someone's head.
+def imageName = getProjectEntry().getImageName()
+def invalidChars = (['<', '>', ':', '"', '/', '\\', '|', '?', '*'] as Set)
+        .collect { java.util.regex.Pattern.quote(it) }.join('|')
+def safeName = imageName.replaceAll(invalidChars, '')
+def sheet = new File(buildPathInProject("results", safeName + "__handcount.tsv"))
+sheet.getParentFile().mkdirs()
+
+// Preserve any human counts already recorded against these same boxes.
+def priorHuman = [:]
+if (sheet.exists()) {
+    sheet.readLines().drop(1).each { line ->
+        def f = line.split("\t", -1)
+        if (f.size() >= 6 && f[5]?.trim()) priorHuman["${f[0]}/${f[1]}"] = f[5].trim()
+    }
+}
+def target = sheet
+if (priorHuman) {
+    target = new File(sheet.getParentFile(), safeName + "__handcount.new.tsv")
+    println ""
+    println "  NOTE: ${sheet.getName()} already carries ${priorHuman.size()} human count(s)."
+    println "        Not overwriting it. Machine counts from THIS run went to"
+    println "        ${target.getName()} -- the boxes are identical (fixed seed), so"
+    println "        the two are mergeable on (region, box) if you want to compare runs."
+}
+
+def sb = new StringBuilder("region\tbox\tside_um\tmachine\tmachine_per_mm2\thuman\n")
+rows.each { r ->
+    def carried = priorHuman["${r[0]}/${r[1]}"] ?: ""
+    sb.append("${r[0]}\t${r[1]}\t${r[2]}\t${r[3]}\t${r[4]}\t${carried}\n")
+}
+target.text = sb.toString()
+
 println ""
 println "=" * 72
 println "MACHINE counts -- now count these boxes BY EYE and compare"
@@ -155,4 +199,8 @@ println ""
 println "  Write the human numbers next to these. What you are looking for is the RATIO,"
 println "  not the absolute: is white matter over-counted relative to cortex, or is the"
 println "  gate's 0.6x expectation simply wrong for this prep?"
+println ""
+println "  tally sheet -> ${target.getAbsolutePath()}"
+println "  fill in the 'human' column, then:"
+println "    python3 scripts/qc_handcount.py --project \"${getProject().getBaseDirectory()}\""
 println "=" * 72
