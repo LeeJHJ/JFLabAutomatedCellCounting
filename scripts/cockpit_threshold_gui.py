@@ -86,6 +86,7 @@ Usage:
 from __future__ import annotations
 
 import argparse
+import json
 import re
 import sys
 from pathlib import Path
@@ -419,37 +420,124 @@ def slice_label(mip_path: Path) -> str:
     return Path(name).stem
 
 
+def groovy_endpoints(project_dir: Path | str | None,
+                     label: str) -> tuple[float | None, float | None]:
+    """Floor and bright peak AS MEASURED BY calibrate_threshold.groovy for this slice.
+
+    Read from <project>/results/<entry>__threshold_calibration.json, which the groovy
+    writes. Returns (None, None) when that file does not exist or carries no peaks --
+    the caller must then fall back to an absolute value rather than guess.
+    """
+    if project_dir is None:
+        return None, None
+    results = Path(project_dir) / "results"
+    if not results.is_dir():
+        return None, None
+    # The JSON is named after the QuPath ENTRY ("<file>.ome.tiff - <label>"), which the
+    # picker only knows the label half of. Prefer the tightest match so a label that is
+    # a prefix of another (s1 vs s10) cannot pick up its neighbour's calibration.
+    hits = [p for p in results.glob("*__threshold_calibration.json")
+            if p.name.split("__threshold_calibration")[0].endswith(label)]
+    if not hits:
+        return None, None
+    try:
+        doc = json.loads(sorted(hits)[0].read_text())
+    except (OSError, ValueError):
+        return None, None
+    floor, bright = doc.get("floor"), doc.get("bright_peak")
+    if floor is None or bright is None:
+        return None, None
+    return float(floor), float(bright)
+
+
+def translate_span_frac(threshold: float, g_floor: float | None,
+                        g_bright: float | None) -> float | None:
+    """The span fraction that makes the GROOVY land on `threshold`.
+
+    THE BUG THIS EXISTS TO FIX. `span_frac` is not a number, it is a number *plus the
+    two endpoints it is measured against*, and this module and the groovy measure
+    different endpoints on purpose. On M5-hipp3_s1 (2026-08-04):
+
+        picker  (512-bin histogram)          floor  256   bright 5,632
+        groovy  (BraiAnDetect, native res)   floor   41   bright   370
+
+    Both are doing the right thing for their job -- the picker bins coarsely precisely
+    to escape the background wrinkles that give the groovy a bright "peak" at 370 (see
+    find_peaks). But it means a span_frac read off the picker's slider and pasted into
+    pipeline.yml denotes a DIFFERENT INTENSITY when the groovy evaluates it. Pasting
+    0.50 there would have set the cut to 206, not to the 2,944 the operator saw.
+
+    So the picker never emits its own fraction. It emits the fraction that reproduces
+    the cut that was actually SEEN, computed in the groovy's endpoints.
+
+    Returns None when the cut cannot be expressed as a fraction of the groovy's span
+    at all -- outside [0, 1] means the groovy's two "peaks" do not bracket the chosen
+    value (the trimodal case), and an absolute is the only honest way to write it down.
+    """
+    if g_floor is None or g_bright is None or g_bright <= g_floor:
+        return None
+    frac = (float(threshold) - g_floor) / (g_bright - g_floor)
+    return frac if 0.0 <= frac <= 1.0 else None
+
+
 def _config_block(method: str, threshold: float, span_frac: float,
-                  scope: str, label: str) -> tuple[str, str]:
+                  scope: str, label: str,
+                  g_floor: float | None = None,
+                  g_bright: float | None = None) -> tuple[str, str]:
     """The YAML to paste, plus the caveat that belongs with it.
 
     PROJECT scope rewrites the project-wide rule and hits every section. SLICE scope
     writes a `threshold_overrides` entry, which is the right choice when one section's
     histogram breaks the rule but the rest are fine -- flipping the whole project to
     absolute would throw away self-calibration on every good section.
+
+    Every emitted number is in the GROOVY's terms, never this module's -- see
+    translate_span_frac for why those differ and what went wrong when they were
+    conflated.
     """
+    cut = int(round(threshold))
+    g_frac = translate_span_frac(threshold, g_floor, g_bright)
+
     if scope == "slice":
-        if method == "absolute":
-            body = (f'threshold_overrides:\n  {label}:\n    mode: "absolute"\n'
-                    f'    absolute: {int(round(threshold))}\n'
-                    f'    note: "set by eye -- <say why this slice needed it>"')
-        else:
-            body = (f'threshold_overrides:\n  {label}:\n'
-                    f'    span_frac: {span_frac:.2f}\n'
-                    f'    note: "set by eye -- <say why this slice needed it>"')
+        # A per-slice override is a fixed decision about ONE section; there is nothing
+        # for a fraction to self-calibrate across. Absolute is exact, endpoint-free,
+        # and cannot be silently reinterpreted by a peak-finder that disagrees.
+        note = f"set by eye -- <say why this slice needed it>"
+        if g_frac is not None:
+            note = (f"set by eye at {cut}; = span_frac {g_frac:.3f} on the groovy's own "
+                    f"floor->bright -- <say why this slice needed it>")
+        body = (f'threshold_overrides:\n  {label}:\n    mode: "absolute"\n'
+                f'    absolute: {cut}\n'
+                f'    note: "{note}"')
         carry = ("applies to <b>this slice only</b>; every other section keeps the "
-                 "project rule. The override is recorded in "
+                 "project rule. Written as an <b>absolute</b> on purpose: a "
+                 "<code>span_frac</code> here would be re-evaluated against the "
+                 "groovy's peaks, not the ones this histogram shows, and can land "
+                 "somewhere else entirely. The override is recorded in "
                  "<code>__detection_threshold.tsv</code>, so a later difference between "
                  "this section and the others can be traced to the threshold rather "
                  "than read as biology.")
         return body, carry
 
     if method == "span_fraction":
+        if g_frac is None:
+            body = (f'detection_threshold:\n  mode: "absolute"\n'
+                    f'  span_frac: {span_frac:.2f}\n  absolute: {cut}')
+            carry = ("<b>no usable groovy calibration for this slice</b>, so the "
+                     "fraction you set here cannot be translated into one the pipeline "
+                     "would evaluate the same way. Run "
+                     "<code>scripts/calibrate_threshold.groovy</code> on this slice and "
+                     "come back, or keep this absolute and accept that it does not "
+                     "self-calibrate.")
+            return body, carry
         return (f'detection_threshold:\n  mode: "span_fraction"\n'
-                f'  span_frac: {span_frac:.2f}\n  absolute: null',
-                "re-measured per section, so sections stay comparable")
+                f'  span_frac: {g_frac:.2f}\n  absolute: null',
+                f"re-measured per section, so sections stay comparable. "
+                f"<b>{g_frac:.2f}, not the {span_frac:.2f} on the slider</b> &mdash; "
+                f"that is the fraction that puts the pipeline's cut at {cut:,}, where "
+                f"you set it. The slider's fraction is measured on a coarser histogram.")
     return (f'detection_threshold:\n  mode: "absolute"\n'
-            f'  span_frac: {span_frac:.2f}\n  absolute: {int(round(threshold))}',
+            f'  span_frac: {span_frac:.2f}\n  absolute: {cut}',
             "<b>applies to EVERY section</b> and does not self-calibrate. If only one "
             "section needs this, switch 'apply to' to THIS SLICE instead.")
 
@@ -518,13 +606,21 @@ def emit_overrides(decisions: dict[str, dict]) -> str:
     out = ["threshold_overrides:"]
     for label, d in decisions.items():
         out.append(f"  {label}:")
-        if d["method"] == "absolute":
-            out.append('    mode: "absolute"')
-            out.append(f"    absolute: {int(round(d['threshold']))}")
-        else:
-            out.append(f"    span_frac: {d['span_frac']:.2f}")
+        # ALWAYS absolute, whichever method was used to arrive at the number. A
+        # per-slice override is one fixed decision about one section, and an absolute
+        # is the only form that survives the trip into the groovy unchanged -- see
+        # translate_span_frac. Emitting `span_frac` here once put M5-hipp3_s1's cut
+        # at 215 when the value chosen by eye was nowhere near that.
+        out.append('    mode: "absolute"')
+        out.append(f"    absolute: {int(round(d['threshold']))}")
+        bits = []
+        g_frac = d.get("groovy_span_frac")
+        if g_frac is not None:
+            bits.append(f"= span_frac {g_frac:.3f} in the pipeline's endpoints")
         frac = d.get("implied_span_frac")
-        detail = f", implied span_frac {frac:.3f}" if frac is not None else ""
+        if frac is not None:
+            bits.append(f"picker-space implied span_frac {frac:.3f}")
+        detail = ("; " + "; ".join(bits)) if bits else ""
         out.append(f'    note: "set by eye {d.get("when", "")}{detail}"')
     return "\n".join(out)
 
@@ -643,6 +739,14 @@ def launch(project: str | Path | None = None, mip: str | Path | None = None,
         ignore_sl.layout.display = "" if method_dd.value == "span_fraction" else "none"
         abs_sl.layout.display = "" if method_dd.value == "absolute" else "none"
 
+        # The groovy's own endpoints for THIS slice, cached per path -- every number
+        # this widget emits has to be expressed in them, not in the picker's.
+        gkey = f"groovy_peaks::{path}"
+        if gkey not in cache:
+            cache[gkey] = groovy_endpoints(project, slice_label(path))
+        _gf, _gb = cache[gkey]
+        _g_frac = translate_span_frac(thr, _gf, _gb) if thr is not None else None
+
         idx = crop_dd.value or 0
         y, x = cache["origins"][min(idx, len(cache["origins"]) - 1)]
         crop = image[y:y + crop_px, x:x + crop_px]
@@ -699,6 +803,22 @@ def launch(project: str | Path | None = None, mip: str | Path | None = None,
             if _imp is not None:
                 print(f"  implied span_frac {_imp:.3f} on this section's own floor->bright "
                       f"span ({floor:,.0f} -> {bright:,.0f})")
+            # What the PIPELINE would need to land here. Printed next to the picker's
+            # own fraction because the two are routinely far apart and only this one
+            # is safe to paste into pipeline.yml.
+            if _gf is not None:
+                if _g_frac is not None:
+                    print(f"  pipeline span_frac {_g_frac:.3f} on the groovy's endpoints "
+                          f"({_gf:,.0f} -> {_gb:,.0f}) -- THIS is the one that reproduces "
+                          f"the cut you see")
+                else:
+                    print(f"  the groovy's endpoints ({_gf:,.0f} -> {_gb:,.0f}) do not "
+                          f"bracket {thr:,.0f}, so no span_frac can express this cut. "
+                          f"Write it as an absolute.")
+            else:
+                print("  no groovy calibration found for this slice -- run "
+                      "scripts/calibrate_threshold.groovy on it and the paste-ready "
+                      "span_frac will appear here.")
             if not stats["bg_subtracted"]:
                 print("  NOTE: no pixel size in the OME-XML, so background was NOT "
                       "subtracted -- this mask is not what detection sees.")
@@ -713,9 +833,12 @@ def launch(project: str | Path | None = None, mip: str | Path | None = None,
         state["ignore_below"] = ignore_sl.value
 
         state["implied_span_frac"] = implied_span_frac(thr, floor, bright)
+        state["groovy_floor"], state["groovy_bright"] = _gf, _gb
+        state["groovy_span_frac"] = _g_frac
         state["scope"] = scope_dd.value
         yaml_block, carry = _config_block(method_dd.value, thr, span_sl.value,
-                                          scope_dd.value, slice_label(path))
+                                          scope_dd.value, slice_label(path),
+                                          g_floor=_gf, g_bright=_gb)
         note.value = (f"<pre style='margin:0'>{yaml_block}</pre>"
                       f"<div style='font-size:90%;color:#555'>{carry}</div>")
 
@@ -742,6 +865,7 @@ def launch(project: str | Path | None = None, mip: str | Path | None = None,
             "floor": state["floor"],
             "bright": state["bright"],
             "implied_span_frac": state["implied_span_frac"],
+            "groovy_span_frac": state.get("groovy_span_frac"),
             "when": _dt.date.today().isoformat(),
         }
         _show_ledger()
@@ -947,9 +1071,15 @@ def _self_test() -> None:
     blk, _ = _config_block("absolute", 1700.4, 0.25, "slice", "M5-hipp3_s1")
     assert blk.startswith("threshold_overrides:"), blk
     assert "M5-hipp3_s1:" in blk and "absolute: 1700" in blk, blk
-    blk_frac, _ = _config_block("span_fraction", 1600, 0.40, "slice", "M5c_s3")
-    assert "span_frac: 0.40" in blk_frac and "mode:" not in blk_frac, (
-        "a span_frac-only override must not also pin mode")
+    # A per-slice override is ALWAYS absolute now, whichever method produced the
+    # number. Emitting the slider's `span_frac` here is the bug that put M5-hipp3_s1
+    # at 215: pipeline.yml is read by the groovy, whose peak-finder disagrees with
+    # this module's on purpose, so the same fraction denotes a different intensity.
+    blk_frac, carry_frac = _config_block("span_fraction", 1600, 0.40, "slice", "M5c_s3")
+    assert "span_frac: 0.40" not in blk_frac, (
+        "REGRESSION: the picker's own fraction must never reach pipeline.yml")
+    assert 'mode: "absolute"' in blk_frac and "absolute: 1600" in blk_frac, blk_frac
+    assert "re-evaluated against" in carry_frac, "the caveat must say WHY it is absolute"
     proj, carry = _config_block("absolute", 1700, 0.25, "project", "M5-hipp3_s1")
     assert "threshold_overrides" not in proj, proj
     assert "EVERY section" in carry, "project-scope absolute must warn about its reach"
@@ -979,6 +1109,71 @@ def _self_test() -> None:
     assert anchor_channel_index(["DAPI-T4", "AF488-T3"]) == 0
     assert anchor_channel_index(["red", "green"]) == 1, "fallback must be the LAST channel"
     print("  (k) anchor channel resolved by name, falls back to last")
+
+    # (l) THE ENDPOINT MISMATCH. Every number this widget emits must be expressed in
+    #     the groovy's floor->bright span, never in this module's. Real measured
+    #     values from M5-hipp3_s1 (2026-08-04) are used deliberately: this is the
+    #     exact case that shipped a wrong cut.
+    G_FLOOR, G_BRIGHT = 41.0, 370.0          # BraiAnDetect, native resolution
+    P_FLOOR, P_BRIGHT = 256.0, 5632.0        # this module, 512-bin histogram
+
+    # The same fraction means two different intensities in the two spaces.
+    picker_cut = P_FLOOR + 0.25 * (P_BRIGHT - P_FLOOR)
+    groovy_cut = G_FLOOR + 0.25 * (G_BRIGHT - G_FLOOR)
+    assert abs(picker_cut - 1600) < 1 and abs(groovy_cut - 123) < 1, (picker_cut, groovy_cut)
+    assert picker_cut > groovy_cut * 10, "the mismatch this guards is an order of magnitude"
+
+    # A cut inside the groovy's span translates exactly.
+    frac = translate_span_frac(206, G_FLOOR, G_BRIGHT)
+    assert frac is not None and abs(frac - 0.50) < 0.01, frac
+    assert abs((G_FLOOR + frac * (G_BRIGHT - G_FLOOR)) - 206) < 1, "must round-trip"
+
+    # A cut OUTSIDE it cannot be a fraction at all -- 1,700 sits far above the
+    # groovy's "bright" peak of 370. Returning something anyway is how 215 happened.
+    assert translate_span_frac(1700, G_FLOOR, G_BRIGHT) is None, (
+        "a cut the groovy's peaks do not bracket has no honest span_frac")
+    assert translate_span_frac(1600, None, None) is None
+    assert translate_span_frac(1600, 500, 500) is None, "zero span must not divide"
+
+    # Project scope emits the TRANSLATED fraction, not the slider's.
+    pblk, pcarry = _config_block("span_fraction", 206, 0.25, "project", "M5-hipp3_s1",
+                                 g_floor=G_FLOOR, g_bright=G_BRIGHT)
+    assert "span_frac: 0.50" in pblk, pblk
+    assert "0.25" in pcarry, "the caveat must show the slider value it overrode"
+    # ...and falls back to absolute when it cannot translate, rather than emitting a
+    # fraction that would move the cut.
+    nblk, ncarry = _config_block("span_fraction", 1700, 0.25, "project", "M5-hipp3_s1",
+                                 g_floor=G_FLOOR, g_bright=G_BRIGHT)
+    assert 'mode: "absolute"' in nblk and "absolute: 1700" in nblk, nblk
+    assert "cannot be translated" in ncarry, ncarry
+    # With no calibration on disk at all, same fallback.
+    ublk, ucarry = _config_block("span_fraction", 1700, 0.25, "project", "M5-hipp3_s1")
+    assert 'mode: "absolute"' in ublk, ublk
+    assert "calibrate_threshold.groovy" in ucarry, ucarry
+
+    # The ledger records the groovy-space fraction in its note, and still emits absolute.
+    led = emit_overrides({"M5-hipp3_s1": {
+        "threshold": 206, "method": "span_fraction", "span_frac": 0.25,
+        "floor": P_FLOOR, "bright": P_BRIGHT, "implied_span_frac": -0.009,
+        "groovy_span_frac": 0.50, "when": "2026-08-04"}})
+    assert 'mode: "absolute"' in led and "absolute: 206" in led, led
+    assert "span_frac 0.500 in the pipeline's endpoints" in led, led
+
+    # groovy_endpoints reads what calibrate_threshold.groovy actually writes.
+    import tempfile
+    with tempfile.TemporaryDirectory() as _tmp:
+        _res = Path(_tmp) / "results"
+        _res.mkdir()
+        (_res / "M5-hipp3_s1_MIP.ome.tiff - M5-hipp3_s1__threshold_calibration.json"
+         ).write_text(json.dumps({"floor": 41, "bright_peak": 370, "threshold": 215}))
+        (_res / "M5-hipp3_s10_MIP.ome.tiff - M5-hipp3_s10__threshold_calibration.json"
+         ).write_text(json.dumps({"floor": 999, "bright_peak": 9999}))
+        assert groovy_endpoints(_tmp, "M5-hipp3_s1") == (41.0, 370.0)
+        assert groovy_endpoints(_tmp, "M5-hipp3_s10") == (999.0, 9999.0), (
+            "a label that is a prefix of another must not steal its calibration")
+        assert groovy_endpoints(_tmp, "nope") == (None, None)
+        assert groovy_endpoints(None, "M5-hipp3_s1") == (None, None)
+    print("  (l) every emitted number is in the groovy's endpoints, or is absolute")
 
     print("\nSELF-TEST PASSED")
 
