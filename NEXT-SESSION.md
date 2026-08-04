@@ -3,6 +3,10 @@
 **Written 2026-08-03** as a cold-start handoff. Assumes no memory of the session that
 wrote it. Supersedes `NEXT-TASK-m3-hipp2.md`, which is now history.
 
+> **Active task, 2026-08-04:** `NEXT-TASK-finish-m5hipp3-m3str1.md` — two datasets to
+> take end to end, and a `k_robust` omission on M5 Hipp3 to settle before its numbers
+> mean anything. Read that first; this file is the standing context behind it.
+
 Branch `generalize-pipeline-260729`, ~45 commits ahead of `main`, still unmerged.
 
 **Framing (operator, 2026-08-03): M3 and M5 were PROOF-OF-CONCEPT runs.** A fresh set
