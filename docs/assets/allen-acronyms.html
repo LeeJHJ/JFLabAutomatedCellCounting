@@ -1,0 +1,868 @@
+<title>Allen CCFv3 Acronym Lookup</title>
+<style>
+:root{
+  --paper:#fbfbfc; --deck:#ffffff; --sunk:#f0f1f4; --rule:#dfe1e8; --rule-2:#ebedf2;
+  --ink:#15161b; --ink-2:#4c5060; --ink-3:#828796;
+  --accent:#8c2f39; --accent-soft:#f7e8e9;
+  --ok:#1d6b4f; --ok-bg:#e2f2ea;
+  --off:#8a8f9e; --off-bg:#edeef2;
+  --flag:#8a5312; --flag-bg:#fbeedc; --flag-rule:#e6c79c;
+  --serif:"Iowan Old Style","Palatino Linotype",Palatino,Georgia,"Times New Roman",serif;
+  --sans:system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+  --mono:ui-monospace,SFMono-Regular,"SF Mono",Menlo,Consolas,monospace;
+  --on-accent:#ffffff;
+}
+@media (prefers-color-scheme:dark){:root{
+  --paper:#101216; --deck:#171a20; --sunk:#13161c; --rule:#262a33; --rule-2:#1d2028;
+  --ink:#e9ebf1; --ink-2:#a5abbb; --ink-3:#7a8091;
+  --accent:#e5919a; --accent-soft:#33191d;
+  --ok:#5bc79a; --ok-bg:#0f2e23;
+  --off:#7c8292; --off-bg:#1b1f27;
+  --flag:#dfab6c; --flag-bg:#2b2113; --flag-rule:#584223;
+  --on-accent:#1a1013;
+}}
+:root[data-theme="light"]{
+  --paper:#fbfbfc; --deck:#ffffff; --sunk:#f0f1f4; --rule:#dfe1e8; --rule-2:#ebedf2;
+  --ink:#15161b; --ink-2:#4c5060; --ink-3:#828796;
+  --accent:#8c2f39; --accent-soft:#f7e8e9;
+  --ok:#1d6b4f; --ok-bg:#e2f2ea; --off:#8a8f9e; --off-bg:#edeef2;
+  --flag:#8a5312; --flag-bg:#fbeedc; --flag-rule:#e6c79c; --on-accent:#ffffff;
+}
+:root[data-theme="dark"]{
+  --paper:#101216; --deck:#171a20; --sunk:#13161c; --rule:#262a33; --rule-2:#1d2028;
+  --ink:#e9ebf1; --ink-2:#a5abbb; --ink-3:#7a8091;
+  --accent:#e5919a; --accent-soft:#33191d;
+  --ok:#5bc79a; --ok-bg:#0f2e23; --off:#7c8292; --off-bg:#1b1f27;
+  --flag:#dfab6c; --flag-bg:#2b2113; --flag-rule:#584223; --on-accent:#1a1013;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--paper);color:var(--ink);font-family:var(--sans);
+  font-size:15px;line-height:1.55;-webkit-font-smoothing:antialiased}
+.page{max-width:1080px;margin:0 auto;padding:clamp(26px,4vw,52px) clamp(13px,3vw,30px) 90px;
+  display:flex;flex-direction:column;gap:24px}
+code{font-family:var(--mono);font-size:.88em;background:var(--sunk);border:1px solid var(--rule);
+  border-radius:4px;padding:1px 5px}
+
+.eyebrow{margin:0 0 10px;font-family:var(--mono);font-size:11px;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--accent)}
+h1{margin:0;font-family:var(--serif);font-size:clamp(28px,4.4vw,42px);line-height:1.06;
+  letter-spacing:-.016em;font-weight:600;text-wrap:balance;max-width:17ch}
+.lede{margin:14px 0 0;font-family:var(--serif);font-size:17px;line-height:1.5;color:var(--ink-2);
+  max-width:62ch}
+.stat{margin-top:16px;display:flex;flex-wrap:wrap;gap:6px 26px;font-family:var(--mono);
+  font-size:11.5px;color:var(--ink-3)}
+.stat b{color:var(--ink-2);font-weight:500;font-variant-numeric:tabular-nums}
+
+/* ---- search ---- */
+.search{display:flex;flex-direction:column;gap:10px;position:sticky;top:0;z-index:8;
+  background:var(--paper);padding:12px 0 11px;border-bottom:1px solid var(--rule)}
+.srow{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+input[type=search]{flex:1 1 260px;min-width:0;font:inherit;font-size:15px;padding:11px 14px;
+  border:1px solid var(--rule);border-radius:8px;background:var(--deck);color:var(--ink)}
+input[type=search]:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+select{font:inherit;font-size:13.5px;padding:9px 10px;border:1px solid var(--rule);border-radius:8px;
+  background:var(--deck);color:var(--ink);max-width:100%}
+select:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+.tgl{font:inherit;font-size:13px;cursor:pointer;padding:8px 13px;border-radius:20px;
+  border:1px solid var(--rule);background:var(--deck);color:var(--ink-2)}
+.tgl[aria-pressed=true]{background:var(--accent);border-color:var(--accent);color:var(--on-accent)}
+.tgl:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+#tally{margin-left:auto;font-family:var(--mono);font-size:11.5px;color:var(--ink-3);
+  font-variant-numeric:tabular-nums;white-space:nowrap}
+
+/* ---- panels ---- */
+.panel{border:1px solid var(--rule);border-radius:10px;background:var(--deck);overflow:hidden}
+.phead{padding:14px 16px;border-bottom:1px solid var(--rule-2);background:var(--sunk)}
+.phead h2{margin:0;font-size:15.5px;font-weight:640;letter-spacing:-.008em}
+.phead p{margin:5px 0 0;font-size:13.3px;color:var(--ink-2);max-width:76ch}
+.pbody{padding:14px 16px;display:flex;flex-direction:column;gap:12px}
+
+/* ---- check-a-list ---- */
+.tabs{display:flex;gap:0;border:1px solid var(--rule);border-radius:8px;overflow:hidden;
+  width:max-content;max-width:100%}
+.tab{font:inherit;font-size:13.5px;cursor:pointer;padding:8px 15px;border:0;background:var(--deck);
+  color:var(--ink-3);white-space:nowrap}
+.tab+.tab{border-left:1px solid var(--rule)}
+.tab[aria-pressed=true]{background:var(--accent);color:var(--on-accent);font-weight:600}
+.tab:focus-visible{outline:2px solid var(--accent);outline-offset:-2px}
+.tabhint{font-size:13px;color:var(--ink-2);margin:0}
+textarea{width:100%;min-height:96px;font-family:var(--mono);font-size:13px;line-height:1.6;
+  padding:11px 13px;border:1px solid var(--rule);border-radius:8px;background:var(--sunk);
+  color:var(--ink);resize:vertical}
+textarea.names{font-family:var(--serif);font-size:14.5px}
+textarea:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+.btn{font:inherit;font-size:13.5px;font-weight:600;cursor:pointer;padding:9px 16px;border-radius:8px;
+  border:1px solid var(--accent);background:var(--accent);color:var(--on-accent)}
+.btn.ghost{background:var(--deck);color:var(--ink-2);border-color:var(--rule);font-weight:500}
+.btn:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.res{display:flex;flex-direction:column;gap:11px}
+.res[hidden]{display:none}
+.bucket{border:1px solid var(--rule);border-radius:8px;padding:11px 13px;background:var(--sunk)}
+.bucket h3{margin:0 0 7px;font-family:var(--mono);font-size:10.5px;letter-spacing:.11em;
+  text-transform:uppercase;font-weight:700}
+.bucket.good h3{color:var(--ok)}
+.bucket.bad h3{color:var(--accent)}
+.bucket.warn h3{color:var(--flag)}
+.bucket ul{margin:0;padding:0;list-style:none;display:flex;flex-direction:column;gap:6px;
+  font-size:13.4px}
+.bucket li{display:flex;flex-wrap:wrap;gap:4px 8px;align-items:baseline}
+.bucket .in{font-family:var(--mono);font-size:12.5px;color:var(--ink)}
+.bucket.names .in{font-family:var(--serif);font-size:14px}
+.bucket .arrow{color:var(--ink-3)}
+.bucket .say{color:var(--ink-2)}
+.bucket .bhead{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;margin-bottom:7px}
+.bucket .bhead h3{margin:0}
+.acr.sm{font-size:12.5px;padding:2px 7px}
+.loc{font-family:var(--mono);font-size:12px;background:var(--deck);border:1px solid var(--rule);
+  border-radius:5px;padding:1px 6px;cursor:pointer;color:var(--ink-3);line-height:1.4}
+.loc:hover{border-color:var(--accent);color:var(--accent)}
+.loc:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.copyall{font:inherit;font-size:11.5px;font-family:var(--mono);cursor:pointer;padding:3px 9px;
+  border-radius:20px;border:1px solid var(--rule);background:var(--deck);color:var(--ink-2);
+  margin-left:auto}
+.copyall:hover{border-color:var(--accent);color:var(--accent)}
+.copyall:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.copyall.copied{color:var(--ok);border-color:var(--ok);background:var(--ok-bg)}
+.fix{font-family:var(--mono);font-size:12.5px;background:none;border:0;padding:0;cursor:pointer;
+  color:var(--accent);text-decoration:underline;text-underline-offset:2px}
+.fix:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+
+/* ---- index ---- */
+.tw{overflow-x:auto;border:1px solid var(--rule);border-radius:10px}
+table{width:100%;border-collapse:collapse;font-size:14px}
+thead th{background:var(--sunk);text-align:left;font-family:var(--mono);font-size:10px;
+  letter-spacing:.11em;text-transform:uppercase;color:var(--ink-3);font-weight:700;padding:9px 12px;
+  border-bottom:1px solid var(--rule);white-space:nowrap}
+tbody td{padding:0;border-bottom:1px solid var(--rule-2);vertical-align:middle}
+tbody tr:last-child td{border-bottom:none}
+tbody tr.r:hover{background:var(--sunk)}
+td>.cell{padding:6px 12px}
+.sw{width:11px;height:11px;border-radius:3px;display:inline-block;flex:none;
+  box-shadow:inset 0 0 0 1px rgba(0,0,0,.16)}
+.acr{font-family:var(--mono);font-size:13.5px;font-weight:640;line-height:1.3;color:var(--accent);
+  background:var(--accent-soft);border:1px solid transparent;border-radius:5px;padding:3px 8px;
+  cursor:pointer;white-space:nowrap}
+.acr:hover{border-color:var(--accent)}
+.acr:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.acr.copied{background:var(--ok-bg);color:var(--ok)}
+.nm{font-family:var(--serif);font-size:14.5px;color:var(--ink-2);line-height:1.35}
+.id{font-family:var(--mono);font-size:12.5px;color:var(--ink-3);font-variant-numeric:tabular-nums}
+.lvl{display:flex;align-items:center;gap:2px}
+.lvl i{width:3px;height:9px;background:var(--rule);border-radius:1px;display:block}
+.lvl i.on{background:var(--ink-3)}
+.lvl .d{font-family:var(--mono);font-size:10.5px;color:var(--ink-3);margin-left:5px;
+  font-variant-numeric:tabular-nums}
+.role{font-family:var(--mono);font-size:11px;color:var(--ink-3);white-space:nowrap}
+.role.parent{color:var(--flag)}
+.chip{font-family:var(--mono);font-size:10px;font-weight:700;letter-spacing:.06em;
+  text-transform:uppercase;padding:3px 7px;border-radius:20px;white-space:nowrap;
+  color:var(--off);background:var(--off-bg)}
+.chip.yes{color:var(--ok);background:var(--ok-bg)}
+.exp{font-family:var(--mono);font-size:12px;background:none;border:0;cursor:pointer;
+  color:var(--ink-3);padding:6px 10px;width:100%;text-align:left}
+.exp:hover{color:var(--accent)}
+.exp:focus-visible{outline:2px solid var(--accent);outline-offset:-2px}
+tr.detail>td{padding:0;background:var(--sunk);border-bottom:1px solid var(--rule)}
+tr.detail[hidden]{display:none}
+.dwrap{padding:13px 14px;display:flex;flex-direction:column;gap:12px}
+.dwrap h3{margin:0 0 5px;font-family:var(--mono);font-size:10.5px;letter-spacing:.12em;
+  text-transform:uppercase;color:var(--ink-3);font-weight:700}
+.crumb{display:flex;flex-wrap:wrap;gap:3px 5px;align-items:baseline;font-size:13px}
+.jump{font-family:var(--mono);font-size:12px;background:var(--deck);border:1px solid var(--rule);
+  border-radius:5px;padding:2px 7px;cursor:pointer;color:var(--ink-2)}
+.jump:hover{border-color:var(--accent);color:var(--accent)}
+.jump:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.jump.here{border-color:var(--accent);color:var(--accent);background:var(--accent-soft);font-weight:640}
+.sep{color:var(--ink-3)}
+.kidlist{display:flex;flex-wrap:wrap;gap:4px}
+.none{color:var(--ink-3);font-style:italic;font-size:12.5px}
+.warnrow{font-size:13px;color:var(--flag);background:var(--flag-bg);border:1px solid var(--flag-rule);
+  border-radius:7px;padding:9px 11px}
+
+.more{padding:13px;text-align:center;font-size:13px;color:var(--ink-3);background:var(--sunk);
+  border-top:1px solid var(--rule)}
+.more[hidden]{display:none}
+.empty{border:1px dashed var(--rule);border-radius:9px;padding:30px;text-align:center;
+  color:var(--ink-3)}
+.empty[hidden]{display:none}
+
+/* ---- literature terms ---- */
+.lithit{border:1px solid var(--flag-rule);background:var(--flag-bg);border-radius:9px;
+  padding:12px 14px;display:flex;flex-direction:column;gap:7px}
+.lithit[hidden]{display:none}
+.litrow{display:flex;flex-direction:column;gap:6px;padding:11px 12px;border:1px solid var(--rule);
+  border-radius:8px;background:var(--sunk)}
+.litrow .top{display:flex;flex-wrap:wrap;gap:7px;align-items:baseline}
+.term{font-family:var(--mono);font-size:13.5px;font-weight:640;color:var(--ink)}
+.kind{font-family:var(--mono);font-size:9.5px;font-weight:700;letter-spacing:.09em;
+  text-transform:uppercase;padding:3px 7px;border-radius:20px;white-space:nowrap}
+.kind.composite{color:var(--accent);background:var(--accent-soft)}
+.kind.alias{color:var(--ok);background:var(--ok-bg)}
+.kind.collision{color:var(--flag);background:var(--flag-bg)}
+.kind.positional{color:var(--off);background:var(--off-bg)}
+.also{font-size:12.5px;color:var(--ink-3);font-family:var(--serif)}
+.litnote{font-size:13px;color:var(--ink-2);max-width:78ch}
+.members{display:flex;flex-wrap:wrap;gap:4px;align-items:center}
+.members .eq{font-family:var(--mono);font-size:11.5px;color:var(--ink-3);margin-right:3px}
+.litgrid{display:flex;flex-direction:column;gap:9px}
+.kindhead{font-family:var(--mono);font-size:10.5px;letter-spacing:.11em;text-transform:uppercase;
+  color:var(--ink-3);font-weight:700;margin:6px 0 0}
+.kindhead:first-child{margin-top:0}
+.kindhead span{font-weight:400;text-transform:none;letter-spacing:0;color:var(--ink-2);
+  font-family:var(--sans);font-size:12.5px;margin-left:8px}
+
+/* ---- confusables ---- */
+.pairs{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:9px}
+.pair{border:1px solid var(--rule);border-radius:8px;padding:10px 12px;background:var(--sunk);
+  display:flex;flex-direction:column;gap:4px}
+.pair .one{display:flex;gap:8px;align-items:baseline;font-size:13px}
+.pair .one code{flex:none}
+.pair .one span{color:var(--ink-2);font-family:var(--serif);font-size:13.5px}
+
+footer{border-top:1px solid var(--rule);padding-top:16px;display:flex;flex-direction:column;gap:6px;
+  font-family:var(--mono);font-size:11.5px;color:var(--ink-3)}
+footer b{color:var(--ink-2);font-weight:500}
+@media (max-width:760px){.hide-s{display:none}}
+@media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+</style>
+
+<div class="page">
+  <header>
+    <p class="eyebrow" id="eyebrow"></p>
+    <h1>Allen CCFv3 acronym lookup</h1>
+    <p class="lede" id="lede"></p>
+    <div class="stat" id="stat"></div>
+  </header>
+
+  <div class="search">
+    <div class="srow">
+      <input type="search" id="q" placeholder="Acronym, region name, or structure id…" aria-label="Search the atlas">
+      <select id="div" aria-label="Filter by major division"></select>
+      <button class="tgl" id="onlyLeaf" type="button" aria-pressed="false">Leaves only</button>
+      <button class="tgl" id="onlyBG" type="button" aria-pressed="false">Missing from BrainGlobe</button>
+      <span id="tally"></span>
+    </div>
+  </div>
+
+  <div class="lithit" id="lithit" hidden></div>
+
+  <section class="panel">
+    <div class="phead">
+      <h2>Look up a list</h2>
+      <p>Paste what you have — acronyms from a config file, or region names from a paper,
+      a figure legend, a collaborator's email — and get back what the atlas calls them.
+      Nothing is uploaded; the lookup runs in this page.</p>
+    </div>
+    <div class="pbody">
+      <div class="tabs" role="group" aria-label="What you are pasting">
+        <button class="tab" id="tabAcr" type="button" aria-pressed="true"
+          aria-controls="paste">I have acronyms</button>
+        <button class="tab" id="tabName" type="button" aria-pressed="false"
+          aria-controls="paste">I have region names</button>
+      </div>
+      <p class="tabhint" id="tabhint"></p>
+      <textarea id="paste" spellcheck="false" aria-label="List to look up"></textarea>
+      <div class="srow">
+        <button class="btn" id="check" type="button">Look them up</button>
+        <button class="btn ghost" id="clear" type="button">Clear</button>
+      </div>
+      <div class="res" id="res" hidden></div>
+    </div>
+  </section>
+
+  <div class="tw">
+    <table>
+      <thead><tr>
+        <th style="width:1%"></th>
+        <th>Acronym</th>
+        <th>Region name</th>
+        <th class="hide-s">Id</th>
+        <th class="hide-s">Level</th>
+        <th class="hide-s">Role</th>
+        <th id="bgHead">BrainGlobe</th>
+        <th style="width:1%"></th>
+      </tr></thead>
+      <tbody id="rows"></tbody>
+    </table>
+    <div class="more" id="more" hidden></div>
+  </div>
+  <div class="empty" id="empty" hidden>No structure in this atlas matches that.</div>
+
+  <section class="panel">
+    <div class="phead">
+      <h2>Terms the literature uses that the atlas does not</h2>
+      <p>Papers are full of names that are not CCFv3 structures — mPFC, BNST, dorsal
+      hippocampus. Each one below expands to the atlas acronyms it actually covers, so you can
+      go from what a paper says to what your software will accept. These are <em>not</em> valid
+      region labels; do not paste the term itself into a config.</p>
+    </div>
+    <div class="pbody"><div class="litgrid" id="litgrid"></div></div>
+  </section>
+
+  <section class="panel">
+    <div class="phead">
+      <h2>Acronyms that get mistaken for each other</h2>
+      <p>Lookup is an exact, case-sensitive string match. A wrong-but-real acronym does not
+      error — it silently returns a different part of the brain.</p>
+    </div>
+    <div class="pbody"><div class="pairs" id="pairs"></div></div>
+  </section>
+
+  <footer id="foot"></footer>
+</div>
+
+<script id="data" type="application/json">{"atlas":"allen_mouse_10um_java","source":"docs/atlas/allen_mouse_10um_java-Ontology.json","built":"2026-08-03","hasBG":true,"bgName":"allen_mouse_10um_v1.2","bgCount":840,"acr":["root","grey","CH","CTX","CTXpl","Isocortex","FRP","FRP1","FRP2/3","FRP5","FRP6a","FRP6b","MO","MO1","MO2/3","MO5","MO6a","MO6b","MOp","MOp1","MOp2/3","MOp5","MOp6a","MOp6b","MOs","MOs1","MOs2/3","MOs5","MOs6a","MOs6b","SS","SS1","SS2/3","SS4","SS5","SS6a","SS6b","SSp","SSp1","SSp2/3","SSp4","SSp5","SSp6a","SSp6b","SSp-n","SSp-n1","SSp-n2/3","SSp-n4","SSp-n5","SSp-n6a","SSp-n6b","SSp-bfd","SSp-bfd1","SSp-bfd2/3","SSp-bfd4","SSp-bfd5","SSp-bfd6a","SSp-bfd6b","VISrll","VISrll1","VISrll2/3","VISrll4","VISrll5","VISrll6a","VISrll6b","SSp-ll","SSp-ll1","SSp-ll2/3","SSp-ll4","SSp-ll5","SSp-ll6a","SSp-ll6b","SSp-m","SSp-m1","SSp-m2/3","SSp-m4","SSp-m5","SSp-m6a","SSp-m6b","SSp-ul","SSp-ul1","SSp-ul2/3","SSp-ul4","SSp-ul5","SSp-ul6a","SSp-ul6b","SSp-tr","SSp-tr1","SSp-tr2/3","SSp-tr4","SSp-tr5","SSp-tr6a","SSp-tr6b","SSp-un","SSp-un1","SSp-un2/3","SSp-un4","SSp-un5","SSp-un6a","SSp-un6b","SSs","SSs1","SSs2/3","SSs4","SSs5","SSs6a","SSs6b","GU","GU1","GU2/3","GU4","GU5","GU6a","GU6b","VISC","VISC1","VISC2/3","VISC4","VISC5","VISC6a","VISC6b","AUD","AUDd","AUDd1","AUDd2/3","AUDd4","AUDd5","AUDd6a","AUDd6b","VISlla","VISlla1","VISlla2/3","VISlla4","VISlla5","VISlla6a","VISlla6b","AUDp","AUDp1","AUDp2/3","AUDp4","AUDp5","AUDp6a","AUDp6b","AUDpo","AUDpo1","AUDpo2/3","AUDpo4","AUDpo5","AUDpo6a","AUDpo6b","AUDv","AUDv1","AUDv2/3","AUDv4","AUDv5","AUDv6a","AUDv6b","VIS","VIS1","VIS2/3","VIS4","VIS5","VIS6a","VIS6b","VISal","VISal1","VISal2/3","VISal4","VISal5","VISal6a","VISal6b","VISam","VISam1","VISam2/3","VISam4","VISam5","VISam6a","VISam6b","VISl","VISl1","VISl2/3","VISl4","VISl5","VISl6a","VISl6b","VISp","VISp1","VISp2/3","VISp4","VISp5","VISp6a","VISp6b","VISpl","VISpl1","VISpl2/3","VISpl4","VISpl5","VISpl6a","VISpl6b","VISpm","VISpm1","VISpm2/3","VISpm4","VISpm5","VISpm6a","VISpm6b","VISli","VISli1","VISli2/3","VISli4","VISli5","VISli6a","VISli6b","VISpor","VISpor1","VISpor2/3","VISpor4","VISpor5","VISpor6a","VISpor6b","ACA","ACA1","ACA2/3","ACA5","ACA6a","ACA6b","ACAd","ACAd1","ACAd2/3","ACAd5","ACAd6a","ACAd6b","ACAv","ACAv1","ACAv2/3","ACAv5","ACAv6a","ACAv6b","PL","PL1","PL2","PL2/3","PL5","PL6a","PL6b","ILA","ILA1","ILA2","ILA2/3","ILA5","ILA6a","ILA6b","ORB","ORB1","ORB2/3","ORB5","ORB6a","ORB6b","ORBl","ORBl1","ORBl2/3","ORBl5","ORBl6a","ORBl6b","ORBm","ORBm1","ORBm2","ORBm2/3","ORBm5","ORBm6a","ORBm6b","ORBv","ORBvl","ORBvl1","ORBvl2/3","ORBvl5","ORBvl6a","ORBvl6b","AI","AId","AId1","AId2/3","AId5","AId6a","AId6b","AIp","AIp1","AIp2/3","AIp5","AIp6a","AIp6b","AIv","AIv1","AIv2/3","AIv5","AIv6a","AIv6b","RSP","RSPagl","RSPagl1","RSPagl2/3","RSPagl5","RSPagl6a","RSPagl6b","VISmma","VISmma1","VISmma2/3","VISmma4","VISmma5","VISmma6a","VISmma6b","VISmmp","VISmmp1","VISmmp2/3","VISmmp4","VISmmp5","VISmmp6a","VISmmp6b","VISm","VISm1","VISm2/3","VISm4","VISm5","VISm6a","VISm6b","RSPd","RSPd1","RSPd2/3","RSPd4","RSPd5","RSPd6a","RSPd6b","RSPv","RSPv1","RSPv2","RSPv2/3","RSPv5","RSPv6a","RSPv6b","PTLp","PTLp1","PTLp2/3","PTLp4","PTLp5","PTLp6a","PTLp6b","VISa","VISa1","VISa2/3","VISa4","VISa5","VISa6a","VISa6b","VISrl","VISrl1","VISrl2/3","VISrl4","VISrl5","VISrl6a","VISrl6b","TEa","TEa1","TEa2/3","TEa4","TEa5","TEa6a","TEa6b","PERI","PERI1","PERI2/3","PERI5","PERI6a","PERI6b","ECT","ECT1","ECT2/3","ECT5","ECT6a","ECT6b","OLF","MOB","MOBgl","MOBgr","MOBipl","MOBmi","MOBopl","AOB","AOBgl","AOBgr","AOBmi","AON","AONd","AONe","AONl","AONm","AONpv","AON1","AON2","TT","TTd","TTd1-4","TTd1","TTd2","TTd3","TTd4","TTv","TTv1-3","TTv1","TTv2","TTv3","DP","DP1","DP2","DP2/3","DP5","DP6a","PIR","PIR1-3","PIR1","PIR2","PIR3","NLOT","NLOT1-3","NLOT1","NLOT2","NLOT3","COA","COAa","COAa1","COAa2","COAa3","COAp","COApl","COApl1-2","COApl1-3","COApl1","COApl2","COApl3","COApm","COApm1-2","COApm1-3","COApm1","COApm2","COApm3","PAA","PAA1-3","PAA1","PAA2","PAA3","TR","TR1-3","TR1","TR2","TR3","HPF","HIP","CA","CA1","CA1slm","CA1so","CA1sp","CA1sr","CA2","CA2slm","CA2so","CA2sp","CA2sr","CA3","CA3slm","CA3slu","CA3so","CA3sp","CA3sr","DG","DG-mo","DG-po","DG-sg","DG-sgz","DGcr","DGcr-mo","DGcr-po","DGcr-sg","DGlb","DGlb-mo","DGlb-po","DGlb-sg","DGmb","DGmb-mo","DGmb-po","DGmb-sg","FC","IG","RHP","ENT","ENTl","ENTl1","ENTl2","ENTl2/3","ENTl2a","ENTl2b","ENTl3","ENTl4","ENTl4/5","ENTl5","ENTl5/6","ENTl6a","ENTl6b","ENTm","ENTm1","ENTm2","ENTm2a","ENTm2b","ENTm3","ENTm4","ENTm5","ENTm5/6","ENTm6","ENTmv","ENTmv1","ENTmv2","ENTmv3","ENTmv4","ENTmv5/6","PAR","PAR1","PAR2","PAR3","POST","POST1","POST2","POST3","PRE","PRE1","PRE2","PRE3","SUB","SUBd","SUBd-m","SUBd-sp","SUBd-sr","SUBv","SUBv-m","SUBv-sp","SUBv-sr","ProS","ProSd","ProSd-m","ProSd-sp","ProSd-sr","ProSv","ProSv-m","ProSv-sp","Prosv-sr","HATA","APr","CTXsp","6b","CLA","EP","EPd","EPv","LA","BLA","BLAa","BLAp","BLAv","BMA","BMAa","BMAp","PA","CNU","STR","STRd","CP","STRv","ACB","FS","OT","isl","islm","OT1-3","OT1","OT2","OT3","LSS","LSX","LS","LSc","LSr","LSv","SF","SH","sAMY","AAA","BA","CEA","CEAc","CEAl","CEAm","IA","MEA","MEAad","MEAav","MEApd","MEApd-a","MEApd-b","MEApd-c","MEApv","PAL","PALd","GPe","GPi","PALv","SI","MA","PALm","MSC","MS","NDB","TRS","PALc","BST","BSTa","BSTal","BSTam","BSTdm","BSTfu","BSTju","BSTmg","BSTov","BSTrh","BSTv","BSTp","BSTd","BSTpr","BSTif","BSTtr","BSTse","BAC","BS","IB","TH","DORsm","VENT","VAL","VM","VP","VPL","VPLpc","VPM","VPMpc","PoT","SPF","SPFm","SPFp","SPA","PP","GENd","MG","MGd","MGv","MGm","LGd","LGd-sh","LGd-co","LGd-ip","DORpm","LAT","LP","PO","POL","SGN","Eth","REth","ATN","AV","AM","AMd","AMv","AD","IAM","IAD","LD","MED","IMD","MD","MDc","MDl","MDm","SMT","PR","MTN","PVT","PT","RE","Xi","ILM","RH","CM","PCN","CL","PF","PIL","RT","GENv","IGL","IntG","LGv","LGvl","LGvm","SubG","EPI","MH","LH","PIN","HY","PVZ","SO","ASO","NC","PVH","PVHm","PVHam","PVHmm","PVHpm","PVHpml","PVHpmm","PVHp","PVHap","PVHmpd","PVHpv","PVa","PVi","ARH","PVR","ADP","AHA","AVP","AVPV","DMH","DMHa","DMHp","DMHv","MEPO","MPO","OV","PD","PS","PSCH","PVp","PVpo","SBPV","SCH","SFO","VMPO","VLPO","MEZ","AHN","AHNa","AHNc","AHNd","AHNp","MBO","LM","MM","MMme","MMl","MMm","MMp","MMd","SUM","SUMl","SUMm","TM","TMd","TMv","MPN","MPNc","MPNl","MPNm","PMd","PMv","PVHd","PVHdp","PVHf","PVHlp","PVHmpv","VMH","VMHa","VMHc","VMHdm","VMHvl","PH","LZ","LHA","LPO","PST","PSTN","PeF","RCH","STN","TU","ZI","A13","FF","ME","MB","MBsen","SCs","SCop","SCsg","SCzo","IC","ICc","ICd","ICe","NB","SAG","PBG","MEV","SCO","MBmot","SNr","VTA","PN","RR","MRN","MRNm","MRNmg","MRNp","SCm","SCdg","SCdw","SCiw","SCig","SCig-a","SCig-b","SCig-c","PAG","PRC","INC","ND","Su3","PRT","APN","MPT","NOT","NPC","OP","PPT","RPF","InCo","CUN","RN","III","MA3","EW","IV","Pa4","VTN","AT","LT","DT","MT","SNl","MBsta","SNc","PPN","RAmb","IF","IPN","IPR","IPC","IPA","IPL","IPI","IPDM","IPDL","IPRL","RL","CLI","DR","HB","P","P-sen","NLL","NLLd","NLLh","NLLv","PSV","PB","KF","PBl","PBlc","PBld","PBle","PBls","PBlv","PBm","PBme","PBmm","PBmv","SOC","POR","SOCm","SOCl","P-mot","B","DTN","LTN","PDTg","PCG","PG","PRNc","PRNv","SG","SSN","SUT","TRN","V","P5","Acs5","PC5","I5","P-sat","CS","CSl","CSm","LC","LDT","NI","PRNr","RPO","SLC","SLD","MY","MY-sen","AP","CN","CNlam","CNspg","DCO","VCO","DCN","CU","GR","ECU","NTB","NTS","NTSce","NTSco","NTSge","NTSl","NTSm","SPVC","SPVI","SPVO","SPVOcdm","SPVOmdmd","SPVOmdmv","SPVOrdm","SPVOvl","Pa5","z","MY-mot","VI","ACVI","VII","ACVII","EV","AMB","AMBd","AMBv","DMX","ECO","GRN","ICB","IO","IRN","ISN","LIN","LRN","LRNm","LRNp","MARN","MDRN","MDRNd","MDRNv","PARN","PAS","PGRN","PGRNd","PGRNl","PHY","NIS","NR","PRP","PMR","PPY","PPYd","PPYs","VNC","LAV","MV","SPIV","SUV","x","XII","y","INV","MY-sat","RM","RPA","RO","CB","CBX","CBXmo","CBXpu","CBXgr","VERM","LING","LINGmo","LINGpu","LINGgr","CENT","CENT2","CENT2mo","CENT2pu","CENT2gr","CENT3","CENT3mo","CENT3pu","CENT3gr","CUL","CUL4","CUL4mo","CUL4pu","CUL4gr","CUL5","CUL5mo","CUL5pu","CUL5gr","CUL4, 5","CUL4, 5mo","CUL4, 5pu","CUL4, 5gr","DEC","DECmo","DECpu","DECgr","FOTU","FOTUmo","FOTUpu","FOTUgr","PYR","PYRmo","PYRpu","PYRgr","UVU","UVUmo","UVUpu","UVUgr","NOD","NODmo","NODpu","NODgr","HEM","SIM","SIMmo","SIMpu","SIMgr","AN","ANcr1","ANcr1mo","ANcr1pu","ANcr1gr","ANcr2","ANcr2mo","ANcr2pu","ANcr2gr","PRM","PRMmo","PRMpu","PRMgr","COPY","COPYmo","COPYpu","COPYgr","PFL","PFLmo","PFLpu","PFLgr","FL","FLmo","FLpu","FLgr","CBN","FN","IP","DN","VeCB","fiber tracts","cm","tn","von","In","onl","lotg","lot","lotd","aolt","aco","IIn","aot","bsc","csc","och","opt","ttp","IIIn","mlf","pc","IVn","IVd","VIn","Vn","moV","sV","mtV","sptV","VIIn","iVIIn","gVIIn","VIIIn","cvb","vVIIIn","cVIIIn","tb","ias","das","ll","cic","bic","IXn","Xn","ts","XIn","XIIn","vrt","drt","cett","dl","dcm","vc","fpr","dc","cuf","grf","iaf","ml","sst","sttl","sttv","scrt","sop","srp","svp","stp","shp","step","hht","cbf","cbc","cbp","scp","dscp","sct","uf","sctv","mcp","icp","sctd","cct","jrb","bct","oct","rct","tct","arb","scwm","lfbs","cc","fa","ec","ee","ccg","fp","ccr","ccb","ccs","cst","int","cpd","cte","crt","cpt","cbt","py","pyd","cstc","cstu","lfbst","em","im","mtc","tp","or","ar","eps","epsc","pap","nst","ntt","ptf","snp","stf","tsp","tspd","dtd","tspc","rust","vtd","rrt","ctb","rst","rstl","rstm","vsp","mfbs","mfbc","amc","apd","act","cing","fxs","alv","df","fi","fxprg","db","fxpo","mct","fx","hc","dhc","vhc","per","ab","lab","st","stc","mfsbshy","mfb","vlt","poc","sup","supa","supd","supv","pmx","smd","php","phpd","phpl","phpm","phpv","pvbh","mfbsma","pm","mtt","mtg","mp","mfbst","pvbt","mfbse","sm","fr","hbc","PIS","mfbsm","dlf","dtt","VS","VL","RC","SEZ","chpl","chfl","IVF","V3","AQ","V4","V4r","c","grv","grv of CTX","eg","hf","rf","ri","grv of CBX","pce","pcf","pri","psf","ppf","sec","plf","nf","sif","icf","apf","ipf","pms","pfs","IPF","retina"],"name":["root","Basic cell groups and regions","Cerebrum","Cerebral cortex","Cortical plate","Isocortex","Frontal pole, cerebral cortex","Frontal pole, layer 1","Frontal pole, layer 2/3","Frontal pole, layer 5","Frontal pole, layer 6a","Frontal pole, layer 6b","Somatomotor areas","Somatomotor areas, Layer 1","Somatomotor areas, Layer 2/3","Somatomotor areas, Layer 5","Somatomotor areas, Layer 6a","Somatomotor areas, Layer 6b","Primary motor area","Primary motor area, Layer 1","Primary motor area, Layer 2/3","Primary motor area, Layer 5","Primary motor area, Layer 6a","Primary motor area, Layer 6b","Secondary motor area","Secondary motor area, layer 1","Secondary motor area, layer 2/3","Secondary motor area, layer 5","Secondary motor area, layer 6a","Secondary motor area, layer 6b","Somatosensory areas","Somatosensory areas, layer 1","Somatosensory areas, layer 2/3","Somatosensory areas, layer 4","Somatosensory areas, layer 5","Somatosensory areas, layer 6a","Somatosensory areas, layer 6b","Primary somatosensory area","Primary somatosensory area, layer 1","Primary somatosensory area, layer 2/3","Primary somatosensory area, layer 4","Primary somatosensory area, layer 5","Primary somatosensory area, layer 6a","Primary somatosensory area, layer 6b","Primary somatosensory area, nose","Primary somatosensory area, nose, layer 1","Primary somatosensory area, nose, layer 2/3","Primary somatosensory area, nose, layer 4","Primary somatosensory area, nose, layer 5","Primary somatosensory area, nose, layer 6a","Primary somatosensory area, nose, layer 6b","Primary somatosensory area, barrel field","Primary somatosensory area, barrel field, layer 1","Primary somatosensory area, barrel field, layer 2/3","Primary somatosensory area, barrel field, layer 4","Primary somatosensory area, barrel field, layer 5","Primary somatosensory area, barrel field, layer 6a","Primary somatosensory area, barrel field, layer 6b","Rostrolateral lateral visual area","Rostrolateral lateral visual area, layer 1","Rostrolateral lateral visual area, layer 2/3","Rostrolateral lateral visual area, layer 4","Rostrolateral lateral visual area,layer 5","Rostrolateral lateral visual area, layer 6a","Rostrolateral lateral visual area, layer 6b","Primary somatosensory area, lower limb","Primary somatosensory area, lower limb, layer 1","Primary somatosensory area, lower limb, layer 2/3","Primary somatosensory area, lower limb, layer 4","Primary somatosensory area, lower limb, layer 5","Primary somatosensory area, lower limb, layer 6a","Primary somatosensory area, lower limb, layer 6b","Primary somatosensory area, mouth","Primary somatosensory area, mouth, layer 1","Primary somatosensory area, mouth, layer 2/3","Primary somatosensory area, mouth, layer 4","Primary somatosensory area, mouth, layer 5","Primary somatosensory area, mouth, layer 6a","Primary somatosensory area, mouth, layer 6b","Primary somatosensory area, upper limb","Primary somatosensory area, upper limb, layer 1","Primary somatosensory area, upper limb, layer 2/3","Primary somatosensory area, upper limb, layer 4","Primary somatosensory area, upper limb, layer 5","Primary somatosensory area, upper limb, layer 6a","Primary somatosensory area, upper limb, layer 6b","Primary somatosensory area, trunk","Primary somatosensory area, trunk, layer 1","Primary somatosensory area, trunk, layer 2/3","Primary somatosensory area, trunk, layer 4","Primary somatosensory area, trunk, layer 5","Primary somatosensory area, trunk, layer 6a","Primary somatosensory area, trunk, layer 6b","Primary somatosensory area, unassigned","Primary somatosensory area, unassigned, layer 1","Primary somatosensory area, unassigned, layer 2/3","Primary somatosensory area, unassigned, layer 4","Primary somatosensory area, unassigned, layer 5","Primary somatosensory area, unassigned, layer 6a","Primary somatosensory area, unassigned, layer 6b","Supplemental somatosensory area","Supplemental somatosensory area, layer 1","Supplemental somatosensory area, layer 2/3","Supplemental somatosensory area, layer 4","Supplemental somatosensory area, layer 5","Supplemental somatosensory area, layer 6a","Supplemental somatosensory area, layer 6b","Gustatory areas","Gustatory areas, layer 1","Gustatory areas, layer 2/3","Gustatory areas, layer 4","Gustatory areas, layer 5","Gustatory areas, layer 6a","Gustatory areas, layer 6b","Visceral area","Visceral area, layer 1","Visceral area, layer 2/3","Visceral area, layer 4","Visceral area, layer 5","Visceral area, layer 6a","Visceral area, layer 6b","Auditory areas","Dorsal auditory area","Dorsal auditory area, layer 1","Dorsal auditory area, layer 2/3","Dorsal auditory area, layer 4","Dorsal auditory area, layer 5","Dorsal auditory area, layer 6a","Dorsal auditory area, layer 6b","Laterolateral anterior visual area","Laterolateral anterior visual area, layer 1","Laterolateral anterior visual area, layer 2/3","Laterolateral anterior visual area, layer 4","Laterolateral anterior visual area,layer 5","Laterolateral anterior visual area, layer 6a","Laterolateral anterior visual area, layer 6b","Primary auditory area","Primary auditory area, layer 1","Primary auditory area, layer 2/3","Primary auditory area, layer 4","Primary auditory area, layer 5","Primary auditory area, layer 6a","Primary auditory area, layer 6b","Posterior auditory area","Posterior auditory area, layer 1","Posterior auditory area, layer 2/3","Posterior auditory area, layer 4","Posterior auditory area, layer 5","Posterior auditory area, layer 6a","Posterior auditory area, layer 6b","Ventral auditory area","Ventral auditory area, layer 1","Ventral auditory area, layer 2/3","Ventral auditory area, layer 4","Ventral auditory area, layer 5","Ventral auditory area, layer 6a","Ventral auditory area, layer 6b","Visual areas","Visual areas, layer 1","Visual areas, layer 2/3","Visual areas, layer 4","Visual areas, layer 5","Visual areas, layer 6a","Visual areas, layer 6b","Anterolateral visual area","Anterolateral visual area, layer 1","Anterolateral visual area, layer 2/3","Anterolateral visual area, layer 4","Anterolateral visual area, layer 5","Anterolateral visual area, layer 6a","Anterolateral visual area, layer 6b","Anteromedial visual area","Anteromedial visual area, layer 1","Anteromedial visual area, layer 2/3","Anteromedial visual area, layer 4","Anteromedial visual area, layer 5","Anteromedial visual area, layer 6a","Anteromedial visual area, layer 6b","Lateral visual area","Lateral visual area, layer 1","Lateral visual area, layer 2/3","Lateral visual area, layer 4","Lateral visual area, layer 5","Lateral visual area, layer 6a","Lateral visual area, layer 6b","Primary visual area","Primary visual area, layer 1","Primary visual area, layer 2/3","Primary visual area, layer 4","Primary visual area, layer 5","Primary visual area, layer 6a","Primary visual area, layer 6b","Posterolateral visual area","Posterolateral visual area, layer 1","Posterolateral visual area, layer 2/3","Posterolateral visual area, layer 4","Posterolateral visual area, layer 5","Posterolateral visual area, layer 6a","Posterolateral visual area, layer 6b","posteromedial visual area","posteromedial visual area, layer 1","posteromedial visual area, layer 2/3","posteromedial visual area, layer 4","posteromedial visual area, layer 5","posteromedial visual area, layer 6a","posteromedial visual area, layer 6b","Laterointermediate area","Laterointermediate area, layer 1","Laterointermediate area, layer 2/3","Laterointermediate area, layer 4","Laterointermediate area, layer 5","Laterointermediate area, layer 6a","Laterointermediate area, layer 6b","Postrhinal area","Postrhinal area, layer 1","Postrhinal area, layer 2/3","Postrhinal area, layer 4","Postrhinal area, layer 5","Postrhinal area, layer 6a","Postrhinal area, layer 6b","Anterior cingulate area","Anterior cingulate area, layer 1","Anterior cingulate area, layer 2/3","Anterior cingulate area, layer 5","Anterior cingulate area, layer 6a","Anterior cingulate area, layer 6b","Anterior cingulate area, dorsal part","Anterior cingulate area, dorsal part, layer 1","Anterior cingulate area, dorsal part, layer 2/3","Anterior cingulate area, dorsal part, layer 5","Anterior cingulate area, dorsal part, layer 6a","Anterior cingulate area, dorsal part, layer 6b","Anterior cingulate area, ventral part","Anterior cingulate area, ventral part, layer 1","Anterior cingulate area, ventral part, layer 2/3","Anterior cingulate area, ventral part, layer 5","Anterior cingulate area, ventral part, 6a","Anterior cingulate area, ventral part, 6b","Prelimbic area","Prelimbic area, layer 1","Prelimbic area, layer 2","Prelimbic area, layer 2/3","Prelimbic area, layer 5","Prelimbic area, layer 6a","Prelimbic area, layer 6b","Infralimbic area","Infralimbic area, layer 1","Infralimbic area, layer 2","Infralimbic area, layer 2/3","Infralimbic area, layer 5","Infralimbic area, layer 6a","Infralimbic area, layer 6b","Orbital area","Orbital area, layer 1","Orbital area, layer 2/3","Orbital area, layer 5","Orbital area, layer 6a","Orbital area, layer 6b","Orbital area, lateral part","Orbital area, lateral part, layer 1","Orbital area, lateral part, layer 2/3","Orbital area, lateral part, layer 5","Orbital area, lateral part, layer 6a","Orbital area, lateral part, layer 6b","Orbital area, medial part","Orbital area, medial part, layer 1","Orbital area, medial part, layer 2","Orbital area, medial part, layer 2/3","Orbital area, medial part, layer 5","Orbital area, medial part, layer 6a","Orbital area, medial part, layer 6b","Orbital area, ventral part","Orbital area, ventrolateral part","Orbital area, ventrolateral part, layer 1","Orbital area, ventrolateral part, layer 2/3","Orbital area, ventrolateral part, layer 5","Orbital area, ventrolateral part, layer 6a","Orbital area, ventrolateral part, layer 6b","Agranular insular area","Agranular insular area, dorsal part","Agranular insular area, dorsal part, layer 1","Agranular insular area, dorsal part, layer 2/3","Agranular insular area, dorsal part, layer 5","Agranular insular area, dorsal part, layer 6a","Agranular insular area, dorsal part, layer 6b","Agranular insular area, posterior part","Agranular insular area, posterior part, layer 1","Agranular insular area, posterior part, layer 2/3","Agranular insular area, posterior part, layer 5","Agranular insular area, posterior part, layer 6a","Agranular insular area, posterior part, layer 6b","Agranular insular area, ventral part","Agranular insular area, ventral part, layer 1","Agranular insular area, ventral part, layer 2/3","Agranular insular area, ventral part, layer 5","Agranular insular area, ventral part, layer 6a","Agranular insular area, ventral part, layer 6b","Retrosplenial area","Retrosplenial area, lateral agranular part","Retrosplenial area, lateral agranular part, layer 1","Retrosplenial area, lateral agranular part, layer 2/3","Retrosplenial area, lateral agranular part, layer 5","Retrosplenial area, lateral agranular part, layer 6a","Retrosplenial area, lateral agranular part, layer 6b","Mediomedial anterior visual area","Mediomedial anterior visual area, layer 1","Mediomedial anterior visual area, layer 2/3","Mediomedial anterior visual area, layer 4","Mediomedial anterior visual area,layer 5","Mediomedial anterior visual area, layer 6a","Mediomedial anterior visual area, layer 6b","Mediomedial posterior visual area","Mediomedial posterior visual area, layer 1","Mediomedial posterior visual area, layer 2/3","Mediomedial posterior visual area, layer 4","Mediomedial posterior visual area,layer 5","Mediomedial posterior visual area, layer 6a","Mediomedial posterior visual area, layer 6b","Medial visual area","Medial visual area, layer 1","Medial visual area, layer 2/3","Medial visual area, layer 4","Medial visual area,layer 5","Medial visual area, layer 6a","Medial visual area, layer 6b","Retrosplenial area, dorsal part","Retrosplenial area, dorsal part, layer 1","Retrosplenial area, dorsal part, layer 2/3","Retrosplenial area, dorsal part, layer 4","Retrosplenial area, dorsal part, layer 5","Retrosplenial area, dorsal part, layer 6a","Retrosplenial area, dorsal part, layer 6b","Retrosplenial area, ventral part","Retrosplenial area, ventral part, layer 1","Retrosplenial area, ventral part, layer 2","Retrosplenial area, ventral part, layer 2/3","Retrosplenial area, ventral part, layer 5","Retrosplenial area, ventral part, layer 6a","Retrosplenial area, ventral part, layer 6b","Posterior parietal association areas","Posterior parietal association areas, layer 1","Posterior parietal association areas, layer 2/3","Posterior parietal association areas, layer 4","Posterior parietal association areas, layer 5","Posterior parietal association areas, layer 6a","Posterior parietal association areas, layer 6b","Anterior area","Anterior area, layer 1","Anterior area, layer 2/3","Anterior area, layer 4","Anterior area, layer 5","Anterior area, layer 6a","Anterior area, layer 6b","Rostrolateral visual area","Rostrolateral area, layer 1","Rostrolateral area, layer 2/3","Rostrolateral area, layer 4","Rostrolateral area, layer 5","Rostrolateral area, layer 6a","Rostrolateral area, layer 6b","Temporal association areas","Temporal association areas, layer 1","Temporal association areas, layer 2/3","Temporal association areas, layer 4","Temporal association areas, layer 5","Temporal association areas, layer 6a","Temporal association areas, layer 6b","Perirhinal area","Perirhinal area, layer 1","Perirhinal area, layer 2/3","Perirhinal area, layer 5","Perirhinal area, layer 6a","Perirhinal area, layer 6b","Ectorhinal area","Ectorhinal area/Layer 1","Ectorhinal area/Layer 2/3","Ectorhinal area/Layer 5","Ectorhinal area/Layer 6a","Ectorhinal area/Layer 6b","Olfactory areas","Main olfactory bulb","Main olfactory bulb, glomerular layer","Main olfactory bulb, granule layer","Main olfactory bulb, inner plexiform layer","Main olfactory bulb, mitral layer","Main olfactory bulb, outer plexiform layer","Accessory olfactory bulb","Accessory olfactory bulb, glomerular layer","Accessory olfactory bulb, granular layer","Accessory olfactory bulb, mitral layer","Anterior olfactory nucleus","Anterior olfactory nucleus, dorsal part","Anterior olfactory nucleus, external part","Anterior olfactory nucleus, lateral part","Anterior olfactory nucleus, medial part","Anterior olfactory nucleus, posteroventral part","Anterior olfactory nucleus, layer 1","Anterior olfactory nucleus, layer 2","Taenia tecta","Taenia tecta, dorsal part","Taenia tecta, dorsal part, layers 1-4","Taenia tecta, dorsal part, layer 1","Taenia tecta, dorsal part, layer 2","Taenia tecta, dorsal part, layer 3","Taenia tecta, dorsal part, layer 4","Taenia tecta, ventral part","Taenia tecta, ventral part, layers 1-3","Taenia tecta, ventral part, layer 1","Taenia tecta, ventral part, layer 2","Taenia tecta, ventral part, layer 3","Dorsal peduncular area","Dorsal peduncular area, layer 1","Dorsal peduncular area, layer 2","Dorsal peduncular area, layer 2/3","Dorsal peduncular area, layer 5","Dorsal peduncular area, layer 6a","Piriform area","Piriform area, layers 1-3","Piriform area, molecular layer","Piriform area, pyramidal layer","Piriform area, polymorph layer","Nucleus of the lateral olfactory tract","Nucleus of the lateral olfactory tract, layers 1-3","Nucleus of the lateral olfactory tract, molecular layer","Nucleus of the lateral olfactory tract, pyramidal layer","Nucleus of the lateral olfactory tract, layer 3","Cortical amygdalar area","Cortical amygdalar area, anterior part","Cortical amygdalar area, anterior part, layer 1","Cortical amygdalar area, anterior part, layer 2","Cortical amygdalar area, anterior part, layer 3","Cortical amygdalar area, posterior part","Cortical amygdalar area, posterior part, lateral zone","Cortical amygdalar area, posterior part, lateral zone, layers 1-2","Cortical amygdalar area, posterior part, lateral zone, layers 1-3","Cortical amygdalar area, posterior part, lateral zone, layer 1","Cortical amygdalar area, posterior part, lateral zone, layer 2","Cortical amygdalar area, posterior part, lateral zone, layer 3","Cortical amygdalar area, posterior part, medial zone","Cortical amygdalar area, posterior part, medial zone, layers 1-2","Cortical amygdalar area, posterior part, medial zone, layers 1-3","Cortical amygdalar area, posterior part, medial zone, layer 1","Cortical amygdalar area, posterior part, medial zone, layer 2","Cortical amygdalar area, posterior part, medial zone, layer 3","Piriform-amygdalar area","Piriform-amygdalar area, layers 1-3","Piriform-amygdalar area, molecular layer","Piriform-amygdalar area, pyramidal layer","Piriform-amygdalar area, polymorph layer","Postpiriform transition area","Postpiriform transition area, layers 1-3","Postpiriform transition area, layers 1","Postpiriform transition area, layers 2","Postpiriform transition area, layers 3","Hippocampal formation","Hippocampal region","Ammon's horn","Field CA1","Field CA1, stratum lacunosum-moleculare","Field CA1, stratum oriens","Field CA1, pyramidal layer","Field CA1, stratum radiatum","Field CA2","Field CA2, stratum lacunosum-moleculare","Field CA2, stratum oriens","Field CA2, pyramidal layer","Field CA2, stratum radiatum","Field CA3","Field CA3, stratum lacunosum-moleculare","Field CA3, stratum lucidum","Field CA3, stratum oriens","Field CA3, pyramidal layer","Field CA3, stratum radiatum","Dentate gyrus","Dentate gyrus, molecular layer","Dentate gyrus, polymorph layer","Dentate gyrus, granule cell layer","Dentate gyrus, subgranular zone","Dentate gyrus crest","Dentate gyrus crest, molecular layer","Dentate gyrus crest, polymorph layer","Dentate gyrus crest, granule cell layer","Dentate gyrus lateral blade","Dentate gyrus lateral blade, molecular layer","Dentate gyrus lateral blade, polymorph layer","Dentate gyrus lateral blade, granule cell layer","Dentate gyrus medial blade","Dentate gyrus medial blade, molecular layer","Dentate gyrus medial blade, polymorph layer","Dentate gyrus medial blade, granule cell layer","Fasciola cinerea","Induseum griseum","Retrohippocampal region","Entorhinal area","Entorhinal area, lateral part","Entorhinal area, lateral part, layer 1","Entorhinal area, lateral part, layer 2","Entorhinal area, lateral part, layer 2/3","Entorhinal area, lateral part, layer 2a","Entorhinal area, lateral part, layer 2b","Entorhinal area, lateral part, layer 3","Entorhinal area, lateral part, layer 4","Entorhinal area, lateral part, layer 4/5","Entorhinal area, lateral part, layer 5","Entorhinal area, lateral part, layer 5/6","Entorhinal area, lateral part, layer 6a","Entorhinal area, lateral part, layer 6b","Entorhinal area, medial part, dorsal zone","Entorhinal area, medial part, dorsal zone, layer 1","Entorhinal area, medial part, dorsal zone, layer 2","Entorhinal area, medial part, dorsal zone, layer 2a","Entorhinal area, medial part, dorsal zone, layer 2b","Entorhinal area, medial part, dorsal zone, layer 3","Entorhinal area, medial part, dorsal zone, layer 4","Entorhinal area, medial part, dorsal zone, layer 5","Entorhinal area, medial part, dorsal zone, layer 5/6","Entorhinal area, medial part, dorsal zone, layer 6","Entorhinal area, medial part, ventral zone","Entorhinal area, medial part, ventral zone, layer 1","Entorhinal area, medial part, ventral zone, layer 2","Entorhinal area, medial part, ventral zone, layer 3","Entorhinal area, medial part, ventral zone, layer 4","Entorhinal area, medial part, ventral zone, layer 5/6","Parasubiculum","Parasubiculum, layer 1","Parasubiculum, layer 2","Parasubiculum, layer 3","Postsubiculum","Postsubiculum, layer 1","Postsubiculum, layer 2","Postsubiculum, layer 3","Presubiculum","Presubiculum, layer 1","Presubiculum, layer 2","Presubiculum, layer 3","Subiculum","Subiculum, dorsal part","Subiculum, dorsal part, molecular layer","Subiculum, dorsal part, pyramidal layer","Subiculum, dorsal part, stratum radiatum","Subiculum, ventral part","Subiculum, ventral part, molecular layer","Subiculum, ventral part, pyramidal layer","Subiculum, ventral part, stratum radiatum","Prosubiculum","Prosubiculum, dorsal part","Prosubiculum, dorsal part, molecular layer","Prosubiculum, dorsal part, pyramidal layer","Prosubiculum, dorsal part, stratum radiatum","Prosubiculum, ventral part","Prosubiculum, ventral part, molecular layer","Prosubiculum, ventral part, pyramidal layer","Prosubiculum, ventral part, stratum radiatum","Hippocampo-amygdalar transition area","Area prostriata","Cortical subplate","Layer 6b, isocortex","Claustrum","Endopiriform nucleus","Endopiriform nucleus, dorsal part","Endopiriform nucleus, ventral part","Lateral amygdalar nucleus","Basolateral amygdalar nucleus","Basolateral amygdalar nucleus, anterior part","Basolateral amygdalar nucleus, posterior part","Basolateral amygdalar nucleus, ventral part","Basomedial amygdalar nucleus","Basomedial amygdalar nucleus, anterior part","Basomedial amygdalar nucleus, posterior part","Posterior amygdalar nucleus","Cerebral nuclei","Striatum","Striatum dorsal region","Caudoputamen","Striatum ventral region","Nucleus accumbens","Fundus of striatum","Olfactory tubercle","Islands of Calleja","Major island of Calleja","Olfactory tubercle, layers 1-3","Olfactory tubercle, molecular layer","Olfactory tubercle, pyramidal layer","Olfactory tubercle, polymorph layer","Lateral strip of striatum","Lateral septal complex","Lateral septal nucleus","Lateral septal nucleus, caudal (caudodorsal) part","Lateral septal nucleus, rostral (rostroventral) part","Lateral septal nucleus, ventral part","Septofimbrial nucleus","Septohippocampal nucleus","Striatum-like amygdalar nuclei","Anterior amygdalar area","Bed nucleus of the accessory olfactory tract","Central amygdalar nucleus","Central amygdalar nucleus, capsular part","Central amygdalar nucleus, lateral part","Central amygdalar nucleus, medial part","Intercalated amygdalar nucleus","Medial amygdalar nucleus","Medial amygdalar nucleus, anterodorsal part","Medial amygdalar nucleus, anteroventral part","Medial amygdalar nucleus, posterodorsal part","Medial amygdalar nucleus, posterodorsal part, sublayer a","Medial amygdalar nucleus, posterodorsal part, sublayer b","Medial amygdalar nucleus, posterodorsal part, sublayer c","Medial amygdalar nucleus, posteroventral part","Pallidum","Pallidum, dorsal region","Globus pallidus, external segment","Globus pallidus, internal segment","Pallidum, ventral region","Substantia innominata","Magnocellular nucleus","Pallidum, medial region","Medial septal complex","Medial septal nucleus","Diagonal band nucleus","Triangular nucleus of septum","Pallidum, caudal region","Bed nuclei of the stria terminalis","Bed nuclei of the stria terminalis, anterior division","Bed nuclei of the stria terminalis, anterior division, anterolateral area","Bed nuclei of the stria terminalis, anterior division, anteromedial area","Bed nuclei of the stria terminalis, anterior division, dorsomedial nucleus","Bed nuclei of the stria terminalis, anterior division, fusiform nucleus","Bed nuclei of the stria terminalis, anterior division, juxtacapsular nucleus","Bed nuclei of the stria terminalis, anterior division, magnocellular nucleus","Bed nuclei of the stria terminalis, anterior division, oval nucleus","Bed nuclei of the stria terminalis, anterior division, rhomboid nucleus","Bed nuclei of the stria terminalis, anterior division, ventral nucleus","Bed nuclei of the stria terminalis, posterior division","Bed nuclei of the stria terminalis, posterior division, dorsal nucleus","Bed nuclei of the stria terminalis, posterior division, principal nucleus","Bed nuclei of the stria terminalis, posterior division, interfascicular nucleus","Bed nuclei of the stria terminalis, posterior division, transverse nucleus","Bed nuclei of the stria terminalis, posterior division, strial extension","Bed nucleus of the anterior commissure","Brain stem","Interbrain","Thalamus","Thalamus, sensory-motor cortex related","Ventral group of the dorsal thalamus","Ventral anterior-lateral complex of the thalamus","Ventral medial nucleus of the thalamus","Ventral posterior complex of the thalamus","Ventral posterolateral nucleus of the thalamus","Ventral posterolateral nucleus of the thalamus, parvicellular part","Ventral posteromedial nucleus of the thalamus","Ventral posteromedial nucleus of the thalamus, parvicellular part","Posterior triangular thalamic nucleus","Subparafascicular nucleus","Subparafascicular nucleus, magnocellular part","Subparafascicular nucleus, parvicellular part","Subparafascicular area","Peripeduncular nucleus","Geniculate group, dorsal thalamus","Medial geniculate complex","Medial geniculate complex, dorsal part","Medial geniculate complex, ventral part","Medial geniculate complex, medial part","Dorsal part of the lateral geniculate complex","Dorsal part of the lateral geniculate complex, shell","Dorsal part of the lateral geniculate complex, core","Dorsal part of the lateral geniculate complex, ipsilateral zone","Thalamus, polymodal association cortex related","Lateral group of the dorsal thalamus","Lateral posterior nucleus of the thalamus","Posterior complex of the thalamus","Posterior limiting nucleus of the thalamus","Suprageniculate nucleus","Ethmoid nucleus of the thalamus","Retroethmoid nucleus","Anterior group of the dorsal thalamus","Anteroventral nucleus of thalamus","Anteromedial nucleus","Anteromedial nucleus, dorsal part","Anteromedial nucleus, ventral part","Anterodorsal nucleus","Interanteromedial nucleus of the thalamus","Interanterodorsal nucleus of the thalamus","Lateral dorsal nucleus of thalamus","Medial group of the dorsal thalamus","Intermediodorsal nucleus of the thalamus","Mediodorsal nucleus of thalamus","Mediodorsal nucleus of the thalamus, central part","Mediodorsal nucleus of the thalamus, lateral part","Mediodorsal nucleus of the thalamus, medial part","Submedial nucleus of the thalamus","Perireunensis nucleus","Midline group of the dorsal thalamus","Paraventricular nucleus of the thalamus","Parataenial nucleus","Nucleus of reuniens","Xiphoid thalamic nucleus","Intralaminar nuclei of the dorsal thalamus","Rhomboid nucleus","Central medial nucleus of the thalamus","Paracentral nucleus","Central lateral nucleus of the thalamus","Parafascicular nucleus","Posterior intralaminar thalamic nucleus","Reticular nucleus of the thalamus","Geniculate group, ventral thalamus","Intergeniculate leaflet of the lateral geniculate complex","Intermediate geniculate nucleus","Ventral part of the lateral geniculate complex","Ventral part of the lateral geniculate complex, lateral zone","Ventral part of the lateral geniculate complex, medial zone","Subgeniculate nucleus","Epithalamus","Medial habenula","Lateral habenula","Pineal body","Hypothalamus","Periventricular zone","Supraoptic nucleus","Accessory supraoptic group","Nucleus circularis","Paraventricular hypothalamic nucleus","Paraventricular hypothalamic nucleus, magnocellular division","Paraventricular hypothalamic nucleus, magnocellular division, anterior magnocellular part","Paraventricular hypothalamic nucleus, magnocellular division, medial magnocellular part","Paraventricular hypothalamic nucleus, magnocellular division, posterior magnocellular part","Paraventricular hypothalamic nucleus, magnocellular division, posterior magnocellular part, lateral zone","Paraventricular hypothalamic nucleus, magnocellular division, posterior magnocellular part, medial zone","Paraventricular hypothalamic nucleus, parvicellular division","Paraventricular hypothalamic nucleus, parvicellular division, anterior parvicellular part","Paraventricular hypothalamic nucleus, parvicellular division, medial parvicellular part, dorsal zone","Paraventricular hypothalamic nucleus, parvicellular division, periventricular part","Periventricular hypothalamic nucleus, anterior part","Periventricular hypothalamic nucleus, intermediate part","Arcuate hypothalamic nucleus","Periventricular region","Anterodorsal preoptic nucleus","Anterior hypothalamic area","Anteroventral preoptic nucleus","Anteroventral periventricular nucleus","Dorsomedial nucleus of the hypothalamus","Dorsomedial nucleus of the hypothalamus, anterior part","Dorsomedial nucleus of the hypothalamus, posterior part","Dorsomedial nucleus of the hypothalamus, ventral part","Median preoptic nucleus","Medial preoptic area","Vascular organ of the lamina terminalis","Posterodorsal preoptic nucleus","Parastrial nucleus","Suprachiasmatic preoptic nucleus","Periventricular hypothalamic nucleus, posterior part","Periventricular hypothalamic nucleus, preoptic part","Subparaventricular zone","Suprachiasmatic nucleus","Subfornical organ","Ventromedial preoptic nucleus","Ventrolateral preoptic nucleus","Hypothalamic medial zone","Anterior hypothalamic nucleus","Anterior hypothalamic nucleus, anterior part","Anterior hypothalamic nucleus, central part","Anterior hypothalamic nucleus, dorsal part","Anterior hypothalamic nucleus, posterior part","Mammillary body","Lateral mammillary nucleus","Medial mammillary nucleus","Medial mammillary nucleus, median part","Medial mammillary nucleus, lateral part","Medial mammillary nucleus, medial part","Medial mammillary nucleus, posterior part","Medial mammillary nucleus, dorsal part","Supramammillary nucleus","Supramammillary nucleus, lateral part","Supramammillary nucleus, medial part","Tuberomammillary nucleus","Tuberomammillary nucleus, dorsal part","Tuberomammillary nucleus, ventral part","Medial preoptic nucleus","Medial preoptic nucleus, central part","Medial preoptic nucleus, lateral part","Medial preoptic nucleus, medial part","Dorsal premammillary nucleus","Ventral premammillary nucleus","Paraventricular hypothalamic nucleus, descending division","Paraventricular hypothalamic nucleus, descending division, dorsal parvicellular part","Paraventricular hypothalamic nucleus, descending division, forniceal part","Paraventricular hypothalamic nucleus, descending division, lateral parvicellular part","Paraventricular hypothalamic nucleus, descending division, medial parvicellular part, ventral zone","Ventromedial hypothalamic nucleus","Ventromedial hypothalamic nucleus, anterior part","Ventromedial hypothalamic nucleus, central part","Ventromedial hypothalamic nucleus, dorsomedial part","Ventromedial hypothalamic nucleus, ventrolateral part","Posterior hypothalamic nucleus","Hypothalamic lateral zone","Lateral hypothalamic area","Lateral preoptic area","Preparasubthalamic nucleus","Parasubthalamic nucleus","Perifornical nucleus","Retrochiasmatic area","Subthalamic nucleus","Tuberal nucleus","Zona incerta","Dopaminergic A13 group","Fields of Forel","Median eminence","Midbrain","Midbrain, sensory related","Superior colliculus, sensory related","Superior colliculus, optic layer","Superior colliculus, superficial gray layer","Superior colliculus, zonal layer","Inferior colliculus","Inferior colliculus, central nucleus","Inferior colliculus, dorsal nucleus","Inferior colliculus, external nucleus","Nucleus of the brachium of the inferior colliculus","Nucleus sagulum","Parabigeminal nucleus","Midbrain trigeminal nucleus","Subcommissural organ","Midbrain, motor related","Substantia nigra, reticular part","Ventral tegmental area","Paranigral nucleus","Midbrain reticular nucleus, retrorubral area","Midbrain reticular nucleus","Midbrain reticular nucleus, magnocellular part","Midbrain reticular nucleus, magnocellular part, general","Midbrain reticular nucleus, parvicellular part","Superior colliculus, motor related","Superior colliculus, motor related, deep gray layer","Superior colliculus, motor related, deep white layer","Superior colliculus, motor related, intermediate white layer","Superior colliculus, motor related, intermediate gray layer","Superior colliculus, motor related, intermediate gray layer, sublayer a","Superior colliculus, motor related, intermediate gray layer, sublayer b","Superior colliculus, motor related, intermediate gray layer, sublayer c","Periaqueductal gray","Precommissural nucleus","Interstitial nucleus of Cajal","Nucleus of Darkschewitsch","Supraoculomotor periaqueductal gray","Pretectal region","Anterior pretectal nucleus","Medial pretectal area","Nucleus of the optic tract","Nucleus of the posterior commissure","Olivary pretectal nucleus","Posterior pretectal nucleus","Retroparafascicular nucleus","Intercollicular nucleus","Cuneiform nucleus","Red nucleus","Oculomotor nucleus","Medial accesory oculomotor nucleus","Edinger-Westphal nucleus","Trochlear nucleus","Paratrochlear nucleus","Ventral tegmental nucleus","Anterior tegmental nucleus","Lateral terminal nucleus of the accessory optic tract","Dorsal terminal nucleus of the accessory optic tract","Medial terminal nucleus of the accessory optic tract","Substantia nigra, lateral part","Midbrain, behavioral state related","Substantia nigra, compact part","Pedunculopontine nucleus","Midbrain raphe nuclei","Interfascicular nucleus raphe","Interpeduncular nucleus","Interpeduncular nucleus, rostral","Interpeduncular nucleus, caudal","Interpeduncular nucleus, apical","Interpeduncular nucleus, lateral","Interpeduncular nucleus, intermediate","Interpeduncular nucleus, dorsomedial","Interpeduncular nucleus, dorsolateral","Interpeduncular nucleus, rostrolateral","Rostral linear nucleus raphe","Central linear nucleus raphe","Dorsal nucleus raphe","Hindbrain","Pons","Pons, sensory related","Nucleus of the lateral lemniscus","Nucleus of the lateral lemniscus, dorsal part","Nucleus of the lateral lemniscus, horizontal part","Nucleus of the lateral lemniscus, ventral part","Principal sensory nucleus of the trigeminal","Parabrachial nucleus","Koelliker-Fuse subnucleus","Parabrachial nucleus, lateral division","Parabrachial nucleus, lateral division, central lateral part","Parabrachial nucleus, lateral division, dorsal lateral part","Parabrachial nucleus, lateral division, external lateral part","Parabrachial nucleus, lateral division, superior lateral part","Parabrachial nucleus, lateral division, ventral lateral part","Parabrachial nucleus, medial division","Parabrachial nucleus, medial division, external medial part","Parabrachial nucleus, medial division, medial medial part","Parabrachial nucleus, medial division, ventral medial part","Superior olivary complex","Superior olivary complex, periolivary region","Superior olivary complex, medial part","Superior olivary complex, lateral part","Pons, motor related","Barrington's nucleus","Dorsal tegmental nucleus","Lateral tegmental nucleus","Posterodorsal tegmental nucleus","Pontine central gray","Pontine gray","Pontine reticular nucleus, caudal part","Pontine reticular nucleus, ventral part","Supragenual nucleus","Superior salivatory nucleus","Supratrigeminal nucleus","Tegmental reticular nucleus","Motor nucleus of trigeminal","Peritrigeminal zone","Accessory trigeminal nucleus","Parvicellular motor 5 nucleus","Intertrigeminal nucleus","Pons, behavioral state related","Superior central nucleus raphe","Superior central nucleus raphe, lateral part","Superior central nucleus raphe, medial part","Locus ceruleus","Laterodorsal tegmental nucleus","Nucleus incertus","Pontine reticular nucleus","Nucleus raphe pontis","Subceruleus nucleus","Sublaterodorsal nucleus","Medulla","Medulla, sensory related","Area postrema","Cochlear nuclei","Granular lamina of the cochlear nuclei","Cochlear nucleus, subpedunclular granular region","Dorsal cochlear nucleus","Ventral cochlear nucleus","Dorsal column nuclei","Cuneate nucleus","Gracile nucleus","External cuneate nucleus","Nucleus of the trapezoid body","Nucleus of the solitary tract","Nucleus of the solitary tract, central part","Nucleus of the solitary tract, commissural part","Nucleus of the solitary tract, gelatinous part","Nucleus of the solitary tract, lateral part","Nucleus of the solitary tract, medial part","Spinal nucleus of the trigeminal, caudal part","Spinal nucleus of the trigeminal, interpolar part","Spinal nucleus of the trigeminal, oral part","Spinal nucleus of the trigeminal, oral part, caudal dorsomedial part","Spinal nucleus of the trigeminal, oral part, middle dorsomedial part, dorsal zone","Spinal nucleus of the trigeminal, oral part, middle dorsomedial part, ventral zone","Spinal nucleus of the trigeminal, oral part, rostral dorsomedial part","Spinal nucleus of the trigeminal, oral part, ventrolateral part","Paratrigeminal nucleus","Nucleus z","Medulla, motor related","Abducens nucleus","Accessory abducens nucleus","Facial motor nucleus","Accessory facial motor nucleus","Efferent vestibular nucleus","Nucleus ambiguus","Nucleus ambiguus, dorsal division","Nucleus ambiguus, ventral division","Dorsal motor nucleus of the vagus nerve","Efferent cochlear group","Gigantocellular reticular nucleus","Infracerebellar nucleus","Inferior olivary complex","Intermediate reticular nucleus","Inferior salivatory nucleus","Linear nucleus of the medulla","Lateral reticular nucleus","Lateral reticular nucleus, magnocellular part","Lateral reticular nucleus, parvicellular part","Magnocellular reticular nucleus","Medullary reticular nucleus","Medullary reticular nucleus, dorsal part","Medullary reticular nucleus, ventral part","Parvicellular reticular nucleus","Parasolitary nucleus","Paragigantocellular reticular nucleus","Paragigantocellular reticular nucleus, dorsal part","Paragigantocellular reticular nucleus, lateral part","Perihypoglossal nuclei","Nucleus intercalatus","Nucleus of Roller","Nucleus prepositus","Paramedian reticular nucleus","Parapyramidal nucleus","Parapyramidal nucleus, deep part","Parapyramidal nucleus, superficial part","Vestibular nuclei","Lateral vestibular nucleus","Medial vestibular nucleus","Spinal vestibular nucleus","Superior vestibular nucleus","Nucleus x","Hypoglossal nucleus","Nucleus y","Interstitial nucleus of the vestibular nerve","Medulla, behavioral state related","Nucleus raphe magnus","Nucleus raphe pallidus","Nucleus raphe obscurus","Cerebellum","Cerebellar cortex","Cerebellar cortex, molecular layer","Cerebellar cortex, Purkinje layer","Cerebellar cortex, granular layer","Vermal regions","Lingula (I)","Lingula (I), molecular layer","Lingula (I), Purkinje layer","Lingula (I), granular layer","Central lobule","Lobule II","Lobule II, molecular layer","Lobule II, Purkinje layer","Lobule II, granular layer","Lobule III","Lobule III, molecular layer","Lobule III, Purkinje layer","Lobule III, granular layer","Culmen","Lobule IV","Lobule IV, molecular layer","Lobule IV, Purkinje layer","Lobule IV, granular layer","Lobule V","Lobule V, molecular layer","Lobule V, Purkinje layer","Lobule V, granular layer","Lobules IV-V","Lobules IV-V, molecular layer","Lobules IV-V, Purkinje layer","Lobules IV-V, granular layer","Declive (VI)","Declive (VI), molecular layer","Declive (VI), Purkinje layer","Declive (VI), granular layer","Folium-tuber vermis (VII)","Folium-tuber vermis (VII), molecular layer","Folium-tuber vermis (VII), Purkinje layer","Folium-tuber vermis (VII), granular layer","Pyramus (VIII)","Pyramus (VIII), molecular layer","Pyramus (VIII), Purkinje layer","Pyramus (VIII), granular layer","Uvula (IX)","Uvula (IX), molecular layer","Uvula (IX), Purkinje layer","Uvula (IX), granular layer","Nodulus (X)","Nodulus (X), molecular layer","Nodulus (X), Purkinje layer","Nodulus (X), granular layer","Hemispheric regions","Simple lobule","Simple lobule, molecular layer","Simple lobule, Purkinje layer","Simple lobule, granular layer","Ansiform lobule","Crus 1","Crus 1, molecular layer","Crus 1, Purkinje layer","Crus 1, granular layer","Crus 2","Crus 2, molecular layer","Crus 2, Purkinje layer","Crus 2, granular layer","Paramedian lobule","Paramedian lobule, molecular layer","Paramedian lobule, Purkinje layer","Paramedian lobule, granular layer","Copula pyramidis","Copula pyramidis, molecular layer","Copula pyramidis, Purkinje layer","Copula pyramidis, granular layer","Paraflocculus","Paraflocculus, molecular layer","Paraflocculus, Purkinje layer","Paraflocculus, granular layer","Flocculus","Flocculus, molecular layer","Flocculus, Purkinje layer","Flocculus, granular layer","Cerebellar nuclei","Fastigial nucleus","Interposed nucleus","Dentate nucleus","Vestibulocerebellar nucleus","fiber tracts","cranial nerves","terminal nerve","vomeronasal nerve","olfactory nerve","olfactory nerve layer of main olfactory bulb","lateral olfactory tract, general","lateral olfactory tract, body","dorsal limb","accessory olfactory tract","anterior commissure, olfactory limb","optic nerve","accessory optic tract","brachium of the superior colliculus","superior colliculus commissure","optic chiasm","optic tract","tectothalamic pathway","oculomotor nerve","medial longitudinal fascicle","posterior commissure","trochlear nerve","trochlear nerve decussation","abducens nerve","trigeminal nerve","motor root of the trigeminal nerve","sensory root of the trigeminal nerve","midbrain tract of the trigeminal nerve","spinal tract of the trigeminal nerve","facial nerve","intermediate nerve","genu of the facial nerve","vestibulocochlear nerve","efferent cochleovestibular bundle","vestibular nerve","cochlear nerve","trapezoid body","intermediate acoustic stria","dorsal acoustic stria","lateral lemniscus","inferior colliculus commissure","brachium of the inferior colliculus","glossopharyngeal nerve","vagus nerve","solitary tract","accessory spinal nerve","hypoglossal nerve","ventral roots","dorsal roots","cervicothalamic tract","dorsolateral fascicle","dorsal commissure of the spinal cord","ventral commissure of the spinal cord","fasciculus proprius","dorsal column","cuneate fascicle","gracile fascicle","internal arcuate fibers","medial lemniscus","spinothalamic tract","lateral spinothalamic tract","ventral spinothalamic tract","spinocervical tract","spino-olivary pathway","spinoreticular pathway","spinovestibular pathway","spinotectal pathway","spinohypothalamic pathway","spinotelenchephalic pathway","hypothalamohypophysial tract","cerebellum related fiber tracts","cerebellar commissure","cerebellar peduncles","superior cerebelar peduncles","superior cerebellar peduncle decussation","spinocerebellar tract","uncinate fascicle","ventral spinocerebellar tract","middle cerebellar peduncle","inferior cerebellar peduncle","dorsal spinocerebellar tract","cuneocerebellar tract","juxtarestiform body","bulbocerebellar tract","olivocerebellar tract","reticulocerebellar tract","trigeminocerebellar tract","arbor vitae","supra-callosal cerebral white matter","lateral forebrain bundle system","corpus callosum","corpus callosum, anterior forceps","external capsule","corpus callosum, extreme capsule","genu of corpus callosum","corpus callosum, posterior forceps","corpus callosum, rostrum","corpus callosum, body","corpus callosum, splenium","corticospinal tract","internal capsule","cerebal peduncle","corticotectal tract","corticorubral tract","corticopontine tract","corticobulbar tract","pyramid","pyramidal decussation","corticospinal tract, crossed","corticospinal tract, uncrossed","thalamus related","external medullary lamina of the thalamus","internal medullary lamina of the thalamus","middle thalamic commissure","thalamic peduncles","optic radiation","auditory radiation","extrapyramidal fiber systems","cerebral nuclei related","pallidothalamic pathway","nigrostriatal tract","nigrothalamic fibers","pallidotegmental fascicle","striatonigral pathway","subthalamic fascicle","tectospinal pathway","direct tectospinal pathway","doral tegmental decussation","crossed tectospinal pathway","rubrospinal tract","ventral tegmental decussation","rubroreticular tract","central tegmental bundle","retriculospinal tract","retriculospinal tract, lateral part","retriculospinal tract, medial part","vestibulospinal pathway","medial forebrain bundle system","cerebrum related","amygdalar capsule","ansa peduncularis","anterior commissure, temporal limb","cingulum bundle","fornix system","alveus","dorsal fornix","fimbria","precommissural fornix, general","precommissural fornix diagonal band","postcommissural fornix","medial corticohypothalamic tract","columns of the fornix","hippocampal commissures","dorsal hippocampal commissure","ventral hippocampal commissure","perforant path","angular path","longitudinal association bundle","stria terminalis","commissural branch of stria terminalis","hypothalamus related","medial forebrain bundle","ventrolateral hypothalamic tract","preoptic commissure","supraoptic commissures","supraoptic commissures, anterior","supraoptic commissures, dorsal","supraoptic commissures, ventral","premammillary commissure","supramammillary decussation","propriohypothalamic pathways","propriohypothalamic pathways, dorsal","propriohypothalamic pathways, lateral","propriohypothalamic pathways, medial","propriohypothalamic pathways, ventral","periventricular bundle of the hypothalamus","mammillary related","principal mammillary tract","mammillothalamic tract","mammillotegmental tract","mammillary peduncle","dorsal thalamus related","periventricular bundle of the thalamus","epithalamus related","stria medullaris","fasciculus retroflexus","habenular commissure","pineal stalk","midbrain related","dorsal longitudinal fascicle","dorsal tegmental tract","ventricular systems","lateral ventricle","rhinocele","subependymal zone","choroid plexus","choroid fissure","interventricular foramen","third ventricle","cerebral aqueduct","fourth ventricle","lateral recess","central canal, spinal cord/medulla","grooves","grooves of the cerebral cortex","endorhinal groove","hippocampal fissure","rhinal fissure","rhinal incisure","grooves of the cerebellar cortex","precentral fissure","preculminate fissure","primary fissure","posterior superior fissure","prepyramidal fissure","secondary fissure","posterolateral fissure","nodular fissure","simple fissure","intercrural fissure","ansoparamedian fissure","intraparafloccular fissure","paramedian sulcus","parafloccular sulcus","Interpeduncular fossa","retina"],"sid":[997,8,567,688,695,315,184,68,667,526157192,526157196,526322264,500,107,219,299,644,947,985,320,943,648,844,882,993,656,962,767,1021,1085,453,12993,12994,12995,12996,12997,12998,322,793,346,865,921,686,719,353,558,838,654,702,889,929,329,981,201,1047,1070,1038,1062,480149202,480149206,480149210,480149214,480149218,480149222,480149226,337,1030,113,1094,1128,478,510,345,878,657,950,974,1102,2,369,450,854,577,625,945,1026,361,1006,670,1086,1111,9,461,182305689,182305693,182305697,182305701,182305705,182305709,182305713,378,873,806,1035,1090,862,893,1057,36,180,148,187,638,662,677,897,1106,1010,1058,857,849,247,1011,527,600,678,252,156,243,480149230,480149234,480149238,480149242,480149246,480149250,480149254,1002,735,251,816,847,954,1005,1027,696,643,759,791,249,456,1018,959,755,990,1023,520,598,669,801,561,913,937,457,497,402,1074,905,1114,233,601,649,394,281,1066,401,433,1046,441,409,421,973,573,613,74,121,385,593,821,721,778,33,305,425,750,269,869,902,377,393,533,805,41,501,565,257,469,312782574,312782578,312782582,312782586,312782590,312782594,312782598,312782628,312782632,312782636,312782640,312782644,312782648,312782652,31,572,1053,739,179,227,39,935,211,1015,919,927,48,588,296,772,810,819,972,171,195,304,363,84,132,44,707,747,556,827,1054,1081,714,264,492,352,476,516,723,448,412,630,440,488,731,484,524,582,620,910,527696977,738,746,969,288,1125,608,680,95,104,996,328,1101,783,831,111,120,163,344,314,355,119,704,694,800,675,699,254,894,671,965,774,906,279,480149258,480149262,480149266,480149270,480149274,480149278,480149282,480149286,480149290,480149294,480149298,480149302,480149306,480149310,480149314,480149318,480149322,480149326,480149330,480149334,480149338,879,442,434,545,610,274,330,886,542,606,430,687,590,622,22,532,241,635,683,308,340,312782546,312782550,312782554,312782558,312782562,312782566,312782570,417,312782604,312782608,312782612,312782616,312782620,312782624,541,97,1127,234,289,729,786,922,540,888,692,335,368,895,836,427,988,977,1045,698,507,212,220,228,236,244,151,188,196,204,159,167,175,183,191,199,160,168,589,597,297,1034,1042,1050,1059,605,306,1067,1075,1082,814,496,535,360,646,267,961,152,276,284,291,619,392,260,268,1139,631,639,192,200,208,647,655,584,376,216,224,232,663,592,383,240,248,256,788,400,408,416,424,566,517,1140,1141,1142,1089,1080,375,382,391,399,407,415,423,431,438,446,454,463,471,479,486,495,504,726,10703,10704,632,10702,734,742,751,758,766,775,782,790,799,807,815,823,982,19,822,909,918,1121,20,999,715,764,52,92,312,139,387,28,60,926,526,543,468,508,664,712,727,550,743,934,259,324,371,419,1133,843,10693,10694,10695,1037,10696,10697,10698,1084,10699,10700,10701,502,509,829,845,837,518,853,870,861,484682470,484682475,484682479,484682483,484682487,484682492,484682496,484682500,484682504,589508447,484682508,703,16,583,942,952,966,131,295,303,311,451,319,327,334,780,623,477,485,672,493,56,998,754,481,489,144,458,465,473,549009199,275,242,250,258,266,310,333,278,23,292,536,544,551,559,1105,403,411,418,426,472,480,487,435,803,818,1022,1031,835,342,298,826,904,564,596,581,809,351,359,537,498,505,513,546,521,554,562,529,367,569,578,585,594,602,287,343,1129,549,864,637,629,685,709,718,725,733,741,563807435,406,414,422,609,1044,1008,475,1072,1079,1088,170,496345664,496345668,496345672,856,138,218,1020,1029,325,560581551,560581555,239,255,127,1096,1104,64,1120,1113,155,444,59,362,617,626,636,366,1077,571,149,15,181,560581559,51,189,599,907,575,930,560581563,262,1014,27,563807439,178,300,316,321,958,483,186,953,1097,157,390,332,432,38,71,47,79,103,652,660,94,55,87,110,30,118,223,141,72,80,263,272,830,668,676,684,452,523,763,914,1109,1124,126,133,347,286,338,576073699,689,467,88,700,708,716,724,331,210,491,732,606826647,606826651,606826655,606826659,525,1110,1118,557,1126,1,515,740,748,756,980,1004,63,439,447,455,464,693,761,769,777,785,946,290,194,226,356,364,576073704,173,470,614,797,796,804,10671,313,339,302,851,842,834,4,811,820,828,580,271,874,460,599626923,323,381,749,607344830,246,128,539,548,555,294,26,42,17,10,494,503,511,795,50,67,587,614454277,1100,215,531,628,634,706,1061,549009203,549009207,616,214,35,549009211,975,115,606826663,757,231,66,75,58,615,348,374,1052,165,12,100,607344834,607344838,607344842,607344846,607344850,607344854,607344858,607344862,197,591,872,1065,771,1132,612,82,90,99,7,867,123,881,860,868,875,883,891,890,899,915,923,398,122,105,114,987,280,880,283,599626927,898,931,1093,552,318,462,534,574,621,549009215,549009219,549009223,549009227,1117,679,137,130,147,162,604,146,238,350,358,354,386,207,607,112,560,96,101,720,711,1039,903,642,651,659,666,674,682,691,429,437,445,77,53,61,45,69,589508451,789,370,653,568,661,576,640,135,939,143,839,887,1048,372,83,136,106,203,235,955,963,307,395,1098,1107,852,859,938,970,978,154,161,177,169,995,1069,185,193,701,209,202,225,217,765,773,781,76,379,206,230,222,512,528,1144,1145,1143,645,912,10707,10706,10705,920,976,10710,10709,10708,984,10713,10712,10711,928,992,10716,10715,10714,1001,10719,10718,10717,1091,10722,10721,10720,936,10725,10724,10723,944,10728,10727,10726,951,10731,10730,10729,957,10734,10733,10732,968,10737,10736,10735,1073,1007,10674,10673,10672,1017,1056,10677,10676,10675,1064,10680,10679,10678,1025,10683,10682,10681,1033,10686,10685,10684,1041,10689,10688,10687,1049,10692,10691,10690,519,989,91,846,589508455,1009,967,885,949,840,1016,21,665,538,459,900,848,876,916,336,117,125,357,832,62,158,911,384,710,901,93,229,705,794,798,1131,1116,933,1076,413,948,841,641,506,658,633,482,808,917,237,717,813,925,792,932,570,522,858,586,514,380,388,396,697,871,29,389,245,261,270,293,277,253,285,627,960,744,752,326,812,85,850,866,78,1123,553,499,650,490,404,410,373,728,484682512,983,776,956,579,964,1108,971,979,484682516,986,784,6,924,1036,1012,1003,994,190,198,1019,1028,896,1092,14,86,365,484682520,484682524,1000,760,142,102,109,134,309,317,877,1051,1060,1043,863,397,221,736,855,205,213,941,991,768,884,892,908,940,1099,466,530,603,745,420,737,428,436,618,443,449,713,474,37,301,484682528,824,54,405,174,349,817,825,833,166,341,182,762,770,779,787,150,46,753,690,681,673,1068,722,1083,802,595,611,730,70,547,563,73,81,89,98,108,116,124,129,140,145,153,164,1024,1032,1055,1063,1071,1078,1040,1087,1095,1103,1112,1119,3,11,18,25,34,43,49,57,65,624,304325711],"par":[-1,0,1,2,3,4,5,6,6,6,6,6,5,12,12,12,12,12,12,18,18,18,18,18,12,24,24,24,24,24,5,30,30,30,30,30,30,30,37,37,37,37,37,37,37,44,44,44,44,44,44,37,51,51,51,51,51,51,51,58,58,58,58,58,58,37,65,65,65,65,65,65,37,72,72,72,72,72,72,37,79,79,79,79,79,79,37,86,86,86,86,86,86,37,93,93,93,93,93,93,30,100,100,100,100,100,100,5,107,107,107,107,107,107,5,114,114,114,114,114,114,5,121,122,122,122,122,122,122,122,129,129,129,129,129,129,121,136,136,136,136,136,136,121,143,143,143,143,143,143,121,150,150,150,150,150,150,5,157,157,157,157,157,157,157,164,164,164,164,164,164,157,171,171,171,171,171,171,157,178,178,178,178,178,178,157,185,185,185,185,185,185,157,192,192,192,192,192,192,157,199,199,199,199,199,199,157,206,206,206,206,206,206,157,213,213,213,213,213,213,5,220,220,220,220,220,220,226,226,226,226,226,220,232,232,232,232,232,5,238,238,238,238,238,238,5,245,245,245,245,245,245,5,252,252,252,252,252,252,258,258,258,258,258,252,264,264,264,264,264,264,252,252,272,272,272,272,272,5,278,279,279,279,279,279,278,285,285,285,285,285,278,291,291,291,291,291,5,297,298,298,298,298,298,298,304,304,304,304,304,304,298,311,311,311,311,311,311,298,318,318,318,318,318,318,297,325,325,325,325,325,325,297,332,332,332,332,332,332,5,339,339,339,339,339,339,339,346,346,346,346,346,346,339,353,353,353,353,353,353,5,360,360,360,360,360,360,5,367,367,367,367,367,5,373,373,373,373,373,4,379,380,380,380,380,380,379,386,386,386,379,390,390,390,390,390,390,390,379,398,399,399,399,399,399,398,405,405,405,405,379,410,410,410,410,410,379,416,416,416,416,379,421,421,421,421,379,426,427,427,427,426,431,432,432,432,432,432,431,438,438,438,438,438,379,444,444,444,444,379,449,449,449,449,4,454,455,456,457,457,457,457,456,462,462,462,462,456,467,467,467,467,467,455,473,473,473,473,473,478,478,478,473,482,482,482,473,486,486,486,455,455,454,492,493,494,494,494,494,494,494,494,494,494,494,494,494,493,507,507,507,507,507,507,507,507,507,493,517,517,517,517,517,492,523,523,523,492,527,527,527,492,531,531,531,492,535,536,536,536,535,540,540,540,492,544,545,545,545,544,549,549,549,492,492,3,555,555,555,558,558,555,555,562,562,562,555,566,566,555,2,570,571,572,571,574,574,574,577,577,577,577,577,577,574,571,585,586,586,586,585,585,571,592,592,592,595,595,595,592,592,600,600,600,603,603,603,600,570,608,609,609,608,612,612,608,615,616,616,615,608,620,621,622,622,622,622,622,622,622,622,622,621,632,632,632,632,632,620,1,639,640,641,642,643,643,643,646,646,646,646,643,642,652,652,642,642,642,657,658,658,658,657,662,662,662,641,666,667,667,667,667,667,667,666,674,674,676,676,674,674,674,674,666,683,683,685,685,685,683,683,666,691,691,691,691,666,696,696,696,696,696,696,666,666,704,704,704,707,707,704,666,711,711,711,640,715,716,716,718,716,720,721,721,721,724,724,720,727,727,727,716,716,716,715,734,734,734,734,734,739,739,739,734,734,734,734,734,734,734,734,734,734,734,734,734,715,756,757,757,757,757,756,762,762,764,764,764,764,764,762,770,770,762,773,773,756,776,776,776,756,756,756,782,782,782,782,756,787,787,787,787,756,715,793,793,793,793,793,793,793,793,793,802,802,715,639,806,807,808,808,808,807,812,812,812,807,807,807,807,807,806,821,821,821,821,821,826,826,826,821,830,830,830,830,834,834,834,821,838,838,838,838,821,843,843,843,843,843,843,843,821,821,821,821,821,821,821,821,821,821,821,821,821,821,806,865,865,865,868,868,870,870,870,870,870,870,870,870,868,868,868,639,882,883,884,885,885,885,884,884,890,890,892,892,892,892,892,890,898,898,898,884,902,902,902,883,906,906,906,906,906,906,906,906,906,906,906,906,906,906,906,906,906,883,924,925,925,924,924,924,924,924,924,924,882,935,936,936,938,938,938,938,936,943,943,936,936,936,948,948,948,948,948,936,936,936,956,956,956,956,956,936,936,935,964,964,964,964,964,964,970,970,964,964,964,964,964,964,964,964,964,981,981,964,964,985,985,964,964,964,990,990,964,993,993,993,964,964,998,998,964,1001,1001,1001,1001,964,964,964,964,935,1010,1010,1010,1,1014,1015,1015,1015,1015,1019,1020,1020,1020,1019,1024,1025,1025,1025,1024,1029,1029,1029,1019,1033,1034,1034,1034,1033,1038,1038,1038,1033,1042,1042,1042,1019,1046,1046,1046,1019,1050,1050,1050,1019,1054,1054,1054,1019,1058,1058,1058,1019,1062,1062,1062,1015,1066,1067,1067,1067,1066,1071,1072,1072,1072,1071,1076,1076,1076,1066,1080,1080,1080,1066,1084,1084,1084,1066,1088,1088,1088,1066,1092,1092,1092,1014,1096,1096,1096,1096,0,1101,1102,1102,1102,1105,1105,1107,1107,1107,1105,1102,1112,1112,1112,1112,1112,1112,1102,1119,1119,1102,1122,1102,1102,1125,1125,1127,1127,1102,1130,1130,1102,1133,1133,1133,1136,1136,1136,1136,1136,1136,1102,1102,1144,1102,1102,1102,1102,1149,1150,1150,1150,1150,1150,1155,1155,1155,1150,1102,1160,1160,1160,1160,1160,1160,1160,1160,1160,1169,1101,1171,1171,1173,1174,1175,1174,1174,1173,1173,1180,1180,1180,1180,1184,1184,1173,1171,1101,1101,1190,1191,1192,1191,1191,1191,1191,1191,1191,1190,1200,1200,1200,1200,1200,1200,1200,1200,1200,1200,1190,1211,1211,1211,1211,1211,1211,1101,1218,1219,1219,1219,1219,1219,1219,1218,1226,1226,1226,1218,1230,1230,1218,1218,1234,1234,1218,1101,1238,1239,1239,1239,1239,1239,1244,1244,1244,1244,1248,1244,1250,1250,1244,1253,1253,1244,1244,1239,1239,1259,1238,1261,1261,1261,1261,1265,1265,1265,1261,1261,1261,1271,1271,1271,1271,1261,1261,1277,1277,1277,1277,1261,1282,1261,1284,1284,1284,1284,1261,1289,1289,0,1292,1293,1293,1293,1293,1292,1292,1292,1292,1301,1292,0,1304,1305,1305,1305,1305,1304,1310,1310,1310,1310,1310,1310,1310,1310,1310,1310,1310,1310,1310,1310,1304,0],"depth":[0,1,2,3,4,5,6,7,7,7,7,7,6,7,7,7,7,7,7,8,8,8,8,8,7,8,8,8,8,8,6,7,7,7,7,7,7,7,8,8,8,8,8,8,8,9,9,9,9,9,9,8,9,9,9,9,9,9,9,10,10,10,10,10,10,8,9,9,9,9,9,9,8,9,9,9,9,9,9,8,9,9,9,9,9,9,8,9,9,9,9,9,9,8,9,9,9,9,9,9,7,8,8,8,8,8,8,6,7,7,7,7,7,7,6,7,7,7,7,7,7,6,7,8,8,8,8,8,8,8,9,9,9,9,9,9,7,8,8,8,8,8,8,7,8,8,8,8,8,8,7,8,8,8,8,8,8,6,7,7,7,7,7,7,7,8,8,8,8,8,8,7,8,8,8,8,8,8,7,8,8,8,8,8,8,7,8,8,8,8,8,8,7,8,8,8,8,8,8,7,8,8,8,8,8,8,7,8,8,8,8,8,8,7,8,8,8,8,8,8,6,7,7,7,7,7,7,8,8,8,8,8,7,8,8,8,8,8,6,7,7,7,7,7,7,6,7,7,7,7,7,7,6,7,7,7,7,7,7,8,8,8,8,8,7,8,8,8,8,8,8,7,7,8,8,8,8,8,6,7,8,8,8,8,8,7,8,8,8,8,8,7,8,8,8,8,8,6,7,8,8,8,8,8,8,9,9,9,9,9,9,8,9,9,9,9,9,9,8,9,9,9,9,9,9,7,8,8,8,8,8,8,7,8,8,8,8,8,8,6,7,7,7,7,7,7,7,8,8,8,8,8,8,7,8,8,8,8,8,8,6,7,7,7,7,7,7,6,7,7,7,7,7,6,7,7,7,7,7,5,6,7,7,7,7,7,6,7,7,7,6,7,7,7,7,7,7,7,6,7,8,8,8,8,8,7,8,8,8,8,6,7,7,7,7,7,6,7,7,7,7,6,7,7,7,7,6,7,8,8,8,7,8,9,9,9,9,9,8,9,9,9,9,9,6,7,7,7,7,6,7,7,7,7,5,6,7,8,9,9,9,9,8,9,9,9,9,8,9,9,9,9,9,7,8,8,8,8,8,9,9,9,8,9,9,9,8,9,9,9,7,7,6,7,8,9,9,9,9,9,9,9,9,9,9,9,9,8,9,9,9,9,9,9,9,9,9,8,9,9,9,9,9,7,8,8,8,7,8,8,8,7,8,8,8,7,8,9,9,9,8,9,9,9,7,8,9,9,9,8,9,9,9,7,7,4,5,5,5,6,6,5,5,6,6,6,5,6,6,5,3,4,5,6,5,6,6,6,7,7,7,7,7,7,6,5,6,7,7,7,6,6,5,6,6,6,7,7,7,6,6,7,7,7,8,8,8,7,4,5,6,6,5,6,6,5,6,7,7,6,5,6,7,8,8,8,8,8,8,8,8,8,7,8,8,8,8,8,6,2,3,4,5,6,7,7,7,8,8,8,8,7,6,7,7,6,6,6,7,8,8,8,7,8,8,8,5,6,7,7,7,7,7,7,6,7,7,8,8,7,7,7,7,6,7,7,8,8,8,7,7,6,7,7,7,7,6,7,7,7,7,7,7,6,6,7,7,7,8,8,7,6,7,7,7,4,5,6,6,7,6,7,8,8,8,9,9,7,8,8,8,6,6,6,5,6,6,6,6,6,7,7,7,6,6,6,6,6,6,6,6,6,6,6,6,6,5,6,7,7,7,7,6,7,7,8,8,8,8,8,7,8,8,7,8,8,6,7,7,7,6,6,6,7,7,7,7,6,7,7,7,7,6,5,6,6,6,6,6,6,6,6,6,7,7,5,3,4,5,6,6,6,5,6,6,6,5,5,5,5,5,4,5,5,5,5,5,6,6,6,5,6,6,6,6,7,7,7,5,6,6,6,6,5,6,6,6,6,6,6,6,5,5,5,5,5,5,5,5,5,5,5,5,5,5,4,5,5,5,6,6,7,7,7,7,7,7,7,7,6,6,6,3,4,5,6,7,7,7,6,6,7,7,8,8,8,8,8,7,8,8,8,6,7,7,7,5,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,5,6,7,7,6,6,6,6,6,6,6,4,5,6,6,7,7,7,7,6,7,7,6,6,6,7,7,7,7,7,6,6,6,7,7,7,7,7,6,6,5,6,6,6,6,6,6,7,7,6,6,6,6,6,6,6,6,6,7,7,6,6,7,7,6,6,6,7,7,6,7,7,7,6,6,7,7,6,7,7,7,7,6,6,6,6,5,6,6,6,2,3,4,4,4,4,5,6,6,6,5,6,7,7,7,6,7,7,7,5,6,7,7,7,6,7,7,7,6,7,7,7,5,6,6,6,5,6,6,6,5,6,6,6,5,6,6,6,5,6,6,6,4,5,6,6,6,5,6,7,7,7,6,7,7,7,5,6,6,6,5,6,6,6,5,6,6,6,5,6,6,6,3,4,4,4,4,1,2,3,3,3,4,4,5,5,5,4,3,4,4,4,4,4,4,3,4,4,3,4,3,3,4,4,5,5,3,4,4,3,4,4,4,5,5,5,5,5,5,3,3,4,3,3,3,3,4,5,5,5,5,5,6,6,6,5,3,4,4,4,4,4,4,4,4,4,5,2,3,3,4,5,6,5,5,4,4,5,5,5,5,6,6,4,3,2,2,3,4,5,4,4,4,4,4,4,3,4,4,4,4,4,4,4,4,4,4,3,4,4,4,4,4,4,2,3,4,4,4,4,4,4,3,4,4,4,3,4,4,3,3,4,4,3,2,3,4,4,4,4,4,5,5,5,5,6,5,6,6,5,6,6,5,5,4,4,5,3,4,4,4,4,5,5,5,4,4,4,5,5,5,5,4,4,5,5,5,5,4,5,4,5,5,5,5,4,5,5,1,2,3,3,3,3,2,2,2,2,3,2,1,2,3,3,3,3,2,3,3,3,3,3,3,3,3,3,3,3,3,3,3,2,1],"color":["#FFFFFF","#BFDAE3","#B0F0FF","#B0FFB8","#70FF70","#70FF71","#268F45","#268F45","#268F45","#268F45","#268F45","#268F45","#1F9D5A","#1F9D5A","#1F9D5A","#1F9D5A","#1F9D5A","#1F9D5A","#1F9D5A","#1F9D5A","#1F9D5A","#1F9D5A","#1F9D5A","#1F9D5A","#1F9D5A","#1F9D5A","#1F9D5A","#1F9D5A","#1F9D5A","#1F9D5A","#188064","#188064","#188064","#188064","#188064","#188064","#188064","#188064","#188064","#188064","#188064","#188064","#188064","#188064","#188064","#188064","#188064","#188064","#188064","#188064","#188064","#188064","#188064","#188064","#188064","#188064","#188064","#188064","#188064","#188064","#188064","#188064","#188064","#188064","#188064","#188064","#188064","#188064","#188064","#188064","#188064","#188064","#188064","#188064","#188064","#188064","#188064","#188064","#188064","#188064","#188064","#188064","#188064","#188064","#188064","#188064","#188064","#188064","#188064","#188064","#188064","#188064","#188064","#188064","#188064","#188064","#188064","#188064","#188064","#188064","#188064","#188064","#188064","#188064","#188064","#188064","#188064","#009C75","#009C75","#009C75","#009C75","#009C75","#009C75","#009C75","#11AD83","#11AD83","#11AD83","#11AD83","#11AD83","#11AD83","#11AD83","#019399","#019399","#019399","#019399","#019399","#019399","#019399","#019399","#019399","#019399","#019399","#019399","#019399","#019399","#019399","#019399","#019399","#019399","#019399","#019399","#019399","#019399","#019399","#019399","#019399","#019399","#019399","#019399","#019399","#019399","#019399","#019399","#019399","#019399","#019399","#019399","#08858C","#08858C","#08858C","#08858C","#08858C","#08858C","#08858C","#08858C","#08858C","#08858C","#08858C","#08858C","#08858C","#08858C","#08858C","#08858C","#08858C","#08858C","#08858C","#08858C","#08858C","#08858C","#08858C","#08858C","#08858C","#08858C","#08858C","#08858C","#08858C","#08858C","#08858C","#08858C","#08858C","#08858C","#08858C","#08858C","#08858C","#08858C","#08858C","#08858C","#08858C","#08858C","#08858C","#08858C","#08858C","#08858C","#08858C","#08858C","#08858C","#08858C","#08858C","#08858C","#08858C","#08858C","#08858C","#08858C","#08858C","#08858C","#08858C","#08858C","#08858C","#08858C","#08858C","#40A666","#40A666","#40A666","#40A666","#40A666","#40A666","#40A666","#40A666","#40A666","#40A666","#40A666","#40A666","#40A666","#40A666","#40A666","#40A666","#40A666","#40A666","#2FA850","#2FA850","#2FA850","#2FA850","#2FA850","#2FA850","#2FA850","#59B363","#59B363","#59B363","#59B363","#59B363","#59B363","#59B363","#248A5E","#248A5E","#248A5E","#248A5E","#248A5E","#248A5E","#248A5E","#248A5E","#248A5E","#248A5E","#248A5E","#248A5E","#248A5E","#248A5E","#248A5E","#248A5E","#248A5E","#248A5E","#248A5E","#248A5E","#248A5E","#248A5E","#248A5E","#248A5E","#248A5E","#248A5E","#219866","#219866","#219866","#219866","#219866","#219866","#219866","#219866","#219866","#219866","#219866","#219866","#219866","#219866","#219866","#219866","#219866","#219866","#219866","#1AA698","#1AA698","#1AA698","#1AA698","#1AA698","#1AA698","#1AA698","#1AA698","#1AA698","#1AA698","#1AA698","#1AA698","#1AA698","#1AA698","#1AA698","#1AA698","#1AA698","#1AA698","#1AA698","#1AA698","#1AA698","#1AA698","#1AA698","#1AA698","#1AA698","#1AA698","#1AA698","#1AA698","#1AA698","#1AA698","#1AA698","#1AA698","#1AA698","#1AA698","#1AA698","#1AA698","#1AA698","#1AA698","#1AA698","#1AA698","#1AA698","#1AA698","#009FAC","#009FAC","#009FAC","#009FAC","#009FAC","#009FAC","#009FAC","#009FAC","#009FAC","#009FAC","#009FAC","#009FAC","#009FAC","#009FAC","#009FAC","#009FAC","#009FAC","#009FAC","#009FAC","#009FAC","#009FAC","#15B0B3","#15B0B3","#15B0B3","#15B0B3","#15B0B3","#15B0B3","#15B0B3","#0E9684","#0E9684","#0E9684","#0E9684","#0E9684","#0E9684","#0D9F91","#0D9F91","#0D9F91","#0D9F91","#0D9F91","#0D9F91","#9AD2BD","#9AD2BD","#82C7AE","#82C7AE","#9AD2BD","#82C7AE","#9AD2BD","#9DF0D2","#9DF0D2","#95E4C8","#9DF0D2","#54BF94","#54BF94","#54BF94","#54BF94","#54BF94","#54BF94","#54BF94","#54BF94","#62D09F","#62D09F","#62D09F","#62D09F","#62D09F","#62D09F","#62D09F","#62D09F","#62D09F","#62D09F","#62D09F","#62D09F","#A4DAA4","#A4DAA4","#A4DAA4","#A4DAA4","#A4DAA4","#A4DAA4","#6ACBBA","#6ACBBA","#6ACBBA","#6ACBBA","#6ACBBA","#95E4C8","#95E4C8","#95E4C8","#95E4C8","#95E4C8","#61E7B7","#61E7B7","#61E7B7","#61E7B7","#61E7B7","#61E7B7","#61E7B7","#61E7B7","#61E7B7","#61E7B7","#61E7B7","#61E7B7","#61E7B7","#61E7B7","#61E7B7","#61E7B7","#61E7B7","#61E7B7","#59DAAB","#59DAAB","#59DAAB","#59DAAB","#59DAAB","#A8ECD3","#A8ECD3","#A8ECD3","#A8ECD3","#A8ECD3","#7ED04B","#7ED04B","#7ED04B","#7ED04B","#7ED04B","#7ED04B","#66A83D","#7ED04B","#7ED04B","#7ED04B","#7ED04B","#66A83D","#7ED04B","#7ED04B","#7ED04B","#7ED04B","#7ED04B","#66A83D","#7ED04B","#7ED04B","#7ED04B","#7ED04B","#66A83D","#7ED04B","#7ED04B","#7ED04B","#7ED04B","#7ED04B","#7ED04B","#7ED04B","#7ED04B","#7ED04B","#7ED04B","#7ED04B","#7ED04B","#7ED04B","#7ED04B","#7ED04B","#32B825","#32B825","#32B825","#32B825","#32B825","#32B825","#32B825","#32B825","#32B825","#32B825","#32B825","#32B825","#32B825","#32B825","#32B825","#32B825","#32B825","#32B825","#32B825","#32B825","#32B825","#32B825","#32B825","#32B825","#32B825","#32B825","#32B825","#32B825","#32B825","#32B825","#32B825","#72D569","#72D569","#72D569","#72D569","#48C83C","#48C83C","#48C83C","#48C83C","#59B947","#59B947","#59B947","#59B947","#4FC244","#4FC244","#4FC244","#4BB547","#4FC244","#4FC244","#4FC244","#4BB547","#4FC244","#58BA48","#58BA48","#58BA48","#56B84B","#58BA48","#58BA48","#58BA48","#56B84B","#58BA48","#33B932","#33B932","#8ADA87","#8ADA87","#8ADA87","#A0EE9D","#A0EE9D","#A0EE9D","#90EB8D","#9DE79C","#9DE79C","#9DE79C","#9DE79C","#84EA81","#84EA81","#84EA81","#97EC93","#98D6F9","#98D6F9","#98D6F9","#98D6F9","#80CDF8","#80CDF8","#80CDF8","#80CDF8","#80CDF8","#80CDF8","#80CDF8","#80CDF8","#80CDF8","#80CDF8","#80CDF8","#90CBED","#90CBED","#90CBED","#90CBED","#90CBED","#90CBED","#90CBED","#80C0E2","#80C0E2","#80C0E2","#80C0E2","#80C0E2","#80C0E2","#80C0E2","#80C0E2","#80C0E2","#80C0E2","#80C0E2","#80C0E2","#80C0E2","#80C0E2","#80C0E2","#80C0E2","#8599CC","#8599CC","#8599CC","#8599CC","#A2B1D8","#A2B1D8","#A2B1D8","#96A7D3","#96A7D3","#96A7D3","#96A7D3","#96A7D3","#B3C0DF","#B3C0DF","#B3C0DF","#B3C0DF","#B3C0DF","#B3C0DF","#B3C0DF","#B3C0DF","#B3C0DF","#B3C0DF","#B3C0DF","#B3C0DF","#B3C0DF","#B3C0DF","#B3C0DF","#B3C0DF","#B3C0DF","#B3C0DF","#B3C0DF","#FF7080","#FF7080","#FF7080","#FF8084","#FF8084","#FF8084","#FF8084","#FF8084","#FF8084","#FF8084","#FF8084","#FF8084","#FF8084","#FF8084","#FF8084","#FF8084","#FF8084","#FF8084","#FF8084","#FF8084","#FF8084","#FF8084","#FF8084","#FF8084","#FF8084","#FF8084","#FF8084","#FF909F","#FF909F","#FF909F","#FF909F","#FF909F","#FF909F","#FF909F","#FF909F","#FF909F","#FF909F","#FF909F","#FF909F","#FF909F","#FF909F","#FF909F","#FF909F","#FF909F","#FF909F","#FF909F","#FF909F","#FF909F","#FF909F","#FF909F","#FF909F","#FF909F","#FF909F","#FF909F","#FF909F","#FF909F","#FF909F","#FF909F","#FF909F","#FF909F","#FF909F","#FF909F","#FF909F","#FF909F","#FF909F","#FF909F","#FF909F","#FF909F","#FF909F","#FF909F","#FF909F","#FF909F","#FF909F","#FF909F","#FF909F","#FF909F","#E64438","#FF5D50","#FF5D50","#FF5D50","#FF5D50","#FF5D50","#FF5D50","#FF5D50","#FF5D50","#FF5D50","#FF5D50","#FF5D50","#FF5D50","#FF5D50","#FF5D50","#FF5D50","#FF5D50","#FF5D50","#FF5D50","#FF5547","#FF5547","#FF5547","#FF5547","#FF5547","#FF5547","#FF5547","#FF5547","#FF5547","#FF5547","#FF5547","#FF5547","#FF5547","#FF5547","#FF5547","#FF5547","#FF5547","#FF5547","#FF5547","#FF5547","#FF5547","#FF5547","#FF4C3E","#FF4C3E","#FF4C3E","#FF4C3E","#FF4C3E","#FF4C3E","#FF4C3E","#FF4C3E","#FF4C3E","#FF4C3E","#FF4C3E","#FF4C3E","#FF4C3E","#FF4C3E","#FF4C3E","#FF4C3E","#FF4C3E","#FF4C3E","#FF4C3E","#FF4C3E","#FF4C3E","#FF4C3E","#FF4C3E","#FF4C3E","#FF4C3E","#FF4C3E","#FF4C3E","#FF4C3E","#FF4C3E","#FF4C3E","#FF4C3E","#FF4C3E","#FF4C3E","#FF4C3E","#FF4C3E","#FF4C3E","#FF4C3E","#F2483B","#F2483B","#F2483B","#F2483B","#F2483B","#F2483B","#F2483B","#F2483B","#F2483B","#F2483B","#F2483B","#F2483B","#F2483B","#FF64FF","#FF7AFF","#FF7AFF","#FF7AFF","#FF7AFF","#FF7AFF","#FF7AFF","#FF7AFF","#FF7AFF","#FF7AFF","#FF7AFF","#FF7AFF","#FF7AFF","#FF7AFF","#FF7AFF","#FF90FF","#FF90FF","#FF90FF","#FF90FF","#FF90FF","#FF90FF","#FF90FF","#FF90FF","#FF90FF","#FF90FF","#FF90FF","#FF90FF","#FF90FF","#FF90FF","#FF90FF","#FF90FF","#FF90FF","#FF90FF","#FF90FF","#FF90FF","#FF90FF","#FF90FF","#FF90FF","#FF90FF","#FF90FF","#FF90FF","#FF90FF","#FF90FF","#FF90FF","#FF90FF","#FF90FF","#FF90FF","#FF90FF","#FF90FF","#FF90FF","#FF90FF","#FF90FF","#FF90FF","#FF90FF","#FF90FF","#FF90FF","#FF90FF","#FF90FF","#FF90FF","#FF90FF","#FFA6FF","#FFA6FF","#FFA6FF","#FFA6FF","#FFA6FF","#FFA6FF","#FFA6FF","#FFA6FF","#FFA6FF","#FFA6FF","#FFA6FF","#FFA6FF","#FFA6FF","#FFA6FF","#FFA6FF","#FFA6FF","#FF9B88","#FF9B88","#FFAE6F","#FFAE6F","#FFAE6F","#FFAE6F","#FFAE6F","#FFAE6F","#FFAE6F","#FFAE6F","#FFAE6F","#FFAE6F","#FFAE6F","#FFAE6F","#FFAE6F","#FFAE6F","#FFAE6F","#FFAE6F","#FFAE6F","#FFAE6F","#FFAE6F","#FFAE6F","#FFAE6F","#FFAE6F","#FFBA86","#FFBA86","#FFBA86","#FFBA86","#FFBA86","#FFBA86","#FFBA86","#FFBA86","#FFBA86","#FFBA86","#FFBA86","#FFBA86","#FFBA86","#FFBA86","#FFBA86","#FFBA86","#FFBA86","#FFBA86","#FFC395","#FFC395","#FFC395","#FFC395","#FFC395","#FFC395","#FFC395","#FFC395","#FFC395","#FFC395","#FFC395","#FF9BCD","#FFA5D2","#FFA5D2","#FFA5D2","#FFA5D2","#FFA5D2","#FFA5D2","#FFA5D2","#FFA5D2","#FFA5D2","#FFA5D2","#FFA5D2","#FFA5D2","#FFA5D2","#FFA5D2","#FFA5D2","#FFA5D2","#FFA5D2","#FFA5D2","#FFA5D2","#FFA5D2","#FFA5D2","#FFA5D2","#FFA5D2","#FFA5D2","#FFA5D2","#FFA5D2","#FFA5D2","#FFA5D2","#FFB3D9","#FFB3D9","#FFB3D9","#FFB3D9","#FFB3D9","#FFB3D9","#FFB3D9","#FFB3D9","#FFB3D9","#FFB3D9","#FFB3D9","#FFB3D9","#FFB3D9","#FFB3D9","#FFB3D9","#FFB3D9","#FFB3D9","#FFB3D9","#FFB3D9","#FFB3D9","#FFB3D9","#FFB3D9","#FFB3D9","#FFB3D9","#FFB3D9","#FFB3D9","#FFB3D9","#FFB3D9","#FFB3D9","#FFB3D9","#FFB3D9","#FFB3D9","#FFB3D9","#FFB3D9","#FFB3D9","#FFB3D9","#FFB3D9","#FFB3D9","#FFB3D9","#FFB3D9","#FFB3D9","#FFB3D9","#FFB3D9","#FFB3D9","#FFB3D9","#FFB3D9","#FFC6E2","#FFC6E2","#FFC6E2","#FFC6E2","#F0F080","#F0F080","#FFFC91","#FFFC91","#ECE754","#FFFC91","#FFFC91","#FFFC91","#FFFC91","#ECE754","#FFFC91","#FFFC91","#FFFC91","#FFFC91","#ECE754","#FFFC91","#FFFC91","#FFFC91","#ECE754","#FFFC91","#FFFC91","#FFFC91","#FFFC91","#ECE754","#FFFC91","#FFFC91","#FFFC91","#ECE754","#FFFC91","#FFFC91","#FFFC91","#ECE754","#FFFC91","#FFFC91","#FFFC91","#ECE754","#FFFC91","#FFFC91","#FFFC91","#ECE754","#FFFC91","#FFFC91","#FFFC91","#ECE754","#FFFC91","#FFFC91","#FFFC91","#ECE754","#FFFC91","#FFFC91","#FFFC91","#ECE754","#FFFC91","#FFFC91","#FFFC91","#FFFC91","#ECE754","#FFFC91","#FFFC91","#FFFC91","#FFFC91","#ECE754","#FFFC91","#FFFC91","#FFFC91","#ECE754","#FFFC91","#FFFC91","#FFFC91","#ECE754","#FFFC91","#FFFC91","#FFFC91","#ECE754","#FFFC91","#FFFC91","#FFFC91","#ECE754","#FFFC91","#FFFC91","#FFFC91","#ECE754","#F0F080","#FFFDBC","#FFFDBC","#FFFDBC","#FFFDBC","#CCCCCC","#CCCCCC","#CCCCCC","#CCCCCC","#CCCCCC","#CCCCCC","#CCCCCC","#CCCCCC","#CCCCCC","#CCCCCC","#CCCCCC","#CCCCCC","#CCCCCC","#CCCCCC","#CCCCCC","#CCCCCC","#CCCCCC","#CCCCCC","#CCCCCC","#CCCCCC","#CCCCCC","#CCCCCC","#CCCCCC","#CCCCCC","#CCCCCC","#CCCCCC","#CCCCCC","#CCCCCC","#CCCCCC","#CCCCCC","#CCCCCC","#CCCCCC","#CCCCCC","#CCCCCC","#CCCCCC","#CCCCCC","#CCCCCC","#CCCCCC","#CCCCCC","#CCCCCC","#CCCCCC","#CCCCCC","#CCCCCC","#CCCCCC","#CCCCCC","#CCCCCC","#CCCCCC","#CCCCCC","#CCCCCC","#CCCCCC","#CCCCCC","#CCCCCC","#CCCCCC","#CCCCCC","#CCCCCC","#CCCCCC","#CCCCCC","#CCCCCC","#CCCCCC","#CCCCCC","#CCCCCC","#CCCCCC","#CCCCCC","#CCCCCC","#CCCCCC","#CCCCCC","#CCCCCC","#CCCCCC","#CCCCCC","#CCCCCC","#CCCCCC","#CCCCCC","#CCCCCC","#CCCCCC","#CCCCCC","#CCCCCC","#CCCCCC","#CCCCCC","#CCCCCC","#CCCCCC","#CCCCCC","#CCCCCC","#CCCCCC","#CCCCCC","#CCCCCC","#CCCCCC","#CCCCCC","#CCCCCC","#CCCCCC","#CCCCCC","#CCCCCC","#CCCCCC","#CCCCCC","#CCCCCC","#CCCCCC","#CCCCCC","#CCCCCC","#CCCCCC","#CCCCCC","#CCCCCC","#CCCCCC","#CCCCCC","#CCCCCC","#CCCCCC","#CCCCCC","#CCCCCC","#CCCCCC","#CCCCCC","#CCCCCC","#CCCCCC","#CCCCCC","#CCCCCC","#CCCCCC","#CCCCCC","#CCCCCC","#CCCCCC","#CCCCCC","#CCCCCC","#CCCCCC","#CCCCCC","#CCCCCC","#CCCCCC","#CCCCCC","#CCCCCC","#CCCCCC","#CCCCCC","#CCCCCC","#CCCCCC","#CCCCCC","#CCCCCC","#CCCCCC","#CCCCCC","#CCCCCC","#CCCCCC","#CCCCCC","#CCCCCC","#CCCCCC","#CCCCCC","#CCCCCC","#CCCCCC","#CCCCCC","#CCCCCC","#CCCCCC","#CCCCCC","#CCCCCC","#CCCCCC","#CCCCCC","#CCCCCC","#CCCCCC","#CCCCCC","#CCCCCC","#CCCCCC","#CCCCCC","#CCCCCC","#CCCCCC","#CCCCCC","#CCCCCC","#CCCCCC","#CCCCCC","#CCCCCC","#CCCCCC","#CCCCCC","#CCCCCC","#CCCCCC","#CCCCCC","#CCCCCC","#CCCCCC","#CCCCCC","#CCCCCC","#CCCCCC","#CCCCCC","#CCCCCC","#CCCCCC","#CCCCCC","#CCCCCC","#CCCCCC","#CCCCCC","#CCCCCC","#CCCCCC","#CCCCCC","#CCCCCC","#CCCCCC","#CCCCCC","#CCCCCC","#CCCCCC","#CCCCCC","#CCCCCC","#CCCCCC","#CCCCCC","#CCCCCC","#CCCCCC","#AAAAAA","#AAAAAA","#AAAAAA","#AAAAAA","#AAAAAA","#AAAAAA","#AAAAAA","#AAAAAA","#AAAAAA","#AAAAAA","#AAAAAA","#AAAAAA","#AAAAAA","#AAAAAA","#AAAAAA","#AAAAAA","#AAAAAA","#AAAAAA","#AAAAAA","#AAAAAA","#AAAAAA","#AAAAAA","#AAAAAA","#AAAAAA","#AAAAAA","#AAAAAA","#AAAAAA","#AAAAAA","#AAAAAA","#AAAAAA","#AAAAAA","#AAAAAA","#AAAAAA","#AAAAAA","#7F2E7E"],"div":[-1,-1,-1,-1,-1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,-1,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,-1,-1,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,-1,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,9,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,10,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,12,13,13,13,13,13,13,13,13,13,13,13,13,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,15],"bg":[1,1,1,1,1,1,1,1,1,1,1,1,1,0,0,0,0,0,1,1,1,1,1,1,1,1,1,1,1,1,1,0,0,0,0,0,0,1,0,0,0,0,0,0,1,1,1,1,1,1,1,1,1,1,1,1,1,1,0,0,0,0,0,0,0,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,0,0,0,0,0,0,0,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,0,0,0,0,0,0,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,0,0,0,0,0,1,1,1,1,1,1,1,1,1,1,1,1,1,1,0,1,1,1,1,1,1,0,1,1,1,1,1,0,0,0,0,0,1,1,1,1,1,1,1,1,0,1,1,1,1,0,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1,1,1,1,1,1,1,0,1,1,1,1,1,0,0,0,0,0,0,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,0,0,0,0,0,1,1,1,1,1,0,0,0,0,0,0,0,1,1,0,0,0,0,0,1,0,0,0,0,1,0,0,0,0,0,1,0,0,0,0,1,0,1,1,1,1,1,0,0,0,1,1,0,0,0,0,0,1,0,0,0,0,0,1,0,0,0,0,1,0,0,0,0,1,1,1,1,0,0,0,0,1,0,0,0,0,1,0,0,0,0,0,1,1,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1,1,1,1,1,0,0,0,1,0,0,1,0,1,0,1,1,1,0,0,1,0,1,0,1,0,0,0,0,0,0,1,0,0,0,1,0,0,0,1,0,0,0,1,0,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,0,1,1,1,0,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,0,0,0,0,0,0,0,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,0,0,0,0,0,0,0,1,1,1,1,1,1,1,1,1,1,1,1,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,0,1,1,1,1,1,1,1,1,1,1,1,1,0,0,0,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,0,0,1,1,1,1,0,1,1,1,1,0,1,0,0,0,0,0,0,0,0,0,0,1,1,1,1,1,0,1,1,1,0,0,0,1,1,1,1,1,0,1,1,1,1,1,1,1,1,1,0,0,0,0,1,1,1,1,1,1,1,1,1,0,0,1,1,1,1,0,0,0,1,1,1,0,0,0,0,1,0,0,0,0,1,1,1,1,1,1,1,1,1,1,1,0,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,0,0,0,1,1,1,1,1,0,0,0,1,1,1,1,1,1,1,1,1,1,1,1,1,0,1,1,1,1,1,1,1,1,1,1,1,1,0,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,0,0,0,1,1,1,0,0,0,0,0,0,0,0,0,0,1,1,1,1,1,1,1,0,1,1,1,1,0,1,0,1,1,1,1,1,1,1,1,1,0,0,1,1,1,1,1,1,1,1,1,1,1,0,0,1,1,1,1,1,1,1,1,0,0,0,0,0,1,1,1,0,0,0,0,0,1,0,1,1,0,1,1,0,1,1,1,1,0,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,0,1,1,0,1,0,0,1,1,1,1,1,1,1,1,0,1,1,1,1,1,1,0,0,0,1,1,0,0,0,1,1,0,0,0,1,0,0,0,1,0,0,0,0,0,0,0,0,1,0,0,0,1,0,0,0,1,0,0,0,1,0,0,0,1,0,0,0,1,0,0,0,1,1,0,0,0,1,1,0,0,0,1,0,0,0,1,0,0,0,1,0,0,0,1,0,0,0,1,0,0,0,1,1,1,1,1,1,1,0,1,1,1,1,1,1,0,1,1,0,1,1,1,1,0,1,1,1,1,0,0,1,1,1,0,1,1,0,1,1,0,1,1,1,0,1,1,1,1,0,1,1,0,0,0,1,1,0,0,0,0,1,1,0,0,1,0,0,0,0,0,0,0,0,0,0,0,1,1,1,1,1,0,1,1,1,1,1,0,0,0,0,0,0,1,1,1,1,1,1,1,1,1,0,1,1,1,1,1,0,0,0,0,1,1,0,0,1,1,0,0,0,1,1,1,1,0,1,0,0,0,0,1,1,1,1,1,1,0,0,0,0,0,0,1,1,1,0,1,1,1,1,1,1,0,0,1,1,1,1,1,1,0,0,0,1,1,1,1,0,0,1,0,0,0,0,0,0,0,0,0,0,0,1,1,1,1,1,0,0,1,1,1,1,0,0,0,0,1,1,0,1,1,0,0,1,1,1,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],"divisions":[{"acr":"Isocortex","name":"Isocortex"},{"acr":"OLF","name":"Olfactory areas"},{"acr":"HPF","name":"Hippocampal formation"},{"acr":"CTXsp","name":"Cortical subplate"},{"acr":"STR","name":"Striatum"},{"acr":"PAL","name":"Pallidum"},{"acr":"TH","name":"Thalamus"},{"acr":"HY","name":"Hypothalamus"},{"acr":"MB","name":"Midbrain"},{"acr":"P","name":"Pons"},{"acr":"MY","name":"Medulla"},{"acr":"CB","name":"Cerebellum"},{"acr":"fiber tracts","name":"fiber tracts"},{"acr":"VS","name":"ventricular systems"},{"acr":"grv","name":"grooves"},{"acr":"retina","name":"retina"}],"confusables":[[{"acr":"LH","name":"Lateral habenula"},{"acr":"LHA","name":"Lateral hypothalamic area"}],[{"acr":"PL","name":"Prelimbic area"},{"acr":"PIR","name":"Piriform area"}],[{"acr":"LA","name":"Lateral amygdalar nucleus"},{"acr":"LP","name":"Lateral posterior nucleus of the thalamus"},{"acr":"LD","name":"Lateral dorsal nucleus of thalamus"}],[{"acr":"MO","name":"Somatomotor areas"},{"acr":"MOp","name":"Primary motor area"},{"acr":"MOs","name":"Secondary motor area"}],[{"acr":"PA","name":"Posterior amygdalar nucleus"},{"acr":"PAG","name":"Periaqueductal gray"},{"acr":"PAA","name":"Piriform-amygdalar area"}],[{"acr":"CA1","name":"Field CA1"},{"acr":"CA2","name":"Field CA2"},{"acr":"CA3","name":"Field CA3"}],[{"acr":"AI","name":"Agranular insular area"},{"acr":"AId","name":"Agranular insular area, dorsal part"},{"acr":"AIv","name":"Agranular insular area, ventral part"},{"acr":"AIp","name":"Agranular insular area, posterior part"}],[{"acr":"SI","name":"Substantia innominata"},{"acr":"SNr","name":"Substantia nigra, reticular part"},{"acr":"SNc","name":"Substantia nigra, compact part"}],[{"acr":"RE","name":"Nucleus of reuniens"},{"acr":"RSP","name":"Retrosplenial area"},{"acr":"RT","name":"Reticular nucleus of the thalamus"}]],"lit":[{"term":"mPFC","kind":"composite","also":["medial prefrontal cortex"],"note":"Definitions differ between labs. Most rodent work means PL + ILA + ACA; some include MOs as dorsal mPFC, some drop ACA entirely. State which you used — the choice moves the numbers.","members":[226,232,238,245]},{"term":"vmPFC","kind":"composite","also":["ventromedial prefrontal cortex"],"note":"Usually PL + ILA; occasionally ILA alone.","members":[238,245]},{"term":"dmPFC","kind":"composite","also":["dorsomedial prefrontal cortex"],"note":"Usually ACA + PL; occasionally ACA alone.","members":[226,232,238]},{"term":"PFC","kind":"composite","also":["prefrontal cortex"],"note":"The broadest reading. Whether rodents have a homologue of primate PFC is itself contested, so this one is a convenience, not a structure.","members":[220,238,245,252,6,278]},{"term":"OFC","kind":"alias","also":["orbitofrontal cortex"],"note":"The atlas calls it the orbital area. ORBl / ORBm / ORBvl are its parts.","members":[252]},{"term":"amygdala","kind":"composite","also":["Amyg","amygdaloid complex"],"note":"Not one structure, and not even one division: the cortex-like nuclei sit under CTXsp, the striatum-like ones (CEA, MEA) under STR, and the cortical amygdalar areas under OLF. There is no single ancestor to roll up to.","members":[561,562,566,569,595,600,599,593,427,431]},{"term":"BLA complex","kind":"composite","also":["basolateral amygdala complex","BLAc"],"note":"The trap: the atlas's BLA is ONE nucleus of this complex, not the complex.","members":[561,562,566]},{"term":"extended amygdala","kind":"composite","also":[],"note":"Central extended amygdala. Some definitions add MEA and SI.","members":[595,621,599]},{"term":"hippocampus proper","kind":"composite","also":["Ammon's horn","cornu ammonis","HPC"],"note":"The atlas's CA covers exactly these three. Add DG for the hippocampal region (HIP); add the retrohippocampal areas for the hippocampal formation (HPF).","members":[457,462,467]},{"term":"ventral striatum","kind":"composite","also":[],"note":"Some definitions add the ventral pallidum (PALv), which is pallidum, not striatum.","members":[575,577,576]},{"term":"dorsal striatum","kind":"alias","also":["caudate putamen","DMS","DLS"],"note":"One atlas structure. CCFv3 does not split CP — dorsomedial and dorsolateral striatum are positions inside CP, so separate them by coordinate, not by label.","members":[573]},{"term":"entorhinal cortex","kind":"composite","also":["EC"],"note":"","members":[494,507]},{"term":"insular cortex","kind":"composite","also":["insula"],"note":"Some definitions add the gustatory (GU) and visceral (VISC) areas. Do not abbreviate it IC here — see the collision below.","members":[279,291,285]},{"term":"septum","kind":"composite","also":[],"note":"","members":[617,618,585,619]},{"term":"midbrain dopamine neurons","kind":"composite","also":["VTA/SNc"],"note":"","members":[823,866]},{"term":"BNST","kind":"alias","also":["bed nucleus of the stria terminalis"],"note":"","members":[621]},{"term":"NAc","kind":"alias","also":["NAcc","Acb","nucleus accumbens"],"note":"CCFv3 does not subdivide the accumbens — there is no core or shell in this atlas.","members":[575]},{"term":"LHb","kind":"alias","also":["lateral habenula"],"note":"The atlas's acronym is LH — which is also what many papers write for lateral HYPOTHALAMUS. That one is LHA.","members":[713]},{"term":"MHb","kind":"alias","also":["medial habenula"],"note":"","members":[712]},{"term":"RSC","kind":"alias","also":["retrosplenial cortex"],"note":"","members":[297]},{"term":"MEC","kind":"alias","also":["medial entorhinal cortex"],"note":"","members":[507]},{"term":"LEC","kind":"alias","also":["lateral entorhinal cortex"],"note":"","members":[494]},{"term":"PRh","kind":"alias","also":["perirhinal cortex"],"note":"","members":[367]},{"term":"S1BF","kind":"alias","also":["barrel cortex","barrel field"],"note":"","members":[51]},{"term":"PVN","kind":"alias","also":["paraventricular nucleus of the hypothalamus"],"note":"In the thalamus the paraventricular nucleus is PVT — a different structure in a different division.","members":[720]},{"term":"IL","kind":"alias","also":["infralimbic cortex"],"note":"","members":[245]},{"term":"PrL","kind":"alias","also":["prelimbic cortex"],"note":"","members":[238]},{"term":"locus coeruleus","kind":"alias","also":[],"note":"The atlas spells it ceruleus, so a search for the oe spelling can come up empty.","members":[928]},{"term":"VP","kind":"collision","also":[],"note":"In this atlas VP is the ventral posterior complex of the THALAMUS. If you mean ventral pallidum, that is PALv — substantia innominata (SI) plus the magnocellular nucleus (MA).","members":[612]},{"term":"LH","kind":"collision","also":[],"note":"In this atlas LH is the lateral HABENULA. If you mean the lateral hypothalamic area, that is LHA. Both readings are common in print.","members":[794]},{"term":"IC","kind":"collision","also":[],"note":"In this atlas IC is the inferior colliculus. Papers that abbreviate insular cortex as IC mean the agranular insular areas — AId, AIv, AIp.","members":[279,291,285]},{"term":"dHPC","kind":"positional","also":["dorsal hippocampus"],"note":"CCFv3 does not subdivide the hippocampus along the septotemporal axis. Dorsal and ventral hippocampus are the SAME acronyms at different anteroposterior positions — separate them by coordinate, never by region label.","members":[457,462,467,473,535]},{"term":"vHPC","kind":"positional","also":["ventral hippocampus"],"note":"Same acronyms as dHPC. The distinction is anteroposterior position, not structure — it cannot be made with a region label.","members":[457,462,467,473,535]},{"term":"dCA1","kind":"positional","also":["vCA1"],"note":"One atlas structure. The dorsal/ventral split is a coordinate range within CA1.","members":[457]}]}</script>
+<script>
+(function(){
+"use strict";
+var D = JSON.parse(document.getElementById("data").textContent);
+var N = D.acr.length;
+var esc = function(s){ return String(s == null ? "" : s)
+  .replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;"); };
+var fmt = function(n){ return n.toLocaleString("en-US"); };
+
+var kids = []; for (var i = 0; i < N; i++) kids.push([]);
+for (var i = 0; i < N; i++) if (D.par[i] >= 0) kids[D.par[i]].push(i);
+var maxDepth = 0; for (var i = 0; i < N; i++) if (D.depth[i] > maxDepth) maxDepth = D.depth[i];
+var byAcr = {}; for (var i = 0; i < N; i++) byAcr[D.acr[i]] = i;
+
+var descCount = new Array(N);
+for (var i = N - 1; i >= 0; i--){ var n = 0;
+  for (var k = 0; k < kids[i].length; k++) n += 1 + descCount[kids[i][k]];
+  descCount[i] = n; }
+
+/* normalised index: lowercase, punctuation stripped -- catches ca1 / Ca-1 / CA_1 */
+var norm = function(s){ return String(s).toLowerCase().replace(/[^a-z0-9]/g, ""); };
+var byNorm = {};
+for (var i = 0; i < N; i++){
+  var k = norm(D.acr[i]);
+  if (!byNorm[k]) byNorm[k] = [];
+  byNorm[k].push(i);
+}
+var byId = {}; for (var i = 0; i < N; i++) byId[D.sid[i]] = i;
+
+/* ---- masthead ---- */
+var leaves = 0; for (var i = 0; i < N; i++) if (!kids[i].length) leaves++;
+document.getElementById("eyebrow").textContent = D.atlas;
+document.getElementById("lede").innerHTML =
+  "Every structure in the Allen Mouse Brain Common Coordinate Framework v3 — acronym, " +
+  "full name, numeric id, colour and place in the hierarchy. Read straight from the atlas's " +
+  "own structure graph, so what you see is what your registration software sees. Search a " +
+  "term the atlas does not use — <b>mPFC</b>, <b>BNST</b>, <b>dorsal hippocampus</b> — and it " +
+  "answers with the acronyms that term actually covers.";
+document.getElementById("stat").innerHTML =
+  "<span><b>" + fmt(N) + "</b> structures</span>" +
+  "<span><b>" + fmt(leaves) + "</b> leaves</span>" +
+  "<span><b>" + maxDepth + "</b> levels deep</span>" +
+  (D.hasBG ? "<span><b>" + fmt(D.bgCount) + "</b> of them in BrainGlobe " + esc(D.bgName) + "</span>" : "") +
+  "<span><b>" + D.lit.length + "</b> literature terms mapped</span>";
+
+if (!D.hasBG){
+  document.getElementById("bgHead").remove();
+}
+
+/* ---- division filter ---- */
+var divSel = document.getElementById("div");
+divSel.innerHTML = '<option value="-1">Every division</option>' + D.divisions.map(function(d, k){
+  return '<option value="' + k + '">' + esc(d.acr) + " — " + esc(d.name) + "</option>";
+}).join("");
+
+/* ---- index rows ---- */
+var rowsEl = document.getElementById("rows");
+var CAP = 400;
+
+function levelCell(i){
+  var s = '<span class="lvl">';
+  for (var d = 0; d <= maxDepth; d++) s += '<i class="' + (d <= D.depth[i] ? "on" : "") + '"></i>';
+  return s + '<span class="d">' + D.depth[i] + "</span></span>";
+}
+function rowHTML(i){
+  return '<tr class="r" data-i="' + i + '" id="s-' + esc(D.acr[i]) + '">' +
+    '<td><span class="cell"><span class="sw" style="background:' + esc(D.color[i]) + '"></span></span></td>' +
+    '<td><span class="cell"><button class="acr" type="button" data-c="' + esc(D.acr[i]) +
+        '" title="Copy">' + esc(D.acr[i]) + "</button></span></td>" +
+    '<td><span class="cell nm">' + esc(D.name[i]) + "</span></td>" +
+    '<td class="hide-s"><span class="cell id">' + D.sid[i] + "</span></td>" +
+    '<td class="hide-s"><span class="cell">' + levelCell(i) + "</span></td>" +
+    '<td class="hide-s"><span class="cell">' + (descCount[i]
+        ? '<span class="role parent">parent · ' + descCount[i] + " below</span>"
+        : '<span class="role">leaf</span>') + "</span></td>" +
+    (D.hasBG ? '<td><span class="cell"><span class="chip ' + (D.bg[i] ? "yes" : "") + '">' +
+        (D.bg[i] ? "present" : "pruned") + "</span></span></td>" : "") +
+    '<td><button class="exp" type="button" aria-expanded="false" title="Show hierarchy">+</button></td>' +
+  "</tr>" +
+  '<tr class="detail" hidden><td colspan="' + (D.hasBG ? 8 : 7) + '"></td></tr>';
+}
+function jump(i, here){
+  return '<button class="jump' + (here ? " here" : "") + '" type="button" data-j="' + i + '">' +
+         esc(D.acr[i]) + "</button>";
+}
+function detailHTML(i){
+  var chain = [], c = i;
+  while (c >= 0){ chain.unshift(c); c = D.par[c]; }
+  var crumb = chain.map(function(x, k){
+    return jump(x, k === chain.length - 1); }).join('<span class="sep">›</span>');
+
+  var kidHTML = kids[i].length
+    ? '<div class="kidlist">' + kids[i].map(function(k){ return jump(k, false); }).join("") + "</div>"
+    : '<span class="none">none — this is a leaf of the atlas</span>';
+
+  var warn = "";
+  if (D.hasBG && !D.bg[i]) warn = '<div class="warnrow"><b>' + esc(D.acr[i]) +
+    "</b> is a valid CCFv3 structure but is not in BrainGlobe's " + esc(D.bgName) +
+    ". It will resolve in ABBA and QuPath and fail in brainglobe-atlasapi or brainrender — " +
+    "roll up to an ancestor that is present if you need it there.";
+
+  return '<div class="dwrap">' +
+    warn +
+    '<div><h3>Path from the root</h3><div class="crumb">' + crumb + "</div></div>" +
+    '<div><h3>Direct children (' + kids[i].length + " · " + descCount[i] +
+      " in the whole subtree)</h3>" + kidHTML + "</div>" +
+    '<div><h3>Full name</h3><div class="nm">' + esc(D.name[i]) + "</div></div>" +
+  "</div>";
+}
+
+var tally = document.getElementById("tally");
+var moreEl = document.getElementById("more");
+var emptyEl = document.getElementById("empty");
+var litHit = document.getElementById("lithit");
+var q = document.getElementById("q");
+var onlyLeaf = document.getElementById("onlyLeaf");
+var onlyBG = document.getElementById("onlyBG");
+if (!D.hasBG) onlyBG.remove();
+
+[onlyLeaf, onlyBG].forEach(function(b){
+  if (!b || !b.isConnected) return;
+  b.addEventListener("click", function(){
+    b.setAttribute("aria-pressed", b.getAttribute("aria-pressed") === "true" ? "false" : "true");
+    apply();
+  });
+});
+
+var hay = new Array(N);
+for (var i = 0; i < N; i++) hay[i] = (D.acr[i] + " " + D.name[i] + " " + D.sid[i]).toLowerCase();
+
+function apply(keep){
+  var term = q.value.trim().toLowerCase();
+  var wantDiv = parseInt(divSel.value, 10);
+  var leafOnly = onlyLeaf.getAttribute("aria-pressed") === "true";
+  var bgOnly = onlyBG.isConnected && onlyBG.getAttribute("aria-pressed") === "true";
+  var hits = [];
+  for (var i = 0; i < N; i++){
+    if (leafOnly && descCount[i] !== 0) continue;
+    if (bgOnly && D.bg[i]) continue;
+    if (wantDiv >= 0 && D.div[i] !== wantDiv) continue;
+    if (term && hay[i].indexOf(term) < 0) continue;
+    hits.push(i);
+  }
+  rowsEl.innerHTML = hits.slice(0, CAP).map(rowHTML).join("");
+  tally.textContent = fmt(hits.length) + " / " + fmt(N) + " structures";
+  moreEl.hidden = hits.length <= CAP;
+  moreEl.textContent = hits.length <= CAP ? "" :
+    fmt(hits.length - CAP) + " more match — narrow the search to see them.";
+  emptyEl.hidden = hits.length > 0;
+
+  /* searching a literature term should answer, not come up empty */
+  var e = q.value.trim() ? litFor(q.value) : null;
+  litHit.hidden = !e;
+  if (e) litHit.innerHTML =
+    '<div class="top" style="display:flex;flex-wrap:wrap;gap:7px;align-items:baseline">' +
+      '<span class="term">' + esc(e.term) + "</span>" +
+      '<span class="kind ' + esc(e.kind) + '">' + esc(e.kind) + "</span>" +
+      '<span class="also">' + esc(KINDSAY[e.kind] || "") + "</span></div>" +
+    memberHTML(e) +
+    (e.note ? '<p class="litnote">' + esc(e.note) + "</p>" : "");
+  return hits;
+}
+q.addEventListener("input", function(){ apply(); });
+divSel.addEventListener("change", function(){ apply(); });
+
+/* focus one structure in the index, wherever it is */
+function reveal(i){
+  q.value = D.acr[i]; divSel.value = "-1";
+  onlyLeaf.setAttribute("aria-pressed", "false");
+  if (onlyBG.isConnected) onlyBG.setAttribute("aria-pressed", "false");
+  apply();
+  var tr = document.getElementById("s-" + D.acr[i]);
+  if (tr){
+    var exp = tr.querySelector(".exp");
+    if (exp && exp.getAttribute("aria-expanded") !== "true") exp.click();
+    tr.scrollIntoView({block:"center"});
+  }
+}
+
+function writeClipboard(text, done){
+  if (navigator.clipboard && navigator.clipboard.writeText){
+    navigator.clipboard.writeText(text).then(done, function(){});
+    return;
+  }
+  var ta = document.createElement("textarea");
+  ta.value = text; document.body.appendChild(ta); ta.select();
+  try { document.execCommand("copy"); done(); } catch(e){}
+  document.body.removeChild(ta);
+}
+/* every acronym anywhere on the page copies on click */
+function copyFrom(ev){
+  var el = ev.target.closest(".acr");
+  if (!el) return false;
+  var old = el.textContent;
+  writeClipboard(el.dataset.c, function(){
+    el.classList.add("copied"); el.textContent = "copied";
+    setTimeout(function(){ el.classList.remove("copied"); el.textContent = old; }, 850);
+  });
+  return true;
+}
+
+rowsEl.addEventListener("click", function(ev){
+  if (copyFrom(ev)) return;
+  var j = ev.target.closest(".jump");
+  if (j){ reveal(parseInt(j.dataset.j, 10)); return; }
+  var exp = ev.target.closest(".exp");
+  if (exp){
+    var tr = exp.closest("tr.r"), det = tr.nextElementSibling;
+    var open = exp.getAttribute("aria-expanded") === "true";
+    if (!open && !det.dataset.filled){
+      det.firstElementChild.innerHTML = detailHTML(parseInt(tr.dataset.i, 10));
+      det.dataset.filled = "1";
+    }
+    exp.setAttribute("aria-expanded", String(!open));
+    exp.textContent = open ? "+" : "−";
+    det.hidden = open;
+  }
+});
+
+/* ---- check a list ---- */
+function editDistance(a, b){
+  if (Math.abs(a.length - b.length) > 2) return 3;
+  var prev = [], cur = [];
+  for (var j = 0; j <= b.length; j++) prev[j] = j;
+  for (var i = 1; i <= a.length; i++){
+    cur[0] = i;
+    for (var j = 1; j <= b.length; j++){
+      cur[j] = Math.min(prev[j] + 1, cur[j - 1] + 1,
+                        prev[j - 1] + (a.charAt(i - 1) === b.charAt(j - 1) ? 0 : 1));
+    }
+    for (var j = 0; j <= b.length; j++) prev[j] = cur[j];
+  }
+  return prev[b.length];
+}
+function sharedPrefix(a, b){
+  var n = Math.min(a.length, b.length), i = 0;
+  while (i < n && a.charAt(i) === b.charAt(i)) i++;
+  return i;
+}
+function suggest(raw){
+  var k = norm(raw);
+  if (byNorm[k]) return byNorm[k].slice(0, 4);        /* case / punctuation only */
+  var out = [];
+  for (var i = 0; i < N; i++){
+    if (editDistance(k, norm(D.acr[i])) <= 1) out.push(i);
+    if (out.length >= 4) break;
+  }
+  if (out.length || k.length < 4) return out;
+  /* Someone pasted a name, not an acronym -- answer that too rather than
+     calling it unknown. Match a whole word of the region name, allowing a
+     different ending ("hippocampus" -> "Hippocampal formation"). */
+  var scored = [];
+  for (var i = 0; i < N; i++){
+    var words = D.name[i].toLowerCase().split(/[^a-z0-9]+/);
+    var best = 0;
+    for (var w = 0; w < words.length; w++){
+      if (words[w].length < 4) continue;
+      var sp = sharedPrefix(k, words[w]);
+      if (sp >= 5 && sp > best) best = sp;
+    }
+    if (best) scored.push({i: i, sp: best, len: D.name[i].length});
+  }
+  scored.sort(function(x, y){ return y.sp - x.sp || x.len - y.len; });
+  return scored.slice(0, 4).map(function(x){ return x.i; });
+}
+
+/* ---- literature terms: one lookup key per term and per alias ---- */
+var litByKey = {};
+D.lit.forEach(function(e, k){
+  litByKey[norm(e.term)] = k;
+  e.also.forEach(function(a){ if (litByKey[norm(a)] == null) litByKey[norm(a)] = k; });
+});
+function litFor(raw){
+  var k = litByKey[norm(raw)];
+  return k == null ? null : D.lit[k];
+}
+var KINDSAY = {
+  composite:  "covers several atlas structures",
+  alias:      "the atlas's name for it is",
+  collision:  "means something else in this atlas",
+  positional: "is a position, not a structure"
+};
+function memberHTML(e){
+  return '<div class="members"><span class="eq">' +
+    (e.kind === "collision" ? "you probably mean" :
+     e.kind === "positional" ? "structures involved" :
+     e.kind === "alias" ? "=" : "=") + "</span>" +
+    e.members.map(function(i){
+      return '<button class="acr sm" type="button" data-c="' + esc(D.acr[i]) +
+        '" title="Copy ' + esc(D.acr[i]) + '">' + esc(D.acr[i]) + "</button>"; }).join("") +
+    (e.members.length > 1 ? '<button class="copyall" type="button" data-all="' +
+      esc(e.members.map(function(i){ return D.acr[i]; }).join(", ")) +
+      '">Copy all ' + e.members.length + "</button>" : "") +
+    "</div>";
+}
+function litRowHTML(e){
+  return '<div class="litrow"><div class="top"><span class="term">' + esc(e.term) + "</span>" +
+    '<span class="kind ' + esc(e.kind) + '">' + esc(e.kind) + "</span>" +
+    (e.also.length ? '<span class="also">also written ' +
+      e.also.map(function(a){ return esc(a); }).join(", ") + "</span>" : "") +
+    "</div>" +
+    memberHTML(e) +
+    (e.note ? '<p class="litnote">' + esc(e.note) + "</p>" : "") +
+  "</div>";
+}
+
+/* ---- name -> acronym, the direction you usually need ---- */
+var nameTok = new Array(N), byNameExact = {};
+for (var i = 0; i < N; i++){
+  var t = D.name[i].toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
+  nameTok[i] = t.split(" ").filter(function(x){ return x.length; });
+  byNameExact[t] = i;
+}
+var STOP = {the:1, of:1, and:1};
+/* "amygdala" should reach "amygdalar", "hippocampus" should reach "hippocampal" */
+function tokenHit(qt, nt){
+  if (qt === nt) return true;
+  if (qt.length >= 4 && nt.indexOf(qt) === 0) return true;
+  if (nt.length >= 4 && qt.indexOf(nt) === 0) return true;
+  return sharedPrefix(qt, nt) >= 5;
+}
+function matchName(raw){
+  var qn = raw.toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
+  if (!qn) return [];
+  if (byNameExact[qn] != null) return [{i: byNameExact[qn], sure: true}];
+  if (byAcr[raw.trim()] != null) return [{i: byAcr[raw.trim()], sure: true}];
+  var qt = qn.split(" ").filter(function(x){ return x.length && !STOP[x]; });
+  if (!qt.length) return [];
+  /* Word order carries information in both directions: people write the
+     distinguishing word first ("retrosplenial cortex"), and so does the atlas
+     ("Retrosplenial area"). Without this, "cortex" alone matches Cerebral cortex
+     and outranks the region actually being asked for. */
+  var w = [], wsum = 0;
+  for (var a = 0; a < qt.length; a++){ w[a] = 1 / (1 + a); wsum += w[a]; }
+
+  var scored = [];
+  for (var i = 0; i < N; i++){
+    var nt = nameTok[i], got = 0;
+    for (var a = 0; a < qt.length; a++){
+      for (var b = 0; b < nt.length; b++){ if (tokenHit(qt[a], nt[b])) { got += w[a]; break; } }
+    }
+    var cov = got / wsum;
+    if (cov < 0.5) continue;
+    scored.push({i: i, cov: cov, extra: Math.abs(nt.length - qt.length), len: D.name[i].length});
+  }
+  scored.sort(function(x, y){ return y.cov - x.cov || x.extra - y.extra || x.len - y.len; });
+  var top = scored.slice(0, 4);
+  if (!top.length) return [];
+  /* Call it an answer only when every word is accounted for AND the runner-up is
+     strictly worse. Informal names ("lateral amygdala" vs "Lateral amygdalar
+     nucleus") legitimately leave spare words in the atlas name, so extra words
+     are a tie-breaker, not a disqualifier. */
+  var sure = top[0].cov === 1 &&
+             (top.length === 1 || top[1].cov < 1 || top[1].extra > top[0].extra);
+  return top.map(function(x, k){ return {i: x.i, sure: sure && k === 0}; })
+            .slice(0, sure ? 1 : 4);
+}
+
+/* ---- mode ---- */
+var MODE = "acr";
+var pasteEl = document.getElementById("paste");
+var tabAcr = document.getElementById("tabAcr"), tabName = document.getElementById("tabName");
+var tabhint = document.getElementById("tabhint");
+var PLACEHOLDER = {
+  acr: "CA1\ndg-mo\nLHA\nBLA\nCa-3\nVISp1",
+  name: "Field CA1\nlateral hypothalamic area\nDentate gyrus, molecular layer\nnucleus accumbens\nbasolateral amygdala"
+};
+var HINT = {
+  acr: "One acronym per line, or separated by spaces and commas. Numeric structure ids work too.",
+  name: "One name per line — Allen names contain commas, so line breaks are the only separator. " +
+        "Informal names are fine: “basolateral amygdala” finds the nucleus."
+};
+function setMode(m){
+  MODE = m;
+  tabAcr.setAttribute("aria-pressed", String(m === "acr"));
+  tabName.setAttribute("aria-pressed", String(m === "name"));
+  pasteEl.placeholder = PLACEHOLDER[m];
+  pasteEl.classList.toggle("names", m === "name");
+  tabhint.textContent = HINT[m];
+  resEl.hidden = true; resEl.innerHTML = "";
+}
+tabAcr.addEventListener("click", function(){ setMode("acr"); });
+tabName.addEventListener("click", function(){ setMode("name"); });
+
+/* ---- results ---- */
+var resEl = document.getElementById("res");
+
+function hitHTML(i){
+  return '<button class="acr sm" type="button" data-c="' + esc(D.acr[i]) +
+      '" title="Copy ' + esc(D.acr[i]) + '">' + esc(D.acr[i]) + "</button>" +
+    '<span class="say">' + esc(D.name[i]) + "</span>" +
+    (D.hasBG && !D.bg[i] ? ' <span class="chip">not in BrainGlobe</span>' : "") +
+    '<button class="loc" type="button" data-j="' + i + '" title="Show in the index"' +
+      ' aria-label="Show ' + esc(D.acr[i]) + ' in the index">↗</button>';
+}
+function bucket(cls, title, items, all){
+  return '<div class="bucket ' + cls + '"><div class="bhead"><h3>' + esc(title) + "</h3>" +
+    (all && all.length > 1 ? '<button class="copyall" type="button" data-all="' +
+        esc(all.join(", ")) + '">Copy all ' + all.length + "</button>" : "") +
+    "</div><ul>" + items.join("") + "</ul></div>";
+}
+
+document.getElementById("check").addEventListener("click", function(){
+  var raw = pasteEl.value;
+  var items = (MODE === "name"
+      ? raw.split(/[\n\r;|\t]+/)               /* names carry commas — lines only */
+      : raw.split(/[\s,;|]+/))
+    .map(function(s){ return s.trim(); }).filter(function(s){ return s.length; });
+  if (!items.length){ resEl.hidden = true; return; }
+
+  var sure = [], maybe = [], unknown = [], parents = [], lits = [], seen = {};
+  items.forEach(function(it){
+    if (seen[it]) return; seen[it] = 1;
+    var e = litFor(it);
+
+    /* A real acronym always wins the lookup. But if the literature also uses that
+       exact string for something else, say so instead of letting it pass. */
+    var i = byAcr[it];
+    if (i == null && MODE === "acr" && /^\d+$/.test(it) && byId[parseInt(it, 10)] != null)
+      i = byId[parseInt(it, 10)];
+    if (i != null){
+      sure.push({in: it, i: i});
+      if (descCount[i]) parents.push({in: it, i: i});
+      if (e && e.kind === "collision") lits.push({in: it, e: e});
+      return;
+    }
+    if (e){ lits.push({in: it, e: e}); return; }
+
+    if (MODE === "name"){
+      var m = matchName(it);
+      if (!m.length){ unknown.push(it); return; }
+      if (m[0].sure){
+        sure.push({in: it, i: m[0].i});
+        if (descCount[m[0].i]) parents.push({in: it, i: m[0].i});
+      } else maybe.push({in: it, s: m.map(function(x){ return x.i; })});
+      return;
+    }
+    var s = suggest(it);
+    if (s.length) maybe.push({in: it, s: s});
+    else unknown.push(it);
+  });
+
+  var html = "";
+  if (sure.length) html += bucket("good" + (MODE === "name" ? " names" : ""),
+    sure.length + (MODE === "name" ? " resolved to an acronym" : " recognised"),
+    sure.map(function(e){
+      return '<li><span class="in">' + esc(e.in) + '</span><span class="arrow">→</span>' +
+             hitHTML(e.i) + "</li>"; }),
+    sure.map(function(e){ return D.acr[e.i]; }));
+
+  if (maybe.length) html += bucket("bad" + (MODE === "name" ? " names" : ""),
+    maybe.length + (MODE === "name" ? " matched more than one — pick the right one"
+                                    : " not an exact match — did you mean"),
+    maybe.map(function(f){
+      return '<li><span class="in">' + esc(f.in) + '</span><span class="arrow">→</span>' +
+        f.s.map(function(i){ return hitHTML(i); }).join('<span class="sep">·</span>') + "</li>"; }));
+
+  if (unknown.length) html += bucket("bad" + (MODE === "name" ? " names" : ""),
+    unknown.length + " not in this atlas at all",
+    unknown.map(function(u){ return '<li><span class="in">' + esc(u) +
+      '</span><span class="say">' + (MODE === "name" ? "no region name is close to this"
+                                                     : "no structure with a close acronym") +
+      "</span></li>"; }));
+
+  if (lits.length) html += bucket("warn",
+    lits.length + " are terms from the literature, not atlas acronyms",
+    lits.map(function(L){
+      return '<li style="display:block"><span class="in">' + esc(L.in) + "</span> " +
+        '<span class="kind ' + esc(L.e.kind) + '">' + esc(L.e.kind) + "</span> " +
+        '<span class="say">' + esc(KINDSAY[L.e.kind] || "") + "</span>" +
+        memberHTML(L.e) +
+        (L.e.note ? '<p class="litnote">' + esc(L.e.note) + "</p>" : "") + "</li>"; }));
+
+  if (parents.length) html += bucket("warn",
+    parents.length + " of these are parents, not leaves",
+    parents.map(function(p){
+      return '<li><span class="in">' + esc(D.acr[p.i]) + '</span><span class="say">covers ' +
+        descCount[p.i] + " structures below it (" +
+        kids[p.i].slice(0, 5).map(function(k){ return esc(D.acr[k]); }).join(", ") +
+        (kids[p.i].length > 5 ? ", …" : "") +
+        "). If your per-region labels are leaves, this matches nothing until you roll it down." +
+        "</span></li>"; }));
+
+  resEl.innerHTML = html;
+  resEl.hidden = false;
+});
+document.getElementById("clear").addEventListener("click", function(){
+  pasteEl.value = ""; resEl.hidden = true; resEl.innerHTML = "";
+});
+function panelClick(ev){
+  if (copyFrom(ev)) return;
+  var all = ev.target.closest(".copyall");
+  if (all){
+    var old = all.textContent;
+    writeClipboard(all.dataset.all, function(){
+      all.classList.add("copied"); all.textContent = "copied";
+      setTimeout(function(){ all.classList.remove("copied"); all.textContent = old; }, 900);
+    });
+    return;
+  }
+  var loc = ev.target.closest(".loc");
+  if (loc){ reveal(parseInt(loc.dataset.j, 10)); return; }
+  var f = ev.target.closest(".fix");
+  if (f) reveal(parseInt(f.dataset.j, 10));
+}
+resEl.addEventListener("click", panelClick);
+litHit.addEventListener("click", panelClick);
+
+/* ---- the literature panel ---- */
+var KINDINTRO = {
+  composite:  "One term, several atlas structures. Sum them — there is no single acronym.",
+  alias:      "The same structure under a different abbreviation or spelling.",
+  collision:  "The term is a real atlas acronym, for a DIFFERENT structure. Read carefully.",
+  positional: "Not a structure at all. No set of acronyms expresses it."
+};
+var litGrid = document.getElementById("litgrid");
+var order = ["composite", "alias", "collision", "positional"];
+var seenKinds = {};
+D.lit.forEach(function(e){ seenKinds[e.kind] = 1; });
+order.forEach(function(k){ if (!seenKinds[k]) delete seenKinds[k]; });
+Object.keys(seenKinds).forEach(function(k){ if (order.indexOf(k) < 0) order.push(k); });
+
+litGrid.innerHTML = order.filter(function(k){ return seenKinds[k]; }).map(function(k){
+  var rows = D.lit.filter(function(e){ return e.kind === k; });
+  return '<p class="kindhead">' + esc(k) + " <span>" + esc(KINDINTRO[k] || "") + "</span></p>" +
+         rows.map(litRowHTML).join("");
+}).join("");
+litGrid.addEventListener("click", panelClick);
+
+setMode("acr");
+
+/* ---- confusables ---- */
+document.getElementById("pairs").innerHTML = D.confusables.map(function(g){
+  return '<div class="pair">' + g.map(function(m){
+    return '<div class="one"><code>' + esc(m.acr) + "</code><span>" + esc(m.name) + "</span></div>";
+  }).join("") + "</div>";
+}).join("");
+
+/* ---- footer ---- */
+document.getElementById("foot").innerHTML =
+  "<span>Generated from <b>" + esc(D.source) + "</b> by docs/build_acronym_lookup.py on " +
+    esc(D.built) + ". Acronyms, names, ids and colours are the atlas's own — none are hardcoded.</span>" +
+  (D.hasBG ? "<span>BrainGlobe column compares against <b>" + esc(D.bgName) + "</b> installed on this " +
+    "machine. Where the two overlap they agree exactly; BrainGlobe simply carries fewer structures.</span>" : "") +
+  "<span>Lookup is exact and case-sensitive wherever you use it — this page is lenient so your tools " +
+    "do not have to be.</span>";
+
+apply();
+if (location.hash){
+  var t = byAcr[decodeURIComponent(location.hash.slice(1))];
+  if (t != null) reveal(t);
+}
+})();
+</script>

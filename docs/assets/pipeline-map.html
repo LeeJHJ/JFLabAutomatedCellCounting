@@ -1,0 +1,398 @@
+<title>Section Pipeline Map — TRAP2 → Allen CCFv3</title>
+<style>
+:root{
+  --ground:#eceef0; --deck:#ffffff; --sunk:#f3f5f7; --edge:#d8dde2; --edge-hi:#bcc5cd;
+  --ink:#141a1f; --ink-2:#4b5761; --ink-3:#7b8791;
+  --line:#9aa6b0;
+  --on:#0b6f60;      --on-bg:#dcefe9;
+  --aside:#245e9e;   --aside-bg:#dde9f6;
+  --parked:#9a6207;  --parked-bg:#f7ead4;
+  --probe:#6a4bb5;   --probe-bg:#e8e2f8;
+  --dark:#6d7883;    --dark-bg:#e7eaee;
+  --unknown:#6d7883; --unknown-bg:#e7eaee;
+  --mono:ui-monospace,SFMono-Regular,"SF Mono",Menlo,Consolas,monospace;
+  --sans:system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+  --shadow:0 1px 1px rgba(15,25,35,.04),0 4px 14px rgba(15,25,35,.06);
+}
+@media (prefers-color-scheme:dark){:root{
+  --ground:#0d1216; --deck:#151c22; --sunk:#111820; --edge:#232d36; --edge-hi:#33404b;
+  --ink:#e6ecf1; --ink-2:#a3b0bb; --ink-3:#71808c;
+  --line:#3c4a55;
+  --on:#3ec3ac;      --on-bg:#0e332e;
+  --aside:#74a8e8;   --aside-bg:#132539;
+  --parked:#dc9d3f;  --parked-bg:#33260f;
+  --probe:#a58ceb;   --probe-bg:#231c3a;
+  --dark:#8794a0;    --dark-bg:#1c242c;
+  --unknown:#8794a0; --unknown-bg:#1c242c;
+  --shadow:0 1px 1px rgba(0,0,0,.3),0 6px 18px rgba(0,0,0,.34);
+}}
+:root[data-theme="light"]{
+  --ground:#eceef0; --deck:#ffffff; --sunk:#f3f5f7; --edge:#d8dde2; --edge-hi:#bcc5cd;
+  --ink:#141a1f; --ink-2:#4b5761; --ink-3:#7b8791; --line:#9aa6b0;
+  --on:#0b6f60; --on-bg:#dcefe9; --aside:#245e9e; --aside-bg:#dde9f6;
+  --parked:#9a6207; --parked-bg:#f7ead4; --probe:#6a4bb5; --probe-bg:#e8e2f8;
+  --dark:#6d7883; --dark-bg:#e7eaee; --unknown:#6d7883; --unknown-bg:#e7eaee;
+  --shadow:0 1px 1px rgba(15,25,35,.04),0 4px 14px rgba(15,25,35,.06);
+}
+:root[data-theme="dark"]{
+  --ground:#0d1216; --deck:#151c22; --sunk:#111820; --edge:#232d36; --edge-hi:#33404b;
+  --ink:#e6ecf1; --ink-2:#a3b0bb; --ink-3:#71808c; --line:#3c4a55;
+  --on:#3ec3ac; --on-bg:#0e332e; --aside:#74a8e8; --aside-bg:#132539;
+  --parked:#dc9d3f; --parked-bg:#33260f; --probe:#a58ceb; --probe-bg:#231c3a;
+  --dark:#8794a0; --dark-bg:#1c242c; --unknown:#8794a0; --unknown-bg:#1c242c;
+  --shadow:0 1px 1px rgba(0,0,0,.3),0 6px 18px rgba(0,0,0,.34);
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--ground);color:var(--ink);font-family:var(--sans);
+  font-size:15px;line-height:1.55;-webkit-font-smoothing:antialiased}
+.page{max-width:1010px;margin:0 auto;padding:clamp(24px,4vw,52px) clamp(14px,3.5vw,34px) 80px;
+  display:flex;flex-direction:column;gap:26px}
+
+/* ---- masthead ---- */
+.eyebrow{font-family:var(--mono);font-size:11px;letter-spacing:.17em;text-transform:uppercase;
+  color:var(--ink-3);margin:0 0 10px}
+h1{margin:0;font-size:clamp(24px,3.5vw,34px);line-height:1.1;letter-spacing:-.021em;
+  font-weight:640;text-wrap:balance;max-width:19ch}
+.readout{margin:12px 0 0;color:var(--ink-2);font-size:15.5px;max-width:64ch}
+.stamp{display:flex;flex-wrap:wrap;gap:6px 18px;margin-top:15px;font-family:var(--mono);
+  font-size:11.5px;color:var(--ink-3)}
+.stamp b{color:var(--ink-2);font-weight:500}
+
+/* ---- control deck ---- */
+.deck{background:var(--deck);border:1px solid var(--edge);border-radius:10px;
+  box-shadow:var(--shadow);padding:14px 15px;display:flex;flex-direction:column;gap:13px}
+.deck-row{display:flex;flex-wrap:wrap;gap:9px;align-items:center}
+.deck-lbl{font-family:var(--mono);font-size:10.5px;letter-spacing:.13em;text-transform:uppercase;
+  color:var(--ink-3);flex:0 0 100%}
+input[type=search]{flex:1 1 220px;min-width:0;font:inherit;font-size:14px;padding:8px 12px;
+  border:1px solid var(--edge);border-radius:7px;background:var(--sunk);color:var(--ink)}
+input[type=search]:focus-visible{outline:2px solid var(--on);outline-offset:1px}
+select{font:inherit;font-size:13.5px;padding:8px 10px;border:1px solid var(--edge);
+  border-radius:7px;background:var(--sunk);color:var(--ink)}
+select:focus-visible{outline:2px solid var(--on);outline-offset:1px}
+.sbtn{font:inherit;font-size:12.5px;cursor:pointer;padding:6px 11px 6px 9px;border-radius:20px;
+  border:1px solid var(--edge);background:var(--sunk);color:var(--ink-3);
+  display:inline-flex;align-items:center;gap:7px;line-height:1.3}
+.sbtn .dot{width:9px;height:9px;border-radius:50%;background:currentColor;flex:none;opacity:.35}
+.sbtn[aria-pressed=true]{color:var(--tone);background:var(--tone-bg);border-color:var(--tone)}
+.sbtn[aria-pressed=true] .dot{opacity:1}
+.sbtn .n{font-family:var(--mono);font-size:11px;opacity:.75;font-variant-numeric:tabular-nums}
+.sbtn:focus-visible{outline:2px solid var(--on);outline-offset:2px}
+.tone-on{--tone:var(--on);--tone-bg:var(--on-bg)}
+.tone-aside{--tone:var(--aside);--tone-bg:var(--aside-bg)}
+.tone-parked{--tone:var(--parked);--tone-bg:var(--parked-bg)}
+.tone-probe{--tone:var(--probe);--tone-bg:var(--probe-bg)}
+.tone-dark{--tone:var(--dark);--tone-bg:var(--dark-bg)}
+.tone-unknown{--tone:var(--unknown);--tone-bg:var(--unknown-bg)}
+.tbtn{font:inherit;font-size:12.5px;cursor:pointer;padding:6px 11px;border-radius:7px;
+  border:1px solid var(--edge);background:var(--sunk);color:var(--ink-2)}
+.tbtn:hover{border-color:var(--edge-hi)}
+.tbtn:focus-visible{outline:2px solid var(--on);outline-offset:2px}
+#tally{margin-left:auto;font-family:var(--mono);font-size:11.5px;color:var(--ink-3);
+  font-variant-numeric:tabular-nums}
+.keydefs{display:flex;flex-direction:column;gap:5px;border-top:1px solid var(--edge);padding-top:11px}
+.keydef{display:flex;gap:10px;font-size:13px;color:var(--ink-2);align-items:baseline}
+.keydef .k{font-family:var(--mono);font-size:11.5px;font-weight:600;letter-spacing:.03em;
+  text-transform:uppercase;color:var(--tone);flex:0 0 88px}
+
+/* ---- the line ---- */
+.flow{display:flex;flex-direction:column}
+.stage{display:grid;grid-template-columns:30px 1fr;gap:0 16px;position:relative}
+.rail{position:relative;display:flex;justify-content:center}
+.rail::before{content:"";position:absolute;top:0;bottom:0;left:50%;width:2px;
+  transform:translateX(-50%);background:var(--line);opacity:.5}
+.stage:first-child .rail::before{top:17px}
+.stage:last-child .rail::before{bottom:calc(100% - 17px)}
+.stage[hidden]{display:none}
+.pip{position:relative;z-index:1;margin-top:4px;width:26px;height:26px;border-radius:50%;
+  display:grid;place-items:center;font-family:var(--mono);font-size:12px;font-weight:600;
+  background:var(--deck);color:var(--tone);border:2px solid var(--tone);
+  font-variant-numeric:tabular-nums}
+.stage.off .pip{border-style:dashed;width:20px;height:20px;margin-top:8px}
+.stage.off{margin-left:26px}
+.stage.off .rail::before{background:var(--tone);opacity:.32;
+  -webkit-mask-image:repeating-linear-gradient(180deg,#000 0 5px,transparent 5px 10px);
+  mask-image:repeating-linear-gradient(180deg,#000 0 5px,transparent 5px 10px)}
+.stage.off::before{content:"";position:absolute;left:-26px;top:17px;width:26px;height:2px;
+  background:var(--tone);opacity:.32}
+
+.card{background:var(--deck);border:1px solid var(--edge);border-radius:9px;
+  box-shadow:var(--shadow);margin-bottom:10px;border-left:3px solid var(--tone);overflow:hidden}
+.stage.off .card{background:var(--sunk);border-left-style:dashed}
+.head{width:100%;text-align:left;font:inherit;background:none;border:0;cursor:pointer;
+  padding:11px 14px;display:flex;flex-wrap:wrap;align-items:baseline;gap:5px 11px;color:inherit}
+.head:hover{background:var(--sunk)}
+.stage.off .head:hover{background:var(--deck)}
+.head:focus-visible{outline:2px solid var(--tone);outline-offset:-2px}
+.nm{font-size:15px;font-weight:600;letter-spacing:-.01em}
+.ent{font-family:var(--mono);font-size:12px;color:var(--ink-3);word-break:break-all}
+.badges{margin-left:auto;display:inline-flex;gap:6px;align-items:center;flex-wrap:wrap}
+.badge{font-family:var(--mono);font-size:10px;font-weight:700;letter-spacing:.08em;
+  text-transform:uppercase;padding:3px 8px;border-radius:20px;white-space:nowrap;
+  color:var(--tone);background:var(--tone-bg)}
+.badge.env{color:var(--ink-3);background:var(--sunk);border:1px solid var(--edge);font-weight:600}
+.stage.off .badge.env{background:var(--deck)}
+.caret{font-family:var(--mono);font-size:12px;color:var(--ink-3);transition:transform .16s ease}
+.head[aria-expanded=true] .caret{transform:rotate(90deg)}
+.body{padding:0 14px 14px;display:flex;flex-direction:column;gap:12px;
+  border-top:1px solid var(--edge)}
+.body[hidden]{display:none}
+.body p{margin:12px 0 0;font-size:14px;color:var(--ink-2);max-width:70ch}
+.body p:first-child{margin-top:12px}
+dl{margin:0;display:grid;grid-template-columns:max-content 1fr;gap:5px 16px;font-size:13.5px}
+dt{font-family:var(--mono);font-size:11px;letter-spacing:.09em;text-transform:uppercase;
+  color:var(--ink-3);padding-top:2px}
+dd{margin:0;color:var(--ink-2)}
+dd code,.ent code{font-family:var(--mono)}
+.pill{display:inline-block;font-family:var(--mono);font-size:11.5px;background:var(--sunk);
+  border:1px solid var(--edge);border-radius:5px;padding:1px 6px;margin:0 4px 4px 0;color:var(--ink)}
+.stage.off .pill{background:var(--deck)}
+ol.chain{margin:0;padding-left:0;list-style:none;counter-reset:c;
+  display:flex;flex-direction:column;gap:5px}
+ol.chain li{counter-increment:c;font-size:13.5px;color:var(--ink-2);
+  display:grid;grid-template-columns:20px 1fr;gap:9px}
+ol.chain li::before{content:counter(c);font-family:var(--mono);font-size:10.5px;color:var(--tone);
+  background:var(--tone-bg);border-radius:4px;height:17px;display:grid;place-items:center;
+  font-weight:700;margin-top:1px}
+
+.empty{border:1px dashed var(--edge-hi);border-radius:9px;padding:26px;text-align:center;
+  color:var(--ink-3);font-size:14px}
+.empty[hidden]{display:none}
+
+/* ---- principles ---- */
+.rules{background:var(--deck);border:1px solid var(--edge);border-radius:10px;
+  box-shadow:var(--shadow);padding:16px 18px;display:flex;flex-direction:column;gap:12px}
+.rules h2{margin:0;font-size:13px;font-family:var(--mono);letter-spacing:.12em;
+  text-transform:uppercase;color:var(--ink-3);font-weight:700}
+.rule{display:grid;grid-template-columns:170px 1fr;gap:4px 18px;font-size:13.5px}
+.rule b{font-family:var(--mono);font-size:12px;font-weight:600;color:var(--on);letter-spacing:-.01em}
+.rule span{color:var(--ink-2);max-width:72ch}
+footer{border-top:1px solid var(--edge);padding-top:16px;font-family:var(--mono);font-size:11.5px;
+  color:var(--ink-3);display:flex;flex-direction:column;gap:5px}
+@media (max-width:660px){
+  .stage{grid-template-columns:24px 1fr;gap:0 11px}
+  .stage.off{margin-left:14px}
+  .stage.off::before{left:-14px;width:14px}
+  .rule{grid-template-columns:1fr;gap:2px}
+  .keydef{flex-direction:column;gap:1px}
+  .keydef .k{flex:none}
+  dl{grid-template-columns:1fr;gap:2px 0}
+  dd{margin-bottom:7px}
+  .badges{margin-left:0;width:100%}
+}
+@media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+</style>
+
+<div class="page">
+  <header>
+    <p class="eyebrow" id="eyebrow"></p>
+    <h1>The section pipeline, stage by stage</h1>
+    <p class="readout" id="readout"></p>
+    <div class="stamp" id="stamp"></div>
+  </header>
+
+  <div class="deck">
+    <div class="deck-row">
+      <input type="search" id="q" placeholder="Search stages, scripts, notes…" aria-label="Search stages">
+      <select id="env" aria-label="Filter by where the stage runs"></select>
+      <button class="tbtn" id="expand" type="button">Expand all</button>
+      <span id="tally"></span>
+    </div>
+    <div class="deck-row" id="chips">
+      <span class="deck-lbl">Show status</span>
+    </div>
+    <div class="keydefs" id="keydefs"></div>
+  </div>
+
+  <div class="flow" id="flow"></div>
+  <div class="empty" id="empty" hidden>No stage matches that filter.</div>
+
+  <section class="rules" id="rules"></section>
+
+  <footer id="prov"></footer>
+</div>
+
+<script id="data" type="application/json">{"pipeline":"TRAP2 / Airyscan coronal section pipeline","readout":"per-Allen-region TdT+ (engram) / Fos+ (recall) / Double+ (reactivated) counts","updated":"2026-08-03","schemaVersion":1,"source":"docs/pipeline-stages.yml","environments":{"zen":"Zeiss ZEN Blue on the Windows acquisition PC (not this machine)","shell":"conda env `braian`, python 3.11","qupath":"QuPath v0.6.0, scripts run headless or from the Script editor","fiji":"Fiji + ABBA plugin (PTBIOP update site)","notebook":"JupyterLab in the `braian` env — the operator's self-serve surface"},"statuses":[{"name":"active","tone":"on","blurb":"in the default path today","count":17,"onSpine":true},{"name":"optional","tone":"aside","blurb":"supported, run when needed, not part of every run","count":1,"onSpine":false},{"name":"standby","tone":"parked","blurb":"deliberately NOT in the default path, but kept working and expected to possibly return. Do not delete, do not present as retired.","count":1,"onSpine":false},{"name":"diagnostic","tone":"probe","blurb":"run to answer a question, never part of a production run","count":1,"onSpine":false},{"name":"unwired","tone":"dark","blurb":"code exists but nothing calls it; may be unfinished or abandoned","count":1,"onSpine":false}],"stages":[{"id":"acquire","name":"Acquisition","status":"active","kind":"gui","env":"zen","envTokens":["zen"],"envNote":"Zeiss ZEN Blue on the Windows acquisition PC (not this machine)","entry":[],"inputs":[],"outputs":["multi-scene CZI mosaic"],"knobs":[],"chain":[],"notes":"Airyscan processing, tile stitching and Z-stack happen here. This machine only ingests the exported CZI. Acquisition parameters are the single biggest determinant of what the analysis can later answer — see stage `compare`.","extras":[],"onSpine":true,"step":1},{"id":"mip","name":"CZI → hybrid MIP","status":"active","kind":"scriptable","env":"shell","envTokens":["shell"],"envNote":"conda env `braian`, python 3.11","entry":["czi_mip.py"],"inputs":["multi-scene CZI"],"outputs":["one OME-TIFF per scene","identity thumbnail PNG per scene"],"knobs":["--feather-margin","--no-flat-field","--dapi-z","--marker-z","--scenes"],"chain":[],"notes":"Projection is HYBRID and this is load-bearing: the anchor (DAPI) channel is a single auto-selected sharpest Z plane, while marker channels are max-projected over Z. A plain MIP over-projects DAPI and fuses touching nuclei. `--marker-z` restricts the marker projection depth so a deeper acquisition can be processed at a shallower one's depth — the only way to compare runs of different Z depth. Pixel size is read from the CZI, never defaulted.","extras":[],"onSpine":true,"step":2},{"id":"project","name":"QuPath project + image import","status":"active","kind":"gui","env":"qupath","envTokens":["qupath"],"envNote":"QuPath v0.6.0, scripts run headless or from the Script editor","entry":[],"inputs":[],"outputs":[],"knobs":[],"chain":[],"notes":"Create the project FIRST, then import into ABBA from it. Importing into ABBA via Bio-Formats permanently blocks the registration export back to QuPath.","extras":[],"onSpine":true,"step":3},{"id":"register","name":"ABBA atlas registration","status":"active","kind":"gui","env":"fiji","envTokens":["fiji"],"envNote":"Fiji + ABBA plugin (PTBIOP update site)","entry":[],"inputs":[],"outputs":["ABBA-Transform-*.json","ABBA-RoiSet-*.zip (per entry)"],"knobs":[],"chain":["DeepSlice — initial AP position","Review/positioning mode — position and tilt","Affine tab — match slice to overlay BY HAND (angle, X, Y, scale)","Spline tab — manual BigWarp to finalise","Export registrations to the QuPath project"],"notes":"Fully manual after DeepSlice as of 2026-07-30. Tilt is adjusted BEFORE any warping — lateral misalignment is a tilt problem, not a spline problem.","extras":[{"label":"match against","value":"Label Borders (region outline overlay)"}],"onSpine":true,"step":4},{"id":"register_elastix","name":"elastix Affine + Spline (automated registration)","status":"standby","kind":"gui","env":"fiji","envTokens":["fiji"],"envNote":"Fiji + ABBA plugin (PTBIOP update site)","entry":[],"inputs":[],"outputs":[],"knobs":[],"chain":[],"notes":"NOT in the default path as of 2026-07-30: manual affine + manual BigWarp gave a visibly better fit on M3 Hipp2. This is STANDBY, not retired — mounting and slicing quality vary, and on cleanly mounted series the automated chain may be preferable again. elastix stays installed and pinned at 5.2.0. If reinstated, the fixed channel must be atlas Nissl: an intensity-based optimiser needs intensity correspondence, and Label Borders is a line drawing with none. Note this is the OPPOSITE of the human-facing overlay choice, and the reason is the same fact seen from two sides.","extras":[{"label":"fixed channel","value":"atlas Nissl (Ch0) — NEVER Label Borders"},{"label":"moving channel","value":"section DAPI"}],"onSpine":false,"step":null},{"id":"deploy","name":"Deploy pipeline into the project","status":"active","kind":"scriptable","env":"shell","envTokens":["shell"],"envNote":"conda env `braian`, python 3.11","entry":["scripts/sync_project.py"],"inputs":[],"outputs":[],"knobs":[],"chain":[],"notes":"Repo `scripts/` is SOURCE, `<project>/scripts/` is a DEPLOYED copy — QuPath can only run scripts inside the project. Never hand-copy. `pipeline.yml` is MERGED, never overwritten, so per-slice-set tuning survives. A directory containing `.pipeline-nosync` is skipped.","extras":[],"onSpine":true,"step":5},{"id":"load_rois","name":"Load ABBA ROIs into QuPath","status":"active","kind":"scriptable","env":"qupath","envTokens":["qupath"],"envNote":"QuPath v0.6.0, scripts run headless or from the Script editor","entry":["scripts/01_load_abba_rois.groovy"],"inputs":[],"outputs":[],"knobs":[],"chain":[],"notes":"Must run before detection — detection is confined to the atlas Root annotation.","extras":[],"onSpine":true,"step":6},{"id":"calibrate","name":"Threshold calibration","status":"active","kind":"scriptable","env":"qupath + notebook","envTokens":["qupath","notebook"],"envNote":"","entry":["scripts/calibrate_threshold.groovy","scripts/cockpit_threshold.py"],"inputs":[],"outputs":[],"knobs":[],"chain":[],"notes":"Read-only. The anchor cut is RELATIVE — floor + span_frac x (bright_peak − floor), re-measured from each section's own histogram — never absolute. Look at the histogram before changing span_frac.","extras":[],"onSpine":true,"step":7},{"id":"detect","name":"Nucleus detection","status":"active","kind":"scriptable","env":"qupath","envTokens":["qupath"],"envNote":"QuPath v0.6.0, scripts run headless or from the Script editor","entry":["scripts/run_braian_detection.groovy"],"inputs":[],"outputs":[],"knobs":[],"chain":[],"notes":"DAPI-anchored. Aborts loudly (and non-zero) if the threshold cannot be calibrated rather than falling back to a hardcoded value.","extras":[],"onSpine":true,"step":8},{"id":"classify","name":"Marker classification","status":"active","kind":"scriptable","env":"qupath","envTokens":["qupath"],"envNote":"QuPath v0.6.0, scripts run headless or from the Script editor","entry":["scripts/02_detect_classify.groovy"],"inputs":[],"outputs":[],"knobs":[],"chain":[],"notes":"THE single classification path — every project's BraiAn.yml `classifiers:` block is empty by design. Per-marker robust cut: median + k x 1.4826 x MAD, with an optional PER-MARKER `k_robust` override in pipeline.yml. Compartment per marker: nuclear / cytoplasmic / whole-cell. Colocalization is nucleus-anchored only, never proximity.","extras":[],"onSpine":true,"step":9},{"id":"export","name":"Per-cell + per-region export","status":"active","kind":"scriptable","env":"qupath","envTokens":["qupath"],"envNote":"QuPath v0.6.0, scripts run headless or from the Script editor","entry":["scripts/03_export_region_table.groovy"],"inputs":[],"outputs":["*__percell_export.tsv","*__region_table.tsv","*__detection_threshold.tsv"],"knobs":[],"chain":[],"notes":"Per-cell rows carry class, LEAF region label, nucleus area, centroid, anchor_mean and one <marker>_bgsub column per marker. `anchor_mean` exists so a negative-control pseudo-marker can be built downstream.","extras":[],"onSpine":true,"step":10},{"id":"export_coords","name":"Atlas-space coordinate export","status":"optional","kind":"scriptable","env":"qupath","envTokens":["qupath"],"envNote":"QuPath v0.6.0, scripts run headless or from the Script editor","entry":["scripts/04_export_atlas_coords.groovy"],"inputs":[],"outputs":[],"knobs":[],"chain":[],"notes":"Micron CCFv3 coordinates for 3D visualisation. Not needed for region readouts.","extras":[],"onSpine":false,"step":null},{"id":"qc","name":"QC gates","status":"active","kind":"scriptable","env":"shell + notebook","envTokens":["shell","notebook"],"envNote":"","entry":["scripts/cockpit_checks.py"],"inputs":[],"outputs":[],"knobs":[],"chain":[],"notes":"Every gate prints its measured number, a PASS/FLAG verdict, and its EVIDENCE TIER: <anatomical> (true regardless of acquisition), <internal> (self-consistency), <assumed> (a band borrowed from elsewhere, never validated here). Gates advise; they do not block.","extras":[],"onSpine":true,"step":11},{"id":"rollup_region","name":"Per-region readout","status":"active","kind":"scriptable","env":"shell","envTokens":["shell"],"envNote":"conda env `braian`, python 3.11","entry":["scripts/cockpit_regions.py"],"inputs":[],"outputs":[],"knobs":[],"chain":[],"notes":"Owns the Allen ontology. Region membership is resolved through descendants_or_self() against the PROJECT'S OWN ontology JSON — never a hardcoded acronym table. Per-cell labels are LEAF regions, so a parent acronym matches nothing unless rolled down.","extras":[],"onSpine":true,"step":12},{"id":"rollup_animal","name":"Animal-level rollup","status":"active","kind":"scriptable","env":"shell + notebook","envTokens":["shell","notebook"],"envNote":"","entry":["scripts/cockpit_animal.py"],"inputs":[],"outputs":[],"knobs":[],"chain":[],"notes":"Pools counts across sections then recomputes every ratio — never a mean of per-section ratios. `--pool-same-animal` merges projects declaring the same animal (one brain imaged across several sessions).","extras":[],"onSpine":true,"step":13},{"id":"chance","name":"Chance-baseline analysis","status":"active","kind":"scriptable","env":"shell","envTokens":["shell"],"envNote":"conda env `braian`, python 3.11","entry":["scripts/local_chance.py","scripts/expected_overlap.py","scripts/chance_methods.py"],"inputs":[],"outputs":[],"knobs":[],"chain":[],"notes":"Colocalization is reported against a chance level, and the field's chance is independence. Independence is violated in tissue by shared measurement pixels, spatial structure and detection artifacts, so control regions land above 1.0. These compute the same statistic several ways so the FLOOR is visible and a conclusion can be shown not to depend on which definition was chosen.","extras":[],"onSpine":true,"step":14},{"id":"compare","name":"Cross-dataset comparability","status":"active","kind":"scriptable","env":"shell","envTokens":["shell"],"envNote":"conda env `braian`, python 3.11","entry":["scripts/compare_datasets.py"],"inputs":[],"outputs":[],"knobs":[],"chain":[],"notes":"ADVISORY. Measures declared and observed parameters across datasets and rates how much weight each metric class can carry. Rank order of regions is the most robust cross-dataset comparison; absolute densities the least. Never refuses.","extras":[],"onSpine":true,"step":15},{"id":"figures","name":"Figures","status":"active","kind":"scriptable","env":"shell","envTokens":["shell"],"envNote":"conda env `braian`, python 3.11","entry":["scripts/figure_region_panels.py","scripts/figure_group_comparison.py"],"inputs":[],"outputs":[],"knobs":[],"chain":[],"notes":"Low-evidence bars are hatched; shared y-scales across groups via --ymax.","extras":[],"onSpine":true,"step":16},{"id":"tune","name":"Parameter tuning","status":"active","kind":"cross_cutting","env":"shell + notebook","envTokens":["shell","notebook"],"envNote":"","entry":["scripts/cockpit_tune.py"],"inputs":[],"outputs":[],"knobs":[],"chain":[],"notes":"One control surface over knobs that live in three places (czi_mip CLI, BraiAn.yml, pipeline.yml). Configs stay split on disk; comments are preserved on write.","extras":[],"onSpine":true,"step":17},{"id":"inspect","name":"Visual inspection of a threshold decision","status":"diagnostic","kind":"scriptable","env":"qupath","envTokens":["qupath"],"envNote":"QuPath v0.6.0, scripts run headless or from the Script editor","entry":["scripts/inspect_marker_band.groovy"],"inputs":[],"outputs":[],"knobs":[],"chain":[],"notes":"Tags the cells a k_robust change would flip, so they can be LOOKED at rather than argued about from counts. Uses a derived class so the existing call survives.","extras":[],"onSpine":false,"step":null},{"id":"render3d","name":"3D atlas-space point cloud","status":"unwired","kind":"scriptable","env":"conda env `brainrender`","envTokens":["conda env `brainrender`"],"envNote":"","entry":["scripts/render_engram_cloud.py"],"inputs":[],"outputs":[],"knobs":[],"chain":[],"notes":"Nothing currently calls this. Needs stage `export_coords`. Kept because the 3D readout is a stated project goal, but treat as unfinished until wired up.","extras":[],"onSpine":false,"step":null}],"principles":[{"label":"evidence hierarchy","text":"SEEN (operator looking at the image) > STRUCTURAL (true regardless of acquisition) > ASSUMED (a band borrowed from elsewhere). Never tune a parameter to move an ASSUMED number into range."},{"label":"advisory not refusal","text":"Tooling advises and ranks; it does not block. Refuse only on \"cannot be computed correctly\"; advise on \"may not mean what you think\"."},{"label":"comparability","text":"Relative thresholds absorb brightness drift but NOT geometry (pixel size, Z depth) or separability (SNR). One acquisition regime per comparison."},{"label":"one classification path","text":"Classification happens only in 02_detect_classify.groovy, driven by pipeline.yml."}]}</script>
+<script>
+(function(){
+"use strict";
+var D = JSON.parse(document.getElementById("data").textContent);
+var esc = function(s){ return String(s == null ? "" : s)
+  .replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;"); };
+var toneOf = {};
+D.statuses.forEach(function(s){ toneOf[s.name] = s.tone; });
+
+/* ---- masthead ---- */
+document.getElementById("eyebrow").textContent = D.pipeline;
+document.getElementById("readout").textContent = "Readout: " + D.readout + ".";
+document.getElementById("stamp").innerHTML =
+    "<span><b>generated from</b> " + esc(D.source) + "</span>" +
+  "<span><b>stage list updated</b> " + esc(D.updated) + "</span>" +
+  "<span><b>schema</b> v" + esc(D.schemaVersion) + "</span>" +
+  "<span><b>" + D.stages.length + "</b> stages</span>";
+
+/* ---- status chips + their definitions, both straight from the file ---- */
+var chips = document.getElementById("chips");
+var shown = {};
+D.statuses.forEach(function(s){
+  shown[s.name] = true;
+  var b = document.createElement("button");
+  b.type = "button"; b.className = "sbtn tone-" + s.tone;
+  b.setAttribute("aria-pressed","true");
+  b.dataset.status = s.name;
+  b.innerHTML = '<span class="dot"></span>' + esc(s.name) + ' <span class="n">' + s.count + "</span>";
+  b.addEventListener("click", function(){
+    shown[s.name] = !shown[s.name];
+    b.setAttribute("aria-pressed", String(shown[s.name]));
+    apply();
+  });
+  chips.appendChild(b);
+});
+document.getElementById("keydefs").innerHTML = D.statuses.map(function(s){
+  return '<div class="keydef tone-' + s.tone + '"><span class="k">' + esc(s.name) + "</span>" +
+         "<span>" + esc(s.blurb || "—") + "</span></div>";
+}).join("");
+
+/* ---- environment filter ---- */
+var envSel = document.getElementById("env");
+var envs = [];
+D.stages.forEach(function(s){
+  s.envTokens.forEach(function(t){ if (envs.indexOf(t) < 0) envs.push(t); });
+});
+envs.sort();
+envSel.innerHTML = '<option value="">Anywhere it runs</option>' + envs.map(function(e){
+  var note = D.environments[e];
+  var label = e.replace(/`/g, "");
+  return '<option value="' + esc(e) + '">' + esc(label) + (note ? " — " + esc(note) : "") + "</option>";
+}).join("");
+
+/* ---- stage cards ---- */
+function detailRows(s){
+  var rows = "";
+  function row(label, value){ rows += "<dt>" + esc(label) + "</dt><dd>" + value + "</dd>"; }
+  function pills(list){ return list.map(function(x){
+    return '<span class="pill">' + esc(x) + "</span>"; }).join(""); }
+  if (s.entry.length)   row(s.entry.length > 1 ? "entry points" : "entry point", pills(s.entry));
+  row("runs in", esc(s.env || "—") + (s.envNote ? ' <span style="color:var(--ink-3)">— ' +
+      esc(s.envNote) + "</span>" : ""));
+  if (s.kind)           row("kind", esc(s.kind));
+  if (s.inputs.length)  row("takes", pills(s.inputs));
+  if (s.outputs.length) row("writes", pills(s.outputs));
+  if (s.knobs.length)   row("knobs", pills(s.knobs));
+  s.extras.forEach(function(x){ row(x.label, esc(x.value)); });
+  return rows ? "<dl>" + rows + "</dl>" : "";
+}
+
+var flow = document.getElementById("flow");
+flow.innerHTML = D.stages.map(function(s, i){
+  var tone = toneOf[s.status] || "unknown";
+  var chain = s.chain.length
+    ? "<ol class=\"chain\">" + s.chain.map(function(c){ return "<li><span>" + esc(c) + "</span></li>"; }).join("") + "</ol>"
+    : "";
+  return '<div class="stage tone-' + tone + (s.onSpine ? "" : " off") + '" id="stage-' + esc(s.id) +
+      '" data-i="' + i + '">' +
+      '<div class="rail"><div class="pip">' + (s.step == null ? "·" : s.step) + "</div></div>" +
+      '<div class="card">' +
+        '<button class="head" type="button" aria-expanded="false" aria-controls="body-' + esc(s.id) + '">' +
+          '<span class="nm">' + esc(s.name) + "</span>" +
+          (s.entry.length ? '<span class="ent">' + esc(s.entry[0]) +
+              (s.entry.length > 1 ? " +" + (s.entry.length - 1) : "") + "</span>" : "") +
+          '<span class="badges">' +
+            (s.env ? '<span class="badge env">' + esc(s.env) + "</span>" : "") +
+            '<span class="badge">' + esc(s.status) + "</span>" +
+            '<span class="caret">›</span>' +
+          "</span>" +
+        "</button>" +
+        '<div class="body" id="body-' + esc(s.id) + '" hidden>' +
+          (s.notes ? "<p>" + esc(s.notes) + "</p>" : "") +
+          chain +
+          detailRows(s) +
+        "</div>" +
+      "</div></div>";
+}).join("");
+
+/* ---- expand / collapse ---- */
+var heads = Array.prototype.slice.call(flow.querySelectorAll(".head"));
+function setOpen(head, open){
+  head.setAttribute("aria-expanded", String(open));
+  document.getElementById(head.getAttribute("aria-controls")).hidden = !open;
+}
+heads.forEach(function(h){
+  h.addEventListener("click", function(){
+    setOpen(h, h.getAttribute("aria-expanded") !== "true");
+    syncExpandBtn();
+  });
+});
+var expandBtn = document.getElementById("expand");
+function visibleHeads(){
+  return heads.filter(function(h){ return !h.closest(".stage").hidden; });
+}
+function syncExpandBtn(){
+  var vis = visibleHeads();
+  var allOpen = vis.length > 0 && vis.every(function(h){
+    return h.getAttribute("aria-expanded") === "true"; });
+  expandBtn.textContent = allOpen ? "Collapse all" : "Expand all";
+  expandBtn.dataset.mode = allOpen ? "collapse" : "expand";
+}
+expandBtn.addEventListener("click", function(){
+  var open = expandBtn.dataset.mode !== "collapse";
+  visibleHeads().forEach(function(h){ setOpen(h, open); });
+  syncExpandBtn();
+});
+
+/* ---- filtering ---- */
+var haystacks = D.stages.map(function(s){
+  return [s.id, s.name, s.status, s.kind, s.env, s.notes,
+          s.entry.join(" "), s.inputs.join(" "), s.outputs.join(" "),
+          s.knobs.join(" "), s.chain.join(" "),
+          s.extras.map(function(x){ return x.label + " " + x.value; }).join(" ")
+         ].join(" ").toLowerCase();
+});
+var cards = Array.prototype.slice.call(flow.querySelectorAll(".stage"));
+var q = document.getElementById("q");
+var tally = document.getElementById("tally");
+var empty = document.getElementById("empty");
+
+function apply(){
+  var term = q.value.trim().toLowerCase();
+  var wantEnv = envSel.value;
+  var n = 0;
+  cards.forEach(function(card, i){
+    var s = D.stages[i];
+    var ok = shown[s.status] !== false
+      && (!term || haystacks[i].indexOf(term) >= 0)
+      && (!wantEnv || s.envTokens.indexOf(wantEnv) >= 0);
+    card.hidden = !ok;
+    if (ok) n++;
+  });
+  tally.textContent = n + " / " + D.stages.length + " shown";
+  empty.hidden = n > 0;
+  syncExpandBtn();
+}
+q.addEventListener("input", apply);
+envSel.addEventListener("change", apply);
+
+/* ---- principles ---- */
+document.getElementById("rules").innerHTML =
+  "<h2>Rules that hold across every stage</h2>" +
+  D.principles.map(function(p){
+    return '<div class="rule"><b>' + esc(p.label) + "</b><span>" + esc(p.text) + "</span></div>";
+  }).join("");
+
+/* ---- provenance ---- */
+document.getElementById("prov").innerHTML =
+  "<span>Generated from " + esc(D.source) + " by docs/build_pipeline_map.py — edit the YAML, re-run, re-publish.</span>" +
+  "<span>Numbered pips are the default path. Dashed, indented cards are off it: parked beside the line at the point they attach, not removed from it.</span>";
+
+/* ---- deep link ---- */
+apply();
+if (location.hash) {
+  var t = document.getElementById(location.hash.slice(1));
+  if (t) {
+    var h = t.querySelector(".head");
+    if (h) { setOpen(h, true); syncExpandBtn(); }
+    t.scrollIntoView({block:"center"});
+  }
+}
+})();
+</script>
