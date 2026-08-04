@@ -440,6 +440,51 @@ def _restrict_to_intersection(df: pd.DataFrame, config: creg.Config, roles: Role
     return df.drop(columns=[c for c in drop_cols if c in df.columns])
 
 
+def pool_same_animal(df: pd.DataFrame, config: creg.Config, roles: Roles) -> pd.DataFrame:
+    """Merge rows that share an animal but came from different projects.
+
+    stack_animals concatenates per-project rollups; it is built for stacking DIFFERENT
+    animals into a group table. When one animal is split across projects -- the same
+    brain imaged in two sessions, each its own QuPath project, both declaring the same
+    `animal:` in pipeline.yml -- concatenation leaves two rows per region and the
+    cohort is never actually pooled.
+
+    Follows the project's aggregation rule (D-8): sum COUNTS and areas, then recompute
+    every ratio from the sums via add_metrics. Never averages a ratio, and never
+    reimplements a metric -- add_metrics stays the single definition.
+    """
+    if df.empty or "animal" not in df.columns:
+        return df
+    split = (df.groupby(["animal", "region_acronym", "hemisphere"])
+               .size().gt(1).any())
+    if not split:
+        return df
+
+    count_cols = [c for c in df.columns if c.endswith("_count")]
+    sum_cols = [c for c in (count_cols + ["area_mm2", "N", "n_slices"]) if c in df.columns]
+    agg = {c: (c, "sum") for c in sum_cols}
+    if "projects" in df.columns:
+        agg["projects"] = ("projects", lambda s: ",".join(sorted({x for v in s for x in str(v).split(",")})))
+    for c in ("region_name", "level", "group", "N_source"):
+        if c in df.columns:
+            agg[c] = (c, "first")
+
+    pooled = df.groupby(["animal", "region_acronym", "hemisphere"], as_index=False).agg(**agg)
+    area = pooled["area_mm2"].to_numpy(dtype=float)
+    anchor_name = config.anchor_name
+    if f"{anchor_name}_count" in pooled:
+        pooled[f"{anchor_name}_density"] = _safe_div(
+            pooled[f"{anchor_name}_count"].to_numpy(dtype=float), area)
+    for m in config.marker_names:
+        if f"{m}+_count" in pooled:
+            pooled[f"{m}+_density"] = _safe_div(pooled[f"{m}+_count"].to_numpy(dtype=float), area)
+    if config.emit_double and "Double+_count" in pooled:
+        pooled["Double+_density"] = _safe_div(
+            pooled["Double+_count"].to_numpy(dtype=float), area)
+    add_metrics(pooled, config, roles)
+    return pooled
+
+
 def stack_animals(project_dirs: list[Path], regions: list[str] | None = None,
                   tagged: str | None = None, activity: str | None = None,
                   n_source: str = "auto", stack_on_intersection: bool = False) -> pd.DataFrame:
@@ -2097,6 +2142,11 @@ def main() -> None:
                     help="D-4: denominator source (default: auto).")
     ap.add_argument("--hemisphere", choices=["both", "L", "R"], default="both",
                     help="Wide-pivot hemisphere slice (the long table always keeps all three).")
+    ap.add_argument("--pool-same-animal", action="store_true",
+                    help="merge rows from different projects that declare the SAME animal in "
+                         "pipeline.yml (one brain imaged across several sessions). Counts are "
+                         "summed and every ratio recomputed from the sums; without this, "
+                         "stacked projects stay as separate rows per region.")
     ap.add_argument("--stack-on-intersection", action="store_true",
                     help="D-2: stack on the shared marker set instead of failing on a mismatch.")
     ap.add_argument("--out-dir", type=Path, default=Path("results/animal"),
@@ -2147,6 +2197,15 @@ def main() -> None:
     except ValueError as exc:
         print(f"\nERROR: {exc}", file=sys.stderr)
         sys.exit(1)
+
+    if args.pool_same_animal:
+        before = len(combined)
+        cfg0 = creg.load_pipeline_config(Path(args.project[0]))
+        combined = pool_same_animal(combined, cfg0, resolve_roles(
+            cfg0, args.tagged_marker, args.activity_marker))
+        if len(combined) != before:
+            print(f"\nPooled same-animal rows across projects: {before} -> {len(combined)} rows "
+                  f"(counts summed, ratios recomputed from the sums).")
 
     group_map = load_group_map(args.groups, args.group)
     combined = apply_group_map(combined, group_map)
