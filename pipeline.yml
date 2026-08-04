@@ -137,8 +137,22 @@ ring:
 # produces a different cut on every section -- 655-952 across M3 Hipp2, 1721-2225
 # across M5b. Ordinary brightness variability is handled and needs nothing here.
 #
-# This block is the escape hatch for sections whose histogram BREAKS THE RULE'S
-# ASSUMPTIONS, which is a different failure:
+# PER-SLICE BY EYE IS A FIRST-CLASS METHOD (operator, 2026-08-04). span_frac 0.25 is
+# tier-3 evidence -- seeded from ONE operator call on ONE section, never validated
+# against hand counts -- while a cut you set while looking at the mask is tier-1
+# (SEEN). The rule misfired or looked suspect on 5 of 16 sections run here (31%), so
+# this block is built to carry a WHOLE SERIES, not just exceptions.
+#
+# The one cost is operator variance, and it is controllable: record every call, keep
+# one visual criterion, set thresholds blind to condition where the group comparison
+# matters, and watch the IMPLIED SPAN FRACTION that notebook section 3b reports for
+# each call. Stable across slices = your eye and the rule agree. Varying = no single
+# rule fits this data, which is measured evidence for doing it per-slice.
+#
+# The rule keeps one genuine advantage: it is reproducible without a human, so a
+# re-run years later gives the same numbers. Prefer it where it demonstrably works.
+#
+# Sections where it demonstrably does NOT work:
 #   M5c_s3 / M5c_s4  no separable floor at all; a prominence sweep gave 1,073 to
 #                    6,328 with no stable answer
 #   M5-hipp3_s1      trimodal (padding at 0, empty field at ~384, nuclei at ~5632);

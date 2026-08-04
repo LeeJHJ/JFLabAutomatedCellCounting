@@ -39,20 +39,39 @@ WHAT IT SHOWS, per crop
     measured on real sections at their real thresholds (76% and 87% on two good
     ones, 98% on the one that over-detected).
 
-THRESHOLDING METHODS
-    absolute        one number, straight from the slider. The escape hatch, and the
-                    right answer when the peak rule cannot work (see M5c_s3/s4,
-                    whose histograms have no separable floor at all).
-    span_fraction   floor + frac x (bright - floor), the self-calibrating rule that
-                    tracks staining and laser drift across sections. Endpoints are
-                    found on a COARSELY binned histogram, which is what keeps the
-                    finder out of the background wrinkles; an IGNORE-BELOW control
-                    is available when even that is not enough.
+PER-SLICE BY EYE IS A FIRST-CLASS METHOD, NOT A FALLBACK (operator, 2026-08-04)
+    The project-wide span rule is tier-3 evidence: span_frac 0.25 was seeded from ONE
+    operator call on ONE section and has never been validated against hand counts. A
+    threshold you set while looking at the mask is tier-1 (SEEN). By this project's own
+    evidence hierarchy the eye outranks the rule, and the failure rate is not marginal
+    -- the rule misfired or looked suspect on 5 of 16 sections run here (31%).
 
-    span_fraction is preferred whenever it works, because it re-measures per section
-    and so keeps sections comparable. absolute does not -- it must be re-checked on
-    every section, and a section dimmer than the one it was tuned on will silently
-    under-detect.
+    So setting every slice by eye is sound, and `threshold_overrides` in pipeline.yml
+    is built to carry a full series, not just exceptions.
+
+    THE ONE COST, and it is controllable. A mechanical rule has no operator variance;
+    sixteen by-eye calls do. If the eye drifts over a session, that drift becomes an
+    AP-position gradient in the counts and reads as biology. The controls:
+      * Record each call (the ledger below) so the series is inspectable, not recalled.
+      * Watch the IMPLIED SPAN FRACTION -- where each by-eye cut sits on that section's
+        own floor->bright span. Stable across slices means the eye and the rule agree.
+        Varying means no single rule fits, which is the case per-slice exists for.
+      * Judge against the same visual criterion every time: mask covers nuclei, leaves
+        the gaps between them alone.
+      * Where the group comparison matters, set thresholds blind to condition.
+
+THRESHOLDING METHODS
+    absolute        one number, straight from the slider. Correct whenever you can see
+                    the right cut, and the only option when the peak rule cannot work
+                    (M5c_s3/s4 have no separable floor at all).
+    span_fraction   floor + frac x (bright - floor), re-measured from each section's
+                    own histogram. Endpoints are found on a COARSELY binned histogram,
+                    which keeps the finder out of the background wrinkles; an
+                    IGNORE-BELOW control is there when even that is not enough.
+
+    span_fraction still has one advantage worth keeping in mind: it is reproducible
+    without a human, so re-running a series years later gives the same numbers. Prefer
+    it where it demonstrably works, and override the slices where it does not.
 
 Usage:
     # in a notebook (this is the intended path)
@@ -435,6 +454,81 @@ def _config_block(method: str, threshold: float, span_frac: float,
             "section needs this, switch 'apply to' to THIS SLICE instead.")
 
 
+def implied_span_frac(threshold: float, floor: float | None,
+                      bright: float | None) -> float | None:
+    """Where a by-eye cut sits on this section's own floor->bright span.
+
+    THE POINT OF THIS NUMBER. A per-slice by-eye threshold is tier-1 evidence (SEEN)
+    and outranks the span rule, which is tier-3 (ASSUMED -- span_frac 0.25 was seeded
+    from ONE operator call on ONE section and never validated against hand counts).
+    But 16 by-eye calls carry operator variance that a mechanical rule does not, and
+    if the eye drifts over a session that drift becomes an AP-position gradient in
+    the counts, which reads as biology.
+
+    Reporting the implied fraction makes the eye measurable without overruling it:
+      * stable across sections  -> the eye and the rule agree; both are validated
+      * varies with the section -> measured evidence the rule cannot fit this data,
+                                   which is exactly what per-slice is for
+    It is a diagnostic, never a gate. Nothing here refuses a value.
+    """
+    if floor is None or bright is None or bright <= floor:
+        return None
+    return (float(threshold) - float(floor)) / (float(bright) - float(floor))
+
+
+def review_table(decisions: dict[str, dict]) -> str:
+    """Every by-eye decision so far, with its implied span fraction and the drift."""
+    if not decisions:
+        return "no slices decided yet"
+    lines = [f"  {'slice':<18} {'cut':>8} {'floor':>7} {'bright':>8} {'implied':>8}  method"]
+    fracs = []
+    for label, d in decisions.items():
+        frac = d.get("implied_span_frac")
+        if frac is not None:
+            fracs.append(frac)
+        lines.append(
+            f"  {label:<18} {d['threshold']:>8,.0f} "
+            f"{(d.get('floor') if d.get('floor') is not None else float('nan')):>7,.0f} "
+            f"{(d.get('bright') if d.get('bright') is not None else float('nan')):>8,.0f} "
+            f"{('n/a' if frac is None else f'{frac:.3f}'):>8}  {d['method']}")
+    if len(fracs) >= 2:
+        spread = max(fracs) - min(fracs)
+        lines.append("")
+        lines.append(f"  implied span_frac: {min(fracs):.3f} to {max(fracs):.3f} "
+                     f"(spread {spread:.3f}) over {len(fracs)} slices")
+        if spread <= 0.10:
+            lines.append("  -> tight. Your eye and the span rule agree; a project-wide "
+                         "span_frac near the mean would reproduce these.")
+        else:
+            lines.append("  -> wide. No single span_frac reproduces these calls, which is "
+                         "measured evidence that per-slice is the right choice here.")
+        lines.append("  Neither line is a verdict -- the cuts you SAW are the data. "
+                     "<internal>")
+    return "\n".join(lines)
+
+
+def emit_overrides(decisions: dict[str, dict]) -> str:
+    """The complete `threshold_overrides:` block for every slice decided so far.
+
+    Paste-ready, so a whole series can be set in one pass rather than one slice per
+    edit-run-check cycle.
+    """
+    if not decisions:
+        return "# no slices decided yet"
+    out = ["threshold_overrides:"]
+    for label, d in decisions.items():
+        out.append(f"  {label}:")
+        if d["method"] == "absolute":
+            out.append('    mode: "absolute"')
+            out.append(f"    absolute: {int(round(d['threshold']))}")
+        else:
+            out.append(f"    span_frac: {d['span_frac']:.2f}")
+        frac = d.get("implied_span_frac")
+        detail = f", implied span_frac {frac:.3f}" if frac is not None else ""
+        out.append(f'    note: "set by eye {d.get("when", "")}{detail}"')
+    return "\n".join(out)
+
+
 def _load_pipeline_threshold(project_dir: Path) -> dict:
     import yaml
 
@@ -475,7 +569,11 @@ def launch(project: str | Path | None = None, mip: str | Path | None = None,
     else:
         candidates = [Path(mip)]
 
-    state: dict[str, Any] = {"threshold": None, "method": "span_fraction", "mip": None}
+    # `decisions` accumulates one entry per slice the operator RECORDS, so a whole
+    # series can be set in a single pass. Recording is an explicit button press, not
+    # whatever the slider last happened to sit on.
+    state: dict[str, Any] = {"threshold": None, "method": "span_fraction", "mip": None,
+                             "decisions": {}}
     cache: dict[str, Any] = {}
 
     cfg = _load_pipeline_threshold(Path(project)) if project else {}
@@ -506,6 +604,10 @@ def launch(project: str | Path | None = None, mip: str | Path | None = None,
         value="project", description="apply to:")
     out = widgets.Output()
     note = widgets.HTML()
+    record_btn = widgets.Button(description="Record this slice", button_style="primary",
+                                icon="check", layout=widgets.Layout(width="200px"))
+    clear_btn = widgets.Button(description="Clear recorded", layout=widgets.Layout(width="160px"))
+    ledger = widgets.Output()
 
     def _ensure_loaded(path: Path) -> None:
         if cache.get("path") == path:
@@ -592,7 +694,11 @@ def launch(project: str | Path | None = None, mip: str | Path | None = None,
             plt.show()
 
             stats = crop_stats(crop, thr, pixel_um)
+            _imp = implied_span_frac(thr, floor, bright)
             print(f"  cut {thr:,.0f}   {coverage_verdict(stats['frac_above'])}")
+            if _imp is not None:
+                print(f"  implied span_frac {_imp:.3f} on this section's own floor->bright "
+                      f"span ({floor:,.0f} -> {bright:,.0f})")
             if not stats["bg_subtracted"]:
                 print("  NOTE: no pixel size in the OME-XML, so background was NOT "
                       "subtracted -- this mask is not what detection sees.")
@@ -606,11 +712,46 @@ def launch(project: str | Path | None = None, mip: str | Path | None = None,
         state["span_frac"] = span_sl.value
         state["ignore_below"] = ignore_sl.value
 
+        state["implied_span_frac"] = implied_span_frac(thr, floor, bright)
         state["scope"] = scope_dd.value
         yaml_block, carry = _config_block(method_dd.value, thr, span_sl.value,
                                           scope_dd.value, slice_label(path))
         note.value = (f"<pre style='margin:0'>{yaml_block}</pre>"
                       f"<div style='font-size:90%;color:#555'>{carry}</div>")
+
+    def _show_ledger() -> None:
+        with ledger:
+            ledger.clear_output(wait=True)
+            if not state["decisions"]:
+                print("No slices recorded yet. Set a cut you believe, then press "
+                      "'Record this slice'.")
+                return
+            print(review_table(state["decisions"]))
+            print("\npaste into <project>/pipeline.yml:\n")
+            print(emit_overrides(state["decisions"]))
+
+    def _record(_btn) -> None:
+        if state.get("threshold") is None:
+            return
+        import datetime as _dt
+        label = slice_label(mip_dd.value)
+        state["decisions"][label] = {
+            "threshold": state["threshold"],
+            "method": state["method"],
+            "span_frac": state["span_frac"],
+            "floor": state["floor"],
+            "bright": state["bright"],
+            "implied_span_frac": state["implied_span_frac"],
+            "when": _dt.date.today().isoformat(),
+        }
+        _show_ledger()
+
+    def _clear(_btn) -> None:
+        state["decisions"].clear()
+        _show_ledger()
+
+    record_btn.on_click(_record)
+    clear_btn.on_click(_clear)
 
     for control in (mip_dd, method_dd, ignore_sl, span_sl, abs_sl, crop_dd, scope_dd):
         control.observe(_redraw, names="value")
@@ -620,9 +761,14 @@ def launch(project: str | Path | None = None, mip: str | Path | None = None,
                      "not the number. What you see outranks any expected band."),
         mip_dd, method_dd, ignore_sl, span_sl, abs_sl, crop_dd, scope_dd, out,
         widgets.HTML("<b>paste into <code>&lt;project&gt;/pipeline.yml</code></b>"), note,
+        widgets.HTML("<hr><b>Per-slice pass</b> &mdash; set a cut you believe on each "
+                     "slice, press Record, move to the next. The implied span fraction "
+                     "makes your calls comparable to each other."),
+        widgets.HBox([record_btn, clear_btn]), ledger,
     ])
     display(ui)
     _redraw()
+    _show_ledger()
     return state
 
 
@@ -809,11 +955,30 @@ def _self_test() -> None:
     assert "EVERY section" in carry, "project-scope absolute must warn about its reach"
     print("  (i) per-slice override blocks are well-formed and scope-correct")
 
-    # (j) The anchor channel is matched BY NAME, never by position.
+    # (j) The per-slice review ledger: implied span_frac makes by-eye calls
+    #     comparable to each other, and to the rule.
+    assert implied_span_frac(1600, 256, 5632) is not None
+    assert abs(implied_span_frac(1600, 256, 5632) - 0.25) < 0.01
+    assert implied_span_frac(1600, None, 5632) is None
+    assert implied_span_frac(1600, 500, 500) is None, "zero span must not divide"
+    tight = {f"s{i}": {"threshold": 1600, "method": "absolute", "span_frac": 0.25,
+                       "floor": 256, "bright": 5632, "implied_span_frac": 0.25 + i * 0.01}
+             for i in range(3)}
+    assert "tight" in review_table(tight), review_table(tight)
+    wide = dict(tight); wide["s9"] = {**tight["s0"], "implied_span_frac": 0.70}
+    assert "wide" in review_table(wide), review_table(wide)
+    assert review_table({}) == "no slices decided yet"
+    blk = emit_overrides(tight)
+    assert blk.startswith("threshold_overrides:") and blk.count("mode:") == 3, blk
+    assert "implied span_frac" in blk, "the note must carry the implied fraction"
+    assert emit_overrides({}).startswith("#")
+    print("  (j) review ledger: implied span_frac, drift wording, full block emit")
+
+    # (k) The anchor channel is matched BY NAME, never by position.
     assert anchor_channel_index(["AF568-T2", "AF488-T3", "DAPI-T4"]) == 2
     assert anchor_channel_index(["DAPI-T4", "AF488-T3"]) == 0
     assert anchor_channel_index(["red", "green"]) == 1, "fallback must be the LAST channel"
-    print("  (j) anchor channel resolved by name, falls back to last")
+    print("  (k) anchor channel resolved by name, falls back to last")
 
     print("\nSELF-TEST PASSED")
 

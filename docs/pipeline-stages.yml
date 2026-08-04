@@ -141,6 +141,23 @@ stages:
       re-measured from each section's own histogram — never absolute. Look at the
       histogram before changing span_frac.
 
+  - id: calibrate_by_eye
+    name: "Threshold picker (visual, per slice)"
+    status: active
+    kind: scriptable
+    environment: notebook
+    entry: "scripts/cockpit_threshold_gui.py"
+    notes: >
+      Reads the MIP directly -- no QuPath, no JVM -- samples crops across the tissue
+      range and draws the above-cut mask on the BACKGROUND-SUBTRACTED image, which is
+      what BraiAnDetect actually thresholds. Per-slice by eye is a FIRST-CLASS method
+      here, not a fallback: span_frac is tier-3 evidence (one operator call on one
+      section, never validated against hand counts) while a cut set while looking is
+      tier-1, and the rule misfired or looked suspect on 5 of 16 sections (31%).
+      Records a decision per slice and emits the whole `threshold_overrides:` block.
+      Reports each call's IMPLIED SPAN FRACTION so operator drift across a session is
+      visible rather than silently becoming an AP gradient in the counts.
+
   - id: detect
     name: "Nucleus detection"
     status: active
