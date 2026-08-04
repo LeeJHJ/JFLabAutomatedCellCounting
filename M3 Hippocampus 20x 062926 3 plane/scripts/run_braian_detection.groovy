@@ -113,6 +113,7 @@ def ymlLines = pipelineYml.readLines().collect { stripComment(it) }
 
 String anchorChannel = null, thrMode = null
 Double spanFrac = null, absoluteThr = null
+Map<String, Map> sliceOverrides = [:]
 Integer resLevel = null, smoothWin = null
 Double prominence = null
 
@@ -149,6 +150,42 @@ while (li < ymlLines.size()) {
         }
         li = j; continue
     }
+    // ── Per-slice overrides (TOP-LEVEL `threshold_overrides:`) ──────────────────
+    // Deliberately NOT nested under detection_threshold: this reader matches keys by
+    // regex across every line indented under a block, so a nested child `mode:` would
+    // silently clobber the project-wide mode for every section.
+    //
+    // Shape:
+    //   threshold_overrides:
+    //     M5-hipp3_s1:
+    //       mode: "absolute"
+    //       absolute: 1700
+    //       note: "trimodal histogram; span rule found two background peaks"
+    if (t == "threshold_overrides:") {
+        int j = li + 1
+        String curKey = null
+        while (j < ymlLines.size() && (ymlLines[j].trim().isEmpty() || indentOf(ymlLines[j]) > 0)) {
+            def raw = ymlLines[j]
+            def s = raw.trim()
+            if (s.isEmpty()) { j++; continue }
+            def mKey = (s =~ /^([^:\s][^:]*):\s*$/)
+            if (indentOf(raw) <= 2 && mKey.find()) {
+                curKey = mKey.group(1).replaceAll(/^["']|["']$/, "")
+                sliceOverrides[curKey] = [:]
+            } else if (curKey != null) {
+                def oMode = (s =~ /^mode:\s*"([^"]+)"/)
+                def oAbs  = (s =~ /^absolute:\s*([0-9.eE+-]+)/)
+                def oFrac = (s =~ /^span_frac:\s*([0-9.eE+-]+)/)
+                def oNote = (s =~ /^note:\s*"([^"]*)"/)
+                if (oMode.find()) sliceOverrides[curKey].mode = oMode.group(1)
+                if (oAbs.find())  sliceOverrides[curKey].absolute = oAbs.group(1) as Double
+                if (oFrac.find()) sliceOverrides[curKey].span_frac = oFrac.group(1) as Double
+                if (oNote.find()) sliceOverrides[curKey].note = oNote.group(1)
+            }
+            j++
+        }
+        li = j; continue
+    }
     li++
 }
 
@@ -175,6 +212,44 @@ if (anchorConf == null) {
     println "       (pipeline.yml anchor.channel). Entries present: " +
             config.channelDetections.collect { it.name } + ". Aborting."
     return
+}
+
+// ── Apply a per-slice override, if this image has one ───────────────────────────
+// WHY THIS EXISTS. span_fraction is ALREADY per-slice: floor and bright peak are
+// re-measured from each section's own histogram, so the same span_frac gives 655-952
+// across M3 Hipp2 and 1721-2225 across M5b. Brightness drift is handled.
+//
+// What it cannot handle is a section whose histogram BREAKS THE RULE'S ASSUMPTIONS:
+//   M5c_s3 / M5c_s4  -- no separable floor at all (a prominence sweep gave 1,073 to
+//                       6,328 with no stable answer)
+//   M5-hipp3_s1      -- trimodal; the finder locked onto two background peaks and cut
+//                       at 123 instead of ~1700, giving 5,305 nuclei/mm^2
+//   M5a_s1           -- bright peak 253 vs ~5,000 for its siblings; noise-dominated
+//
+// For those, the operator sets the cut by eye (notebooks/01_calibrate.ipynb section
+// 3b) and records it here, per slice, rather than flipping the whole project to
+// absolute and losing self-calibration on every good section.
+String overrideKey = null
+def thisImageName = getProjectEntry().getImageName()
+sliceOverrides.each { k, v ->
+    if (overrideKey == null && thisImageName.contains(k)) overrideKey = k
+}
+if (overrideKey != null) {
+    def ov = sliceOverrides[overrideKey]
+    println "PER-SLICE OVERRIDE matched '${overrideKey}' for ${thisImageName}"
+    if (ov.note) println "  note: ${ov.note}"
+    if (ov.mode != null)      { println "  mode      ${thrMode} -> ${ov.mode}";      thrMode = ov.mode }
+    if (ov.span_frac != null) { println "  span_frac ${spanFrac} -> ${ov.span_frac}"; spanFrac = ov.span_frac }
+    if (ov.absolute != null)  { println "  absolute  ${absoluteThr} -> ${ov.absolute}"; absoluteThr = ov.absolute }
+    if (thrMode == "absolute" && absoluteThr == null) {
+        throw new RuntimeException(
+            "threshold_overrides['${overrideKey}'] sets mode=absolute but no absolute value, " +
+            "and the project has no default. Add `absolute: <value>` under that slice.")
+    }
+    println "  COMPARABILITY: this section no longer shares the project-wide rule."
+    println "  Its counts remain valid, but a difference between it and an un-overridden"
+    println "  section may be a threshold difference rather than biology. This is"
+    println "  recorded in the __detection_threshold.tsv provenance file."
 }
 
 long resolvedThreshold
@@ -280,9 +355,14 @@ if (AtlasManager.isImported(atlasName, hierarchy)) {
     // Without this, a re-run months later cannot tell which cut made which numbers.
     def provFile = new File(buildPathInProject("results", imageName + "__detection_threshold.tsv"))
     provFile.getParentFile().mkdirs()
-    provFile.text = "image\tanchor_channel\tmode\tspan_frac\tthreshold\n" +
+    // `override` and `override_note` carry a per-slice deviation downstream. Without
+    // them an overridden section is indistinguishable from a self-calibrated one in
+    // every table built from these files, and a threshold difference would read as a
+    // biological one.
+    provFile.text = "image\tanchor_channel\tmode\tspan_frac\tthreshold\toverride\toverride_note\n" +
             "${getProjectEntry().getImageName()}\t${anchorChannel}\t${thrMode}\t" +
-            "${thrMode == 'span_fraction' ? spanFrac : ''}\t${resolvedThreshold}\n"
+            "${thrMode == 'span_fraction' ? spanFrac : ''}\t${resolvedThreshold}\t" +
+            "${overrideKey ?: ''}\t${overrideKey ? (sliceOverrides[overrideKey].note ?: '') : ''}\n"
 }
 
 println getCurrentImageName()+" : DONE!  (anchor threshold ${resolvedThreshold})"

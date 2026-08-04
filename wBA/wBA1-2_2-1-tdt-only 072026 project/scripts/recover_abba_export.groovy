@@ -22,13 +22,23 @@ import ch.epfl.biop.atlas.aligner.action.ExportSliceRegionsToFileAction
 import net.imglib2.realtransform.RealTransform
 import sc.fiji.persist.ScijavaGsonHelper
 
-// ─────────── CONFIG ───────────
+// ─────────── CONFIG — EDIT THESE FOUR BEFORE RUNNING ───────────
+// This is a recovery one-off: it is driven by editing the file, not by arguments.
+// The values below are PLACEHOLDERS. They previously held one specific project's
+// absolute paths, which made the script look runnable as-is while silently
+// pointing at somebody else's data.
 def ATLAS        = "allen_mouse_10um_java"
 def NAMING       = "id"   // if RoiSets stay empty, change to "acronym" and re-run
-def PROJECT_DIR  = "/home/jflab/Analysis/wBA 1-3 2-1 072026/wBA_1-3_2-1_072026"
-def ONTOLOGY_SRC = "/home/jflab/Analysis/M3 Hippocampus 20x 062926 3 plane/allen_mouse_10um_java-Ontology.json"
-def SLICE_TOKEN  = ~/wBA1-3_s\d+/
-// ──────────────────────────────
+def PROJECT_DIR  = "<absolute path to the QuPath project to recover into>"
+def ONTOLOGY_SRC = "<absolute path to an existing allen_mouse_10um_java-Ontology.json>"
+def SLICE_TOKEN  = ~/<regex matching this series' slice labels, e.g. wBA1-3_s\d+>/
+// ───────────────────────────────────────────────────────────────
+
+if (PROJECT_DIR.startsWith("<") || ONTOLOGY_SRC.startsWith("<")) {
+    println "ERROR: edit the CONFIG block at the top of this script first -- " +
+            "PROJECT_DIR and ONTOLOGY_SRC are still placeholders."
+    return
+}
 
 def gson = ScijavaGsonHelper.getGson(ctx, true)
 

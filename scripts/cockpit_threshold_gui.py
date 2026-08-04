@@ -386,6 +386,55 @@ def find_mips(project_dir: Path) -> list[Path]:
     return unique
 
 
+def slice_label(mip_path: Path) -> str:
+    """Slice label from a MIP filename: M5-hipp3_s1_MIP.ome.tiff -> M5-hipp3_s1.
+
+    This is the key `threshold_overrides` is matched on. The groovy matches by
+    SUBSTRING against the QuPath entry name (`<file> - <label>`), so the bare label
+    is enough and is what the operator recognises.
+    """
+    name = Path(mip_path).name
+    for suffix in ("_MIP.ome.tiff", "_MIP.ome.tif", ".ome.tiff", ".ome.tif"):
+        if name.endswith(suffix):
+            return name[: -len(suffix)]
+    return Path(name).stem
+
+
+def _config_block(method: str, threshold: float, span_frac: float,
+                  scope: str, label: str) -> tuple[str, str]:
+    """The YAML to paste, plus the caveat that belongs with it.
+
+    PROJECT scope rewrites the project-wide rule and hits every section. SLICE scope
+    writes a `threshold_overrides` entry, which is the right choice when one section's
+    histogram breaks the rule but the rest are fine -- flipping the whole project to
+    absolute would throw away self-calibration on every good section.
+    """
+    if scope == "slice":
+        if method == "absolute":
+            body = (f'threshold_overrides:\n  {label}:\n    mode: "absolute"\n'
+                    f'    absolute: {int(round(threshold))}\n'
+                    f'    note: "set by eye -- <say why this slice needed it>"')
+        else:
+            body = (f'threshold_overrides:\n  {label}:\n'
+                    f'    span_frac: {span_frac:.2f}\n'
+                    f'    note: "set by eye -- <say why this slice needed it>"')
+        carry = ("applies to <b>this slice only</b>; every other section keeps the "
+                 "project rule. The override is recorded in "
+                 "<code>__detection_threshold.tsv</code>, so a later difference between "
+                 "this section and the others can be traced to the threshold rather "
+                 "than read as biology.")
+        return body, carry
+
+    if method == "span_fraction":
+        return (f'detection_threshold:\n  mode: "span_fraction"\n'
+                f'  span_frac: {span_frac:.2f}\n  absolute: null',
+                "re-measured per section, so sections stay comparable")
+    return (f'detection_threshold:\n  mode: "absolute"\n'
+            f'  span_frac: {span_frac:.2f}\n  absolute: {int(round(threshold))}',
+            "<b>applies to EVERY section</b> and does not self-calibrate. If only one "
+            "section needs this, switch 'apply to' to THIS SLICE instead.")
+
+
 def _load_pipeline_threshold(project_dir: Path) -> dict:
     import yaml
 
@@ -452,6 +501,9 @@ def launch(project: str | Path | None = None, mip: str | Path | None = None,
     abs_sl = widgets.IntSlider(value=1700, min=0, max=20000, step=25, description="threshold:",
                                continuous_update=False, layout=widgets.Layout(width="520px"))
     crop_dd = widgets.Dropdown(description="crop:", layout=widgets.Layout(width="260px"))
+    scope_dd = widgets.ToggleButtons(
+        options=[("whole project", "project"), ("THIS SLICE only", "slice")],
+        value="project", description="apply to:")
     out = widgets.Output()
     note = widgets.HTML()
 
@@ -554,25 +606,19 @@ def launch(project: str | Path | None = None, mip: str | Path | None = None,
         state["span_frac"] = span_sl.value
         state["ignore_below"] = ignore_sl.value
 
-        if method_dd.value == "span_fraction":
-            yaml_block = (f'detection_threshold:\n  mode: "span_fraction"\n'
-                          f'  span_frac: {span_sl.value:.2f}\n  absolute: null')
-            carry = ("re-measured per section, so sections stay comparable")
-        else:
-            yaml_block = (f'detection_threshold:\n  mode: "absolute"\n'
-                          f'  span_frac: {span_sl.value:.2f}\n  absolute: {int(thr)}')
-            carry = ("<b>does NOT self-calibrate</b> -- re-check on every section; "
-                     "a dimmer section will silently under-detect")
+        state["scope"] = scope_dd.value
+        yaml_block, carry = _config_block(method_dd.value, thr, span_sl.value,
+                                          scope_dd.value, slice_label(path))
         note.value = (f"<pre style='margin:0'>{yaml_block}</pre>"
                       f"<div style='font-size:90%;color:#555'>{carry}</div>")
 
-    for control in (mip_dd, method_dd, ignore_sl, span_sl, abs_sl, crop_dd):
+    for control in (mip_dd, method_dd, ignore_sl, span_sl, abs_sl, crop_dd, scope_dd):
         control.observe(_redraw, names="value")
 
     ui = widgets.VBox([
         widgets.HTML("<b>Threshold picker</b> &mdash; judge the red mask on the image, "
                      "not the number. What you see outranks any expected band."),
-        mip_dd, method_dd, ignore_sl, span_sl, abs_sl, crop_dd, out,
+        mip_dd, method_dd, ignore_sl, span_sl, abs_sl, crop_dd, scope_dd, out,
         widgets.HTML("<b>paste into <code>&lt;project&gt;/pipeline.yml</code></b>"), note,
     ])
     display(ui)
@@ -747,11 +793,27 @@ def _self_test() -> None:
     print(f"  (h) coverage readout: bg-sub {stats['frac_above'] * 100:.1f}% vs raw "
           f"{raw['frac_above'] * 100:.1f}% at the same cut")
 
-    # (i) The anchor channel is matched BY NAME, never by position.
+    # (i) Per-slice override blocks: correct key, correct shape, and PROJECT scope
+    #     must never emit a threshold_overrides block (or one slice's by-eye value
+    #     would silently become every section's).
+    assert slice_label(Path("M5-hipp3_s1_MIP.ome.tiff")) == "M5-hipp3_s1"
+    assert slice_label(Path("/a/b/M5c_s3.ome.tif")) == "M5c_s3"
+    blk, _ = _config_block("absolute", 1700.4, 0.25, "slice", "M5-hipp3_s1")
+    assert blk.startswith("threshold_overrides:"), blk
+    assert "M5-hipp3_s1:" in blk and "absolute: 1700" in blk, blk
+    blk_frac, _ = _config_block("span_fraction", 1600, 0.40, "slice", "M5c_s3")
+    assert "span_frac: 0.40" in blk_frac and "mode:" not in blk_frac, (
+        "a span_frac-only override must not also pin mode")
+    proj, carry = _config_block("absolute", 1700, 0.25, "project", "M5-hipp3_s1")
+    assert "threshold_overrides" not in proj, proj
+    assert "EVERY section" in carry, "project-scope absolute must warn about its reach"
+    print("  (i) per-slice override blocks are well-formed and scope-correct")
+
+    # (j) The anchor channel is matched BY NAME, never by position.
     assert anchor_channel_index(["AF568-T2", "AF488-T3", "DAPI-T4"]) == 2
     assert anchor_channel_index(["DAPI-T4", "AF488-T3"]) == 0
     assert anchor_channel_index(["red", "green"]) == 1, "fallback must be the LAST channel"
-    print("  (i) anchor channel resolved by name, falls back to last")
+    print("  (j) anchor channel resolved by name, falls back to last")
 
     print("\nSELF-TEST PASSED")
 

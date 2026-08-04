@@ -131,42 +131,8 @@ ring:
   gap_um: 1.0
   width_um: 8.0
 
-# ── Per-slice threshold overrides (2026-08-04) ────────────────────────────────
-# READ THIS BEFORE USING IT: `span_fraction` is ALREADY per-slice. floor and
-# bright_peak are re-measured from each section's own histogram, so one span_frac
-# produces a different cut on every section -- 655-952 across M3 Hipp2, 1721-2225
-# across M5b. Ordinary brightness variability is handled and needs nothing here.
-#
-# This block is the escape hatch for sections whose histogram BREAKS THE RULE'S
-# ASSUMPTIONS, which is a different failure:
-#   M5c_s3 / M5c_s4  no separable floor at all; a prominence sweep gave 1,073 to
-#                    6,328 with no stable answer
-#   M5-hipp3_s1      trimodal (padding at 0, empty field at ~384, nuclei at ~5632);
-#                    the finder took the two background peaks and cut at 123
-#                    instead of ~1700 -> 5,305 nuclei/mm^2, an over-detection
-#   M5a_s1           bright peak 253 against ~5,000 for its siblings; noise-dominated
-#
-# Setting one slice by eye here is strictly better than flipping the whole project
-# to mode: absolute, which would throw away self-calibration on every good section.
-#
-# Keys are matched by SUBSTRING against the QuPath image entry name, so the slice
-# label alone is enough. First match wins -- keep keys unambiguous.
-#
-# COMPARABILITY, and it is on you to weigh it: an overridden section no longer
-# shares the project-wide rule, so a difference between it and an un-overridden
-# section may be a threshold difference rather than biology. The override and its
-# note are written into results/<image>__detection_threshold.tsv so the deviation
-# travels with the data instead of living in someone's memory. Nothing refuses to
-# run -- this is advisory, and the call is yours.
-#
-# Pick the value by EYE in notebooks/01_calibrate.ipynb section 3b, not by
-# reasoning about intensities.
-#
-# threshold_overrides:
-#   M5-hipp3_s1:
-#     mode: "absolute"
-#     absolute: 1700
-#     note: "trimodal histogram; span rule locked onto two background peaks"
-#   M5c_s3:
-#     span_frac: 0.40          # keep the self-calibrating rule, move the cut only
-#     note: "floor barely separable; 0.25 sat in noise"
+threshold_overrides:
+  M5-hipp3_s1:
+    mode: "absolute"
+    absolute: 1700
+    note: "trimodal histogram; span rule locked onto two background peaks"

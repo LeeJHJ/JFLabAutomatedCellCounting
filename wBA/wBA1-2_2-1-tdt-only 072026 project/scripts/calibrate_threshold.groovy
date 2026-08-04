@@ -69,6 +69,7 @@ Double spanFrac = null
 Double absolute = null
 Integer resolutionLevel = null, smoothWindow = null
 Double peakProminence = null
+Map<String, Map> sliceOverrides = [:]
 
 int i = 0
 while (i < lines.size()) {
@@ -105,6 +106,36 @@ while (i < lines.size()) {
         }
         i = j; continue
     }
+
+    // Per-slice overrides -- TOP-LEVEL, never nested under detection_threshold (a
+    // nested child `mode:` would be matched by the block reader above and clobber
+    // the project-wide value for every section). Mirrors run_braian_detection.groovy
+    // so calibration previews exactly what detection will do.
+    if (t == "threshold_overrides:") {
+        int j = i + 1
+        String curKey = null
+        while (j < lines.size() && (lines[j].trim().isEmpty() || indentOf(lines[j]) > 0)) {
+            def raw = lines[j]
+            def s = raw.trim()
+            if (s.isEmpty()) { j++; continue }
+            def mKey = (s =~ /^([^:\s][^:]*):\s*$/)
+            if (indentOf(raw) <= 2 && mKey.find()) {
+                curKey = mKey.group(1).replaceAll(/^["\']|["\']$/, "")
+                sliceOverrides[curKey] = [:]
+            } else if (curKey != null) {
+                def oMode = (s =~ /^mode:\s*"([^"]+)"/)
+                def oAbs  = (s =~ /^absolute:\s*([0-9.eE+-]+)/)
+                def oFrac = (s =~ /^span_frac:\s*([0-9.eE+-]+)/)
+                def oNote = (s =~ /^note:\s*"([^"]*)"/)
+                if (oMode.find()) sliceOverrides[curKey].mode = oMode.group(1)
+                if (oAbs.find())  sliceOverrides[curKey].absolute = oAbs.group(1) as Double
+                if (oFrac.find()) sliceOverrides[curKey].span_frac = oFrac.group(1) as Double
+                if (oNote.find()) sliceOverrides[curKey].note = oNote.group(1)
+            }
+            j++
+        }
+        i = j; continue
+    }
     i++
 }
 
@@ -127,8 +158,25 @@ if (!(mode in ["span_fraction", "absolute"])) {
 
 var imageData = getCurrentImageData()
 def imageName = getProjectEntry().getImageName()
+
+// Apply this slice's override, if any, BEFORE reporting -- otherwise calibration
+// shows the project default while detection uses something else.
+String overrideKey = null
+sliceOverrides.each { k, v -> if (overrideKey == null && imageName.contains(k)) overrideKey = k }
+if (overrideKey != null) {
+    def ov = sliceOverrides[overrideKey]
+    if (ov.mode != null)      mode = ov.mode
+    if (ov.span_frac != null) spanFrac = ov.span_frac
+    if (ov.absolute != null)  absolute = ov.absolute
+}
+
 println "=" * 78
 println "Threshold calibration -- ${imageName}"
+if (overrideKey != null) {
+    println "  PER-SLICE OVERRIDE : '${overrideKey}' from pipeline.yml threshold_overrides"
+    if (sliceOverrides[overrideKey].note) println "    note: ${sliceOverrides[overrideKey].note}"
+    println "    this slice does NOT use the project-wide rule"
+}
 println "  anchor channel : ${anchorChannel}"
 println "  mode           : ${mode}   span_frac=${spanFrac}" + (mode == "absolute" ? "  absolute=${absolute}" : "")
 println "  peak-finding   : resolutionLevel=${resolutionLevel} smoothWindow=${smoothWindow} prominence=${peakProminence}"
