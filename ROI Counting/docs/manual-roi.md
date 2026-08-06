@@ -1,4 +1,7 @@
-# Counting cells inside ROIs you draw by hand
+# Counting cells inside ROIs you draw by hand — reference
+
+> **Start with [`../README.md`](../README.md)** for the step-by-step. This file is the
+> reference: the parts you come back to when something looks wrong.
 
 **Written 2026-08-05.** A parallel route to the registered whole-brain pipeline, for when
 you want counts inside a shape you drew rather than inside an Allen region.
@@ -69,7 +72,7 @@ no empty column, no zero row. With two or more, `Double+` appears automatically.
 2. **Name them** in the Annotations pane (`LA`, `CA1`, …). Same name on several shapes ⇒
    they also pool into one row. Unnamed shapes become `ROI_1`, `ROI_2`, … and the name is
    written back to the annotation, so what QuPath shows and what the CSV says never differ.
-3. `Automate > Script editor` → open `scripts/roi_count.groovy` → **Run**.
+3. `Automate > Script editor` → open `ROI Counting/scripts/roi_count.groovy` → **Run**.
 4. Adjust the settings dialog, press OK.
 5. **Look at the overlay.**
 
@@ -99,7 +102,7 @@ decided and saved, run it headless instead and skip the prompting:
 ~/section-pipeline/tools/QuPath/bin/QuPath script \
     -p "<project>/project.qpproj" -s \
     -a no-dialog -a stage=classify \
-    "<project>/scripts/roi_count.groovy"
+    "<project>/ROI Counting/scripts/roi_count.groovy"
 ```
 
 `stage=` takes `full`, `classify` or `export`; an unrecognised value aborts rather than
@@ -139,7 +142,7 @@ section, never validated against hand counts. On the registered route it misfire
 looked suspect on 5 of 16 sections (31%), and that was a *single* acquisition regime. At
 an unfamiliar magnification, expect worse.
 
-`notebooks/04_roi.ipynb` §3 gives you the slider and the mask. Put what you settle on into
+`../notebooks/04_roi.ipynb` §3 gives you the slider and the mask. Put what you settle on into
 the dialog's *Absolute cut* with mode `absolute`.
 
 **The one cost, and how to control it.** A mechanical rule has no operator variance;
@@ -195,10 +198,10 @@ mark every image as incompatible with every other. It **includes** pixel size, b
 different pixel size is a different measurement, not a rescaling.
 
 ```bash
-conda run -n braian python scripts/cockpit_roi.py --project "<the project dir>"
+conda run -n braian python ROI Counting/scripts/cockpit_roi.py --project "<the project dir>"
 ```
 
-or `notebooks/04_roi.ipynb` §5. One group ⇒ pool freely. More than one ⇒ you get the list
+or `../notebooks/04_roi.ipynb` §5. One group ⇒ pool freely. More than one ⇒ you get the list
 of what differs, geometry breaks first:
 
 ```
@@ -217,7 +220,7 @@ number. If it is not, re-count the odd images with matching settings.
 
 ## 6. Reading the counts
 
-`notebooks/04_roi.ipynb` §6, or the CSVs directly. Three files land in `results/roi/`:
+`../notebooks/04_roi.ipynb` §6, or the CSVs directly. Three files land in `results/roi/`:
 
 | file | one row per |
 |---|---|
@@ -252,6 +255,80 @@ Every stop names the thing to fix.
 
 ---
 
+## 7b. The two opt-in passes
+
+### Independent marker detection — enabled by operator decision, 2026-08-06
+
+Detects each marker on its **own** channel with no reference to the anchor, overriding this
+project's nucleus-anchored-only rule. Emits:
+
+| column | meaning |
+|---|---|
+| `<M>_obj_count` | objects found on marker M's channel |
+| `Double_overlap_<A>_<B>_count` | overlapping pairs, greedy **one-to-one** matching |
+
+Overlap test: `intersection_area / min(area_a, area_b) >= overlap_min_frac` (default 0.20,
+`[ASSUMED]`, never validated against hand counts). Matching is greedy best-overlap-first
+and one-to-one, so one large blob cannot claim several partners and the pair count can
+never exceed the number of objects present.
+
+**Why these are weaker, structurally and not fixably:**
+
+- A blob on a marker channel is not a cell. It can be a process, neuropil, an
+  autofluorescent speck, or two cells touching. The anchor channel is what makes
+  "one object = one cell" defensible, and this pass does not use it.
+- `Double_overlap` is a proximity metric. "Two markers in the same place" is a different
+  claim from "one nucleus carrying both", and it runs systematically higher in dense fields.
+
+They are never merged with the nucleus-anchored `Double+`: separate column names, and every
+row of `roi_counts_combined.csv` carries `anchoring = nucleus-anchored` or
+`independent-overlap`. Per-shape attribution of overlap pairs is **apportioned** by where
+the first marker's objects fall, because the matching itself is global — per-shape totals
+are therefore approximate while the image total is exact.
+
+### Area / intensity — no segmentation at all
+
+For DG-sg and other densely packed layers. Per ROI, per channel:
+
+| column | meaning |
+|---|---|
+| `<ch>_cut` | the cut used |
+| `<ch>_pos_area_mm2` | area above cut |
+| `<ch>_area_frac` | that area / ROI area |
+| `<ch>_mean` | mean intensity over the whole ROI |
+| `<ch>_mean_pos` | mean intensity over above-cut pixels only |
+| `<ch>_intden` | integrated density (sum of intensities) |
+| `<ch>_blob_count` | connected above-cut components (4-connected) |
+| `<ch>_blob_median_um2`, `<ch>_blob_p90_um2` | their size distribution |
+
+Derived by `cockpit_roi.py` where both passes ran:
+
+```
+<marker>+_per_<anchor>_area_mm2   nucleus-anchored count / DAPI+ area   <- the headline one
+<marker>_obj_per_<anchor>_area_mm2  independent count / DAPI+ area
+<marker>_area_per_<anchor>_area   pure-area analogue, no counting at all
+```
+
+A zero anchor area gives **NaN, never infinity** — "the anchor cut found nothing" is not
+the statement "infinitely many cells per unit area".
+
+**Measured on raw pixels, deliberately.** The cut comes from the same
+`floor + frac × (bright − floor)` rule used everywhere else, and that rule's `floor` *is*
+the background peak. Subtracting a background first would correct twice.
+
+**Cuts are resolved once over all ROIs**, not per shape — a per-shape cut would make two
+ROIs on one section incomparable, the same trap as `k_scope: roi`.
+
+**Pooled rows re-derive fractions from summed areas**, never average per-shape fractions,
+which would weight a tiny shape as heavily as a large one.
+
+**Speckle warning.** If `blob_median_um2` is one or two pixels, the mask is speckle rather
+than objects: `blob_count` is counting noise and will swing with any small change of cut.
+The script says so. `area_frac`, `mean` and `intden` are unaffected — they do not care about
+connectivity. `area_min_blob_um2` filters the blob statistics only.
+
+---
+
 ## 8. The rule that outranks everything here
 
 **If the overlay looks wrong, it is wrong.** Not "the numbers say otherwise", not "the
@@ -260,5 +337,5 @@ clean, form an opinion, then turn detections on and compare. Missing dim nuclei 
 is too high. Detections in the gaps between nuclei ⇒ too low. One nucleus wearing two
 detections ⇒ raise `sigma_um`, not the threshold.
 
-Directions for every knob: [`03-tuning.md`](03-tuning.md). What to look for in the GUI:
-[`04-qupath-gui.md`](04-qupath-gui.md).
+Directions for every knob: [`../../docs/runbook/03-tuning.md`](../../docs/runbook/03-tuning.md). What to look for in the GUI:
+[`../../docs/runbook/04-qupath-gui.md`](../../docs/runbook/04-qupath-gui.md).

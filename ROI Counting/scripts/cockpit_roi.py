@@ -57,11 +57,37 @@ import pandas as pd
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
+# This module lives in the self-contained "ROI Counting/" folder, but it deliberately
+# REUSES the registered route's config loader and metric family rather than carrying its
+# own. So the repo's scripts/ has to be importable. Found by walking up rather than by a
+# fixed number of parents, so moving this folder does not silently break the import.
+def _repo_scripts() -> Path:
+    here = Path(__file__).resolve()
+    for d in here.parents:
+        cand = d / "scripts" / "cockpit_regions.py"
+        if cand.is_file():
+            return cand.parent
+    raise ImportError(
+        f"could not find the pipeline's scripts/ directory at or above {here}. "
+        f"cockpit_roi reuses cockpit_regions/cockpit_animal from it and will not "
+        f"duplicate them; check that this folder still sits inside the Analysis repo.")
+
+
+sys.path.insert(0, str(_repo_scripts()))
+
 import cockpit_regions as creg  # noqa: E402  Config / load_pipeline_config -- do not fork
 import cockpit_animal as ca  # noqa: E402  locked metric family + role resolution -- do not fork
 
 ROI_SUBDIR = "results/roi"
 COMBINED_NAME = "roi_counts_combined.csv"
+AREA_COMBINED_NAME = "roi_area_combined.csv"
+
+# Rows produced by independent marker-channel detection + overlap, rather than by the
+# nucleus-anchored rule. Kept separable at every step: the operator enabled the override
+# deliberately (2026-08-06), and the whole point of the flag is that a consumer can tell
+# the two apart without knowing the naming convention.
+ANCHORING_NUCLEUS = "nucleus-anchored"
+ANCHORING_OVERLAP = "independent-overlap"
 
 # Provenance fields that describe HOW an image was counted. Printed side by side when
 # two settings groups are compared, so "these are not comparable" comes with a reason.
@@ -102,6 +128,26 @@ def load_combined(projects: Path | str | list) -> pd.DataFrame:
     if not frames:
         return pd.DataFrame()
     return pd.concat(frames, ignore_index=True)
+
+
+def load_area(projects: Path | str | list) -> pd.DataFrame:
+    """The per-(image x roi x channel) area/intensity table, if the area pass has run.
+
+    Separate file, separate loader: an area-only run (DG-sg and friends) produces this
+    and no counts at all, so the two must not be coupled.
+    """
+    if isinstance(projects, (str, Path)):
+        projects = [projects]
+    frames = []
+    for p in projects:
+        p = Path(p)
+        path = roi_dir(p) / AREA_COMBINED_NAME
+        if not path.exists():
+            continue
+        df = pd.read_csv(path)
+        df.insert(0, "project", p.name)
+        frames.append(df)
+    return pd.concat(frames, ignore_index=True) if frames else pd.DataFrame()
 
 
 def load_percell(project_dir: Path) -> pd.DataFrame:
@@ -165,10 +211,26 @@ def wide(df: pd.DataFrame, scope: str = "pooled",
     if sub.empty:
         return pd.DataFrame()
 
-    sub["_col"] = [column_prefix(m, c, anchor_name)
-                   for m, c in zip(sub["marker"], sub["class"])]
+    # Independent/overlap categories keep their own literal names; only the
+    # nucleus-anchored ones go through the anchor-vs-marker prefix rule.
+    if "anchoring" in sub.columns:
+        is_nuc = sub["anchoring"] == ANCHORING_NUCLEUS
+    else:
+        is_nuc = pd.Series(True, index=sub.index)
+    sub["_col"] = [column_prefix(m, c, anchor_name) if nuc else m
+                   for m, c, nuc in zip(sub["marker"], sub["class"], is_nuc)]
     keys = ["project", "image", "roi_name", "settings_hash", "n_shapes", "area_mm2"]
     keys = [k for k in keys if k in sub.columns]
+    # pivot_table DROPS any row with NaN in an index column, silently. A count that
+    # vanishes because one provenance field was blank is exactly the kind of quiet loss
+    # this module exists to prevent, so missing keys are filled and reported instead.
+    missing = {k: int(sub[k].isna().sum()) for k in keys if sub[k].isna().any()}
+    if missing:
+        print(f"  NOTE: filling missing key values before pivoting (rows would otherwise "
+              f"be dropped silently): {missing}", file=sys.stderr)
+        for k in missing:
+            sub[k] = sub[k].fillna("" if sub[k].dtype == object else 0)
+    n_before = len(sub)
     counts = sub.pivot_table(index=keys, columns="_col", values="count",
                              aggfunc="sum", observed=True)
     counts.columns = [f"{c}_count" for c in counts.columns]
@@ -176,6 +238,11 @@ def wide(df: pd.DataFrame, scope: str = "pooled",
                            aggfunc="sum", observed=True)
     dens.columns = [f"{c}_density" for c in dens.columns]
     out = counts.join(dens).reset_index()
+    n_after = int(counts.notna().sum().sum())
+    if n_after != n_before:
+        print(f"  NOTE: {n_before} tidy rows collapsed into {n_after} filled cells -- "
+              f"expected when several shapes share a name, suspicious otherwise.",
+              file=sys.stderr)
 
     # Carry the provenance through, so a wide row is still self-describing.
     prov = [c for c in PROVENANCE_FIELDS if c in sub.columns] + ["anchor_threshold"]
@@ -211,6 +278,75 @@ def add_metrics(wide_df: pd.DataFrame, config: creg.Config,
 # ---------------------------------------------------------------------------
 # comparability
 # ---------------------------------------------------------------------------
+def area_wide(area_df: pd.DataFrame, scope: str = "pooled") -> pd.DataFrame:
+    """One row per (project, image, roi_name); one column block per channel."""
+    if area_df.empty:
+        return pd.DataFrame()
+    sub = area_df[area_df["scope"] == scope].copy()
+    if sub.empty:
+        return pd.DataFrame()
+    keys = [k for k in ("project", "image", "roi_name", "n_shapes", "roi_area_mm2",
+                        "settings_hash") if k in sub.columns]
+    metrics = [m for m in ("cut", "pos_area_mm2", "area_frac", "mean", "mean_pos",
+                           "intden", "blob_count", "blob_median_um2", "blob_p90_um2")
+               if m in sub.columns]
+    out = sub.pivot_table(index=keys, columns="channel", values=metrics,
+                          aggfunc="first", observed=True)
+    out.columns = [f"{ch}_{metric}" for metric, ch in out.columns]
+    return out.reset_index()
+
+
+def join_counts_area(counts_wide: pd.DataFrame, area_w: pd.DataFrame,
+                     config: creg.Config) -> pd.DataFrame:
+    """Counts + area side by side, plus the metrics that need BOTH.
+
+    THE HEADLINE ONE, and the reason the area pass exists (operator, 2026-08-06):
+
+        <marker>+_per_<anchor>_area_mm2 = nucleus-anchored <marker>+ count
+                                          / area actually occupied by <anchor>
+
+    That normalises a count to the tissue that could have carried it, rather than to
+    whatever shape happened to be drawn -- which is what makes two hand-drawn ROIs of
+    different size and different cellularity comparable at all.
+
+    Also emitted: the pure-area analogue (<marker> area / <anchor> area) for fields
+    where counting is not defensible, and the same count normalised to the marker's own
+    positive area.
+    """
+    if counts_wide.empty and area_w.empty:
+        return pd.DataFrame()
+    if area_w.empty:
+        return counts_wide
+    keys = [k for k in ("project", "image", "roi_name") if k in area_w.columns
+            and k in counts_wide.columns]
+    if counts_wide.empty or not keys:
+        return area_w
+    out = counts_wide.merge(area_w.drop(columns=[c for c in ("settings_hash", "n_shapes")
+                                                 if c in area_w.columns]),
+                            on=keys, how="outer", suffixes=("", "_area"))
+    anchor = config.anchor_name
+    denom_col = f"{anchor}_pos_area_mm2"
+    if denom_col not in out.columns:
+        return out
+    denom = pd.to_numeric(out[denom_col], errors="coerce")
+    # A zero or missing anchor area is not a zero denominator to divide by -- it means
+    # the anchor cut found nothing, so the ratio is undefined rather than infinite.
+    denom = denom.where(denom > 0)
+    for m in config.marker_names:
+        cnt_col = f"{m}+_count"
+        if cnt_col in out.columns:
+            out[f"{m}+_per_{anchor}_area_mm2"] = pd.to_numeric(out[cnt_col], errors="coerce") / denom
+        obj_col = f"{m}_obj_count"
+        if obj_col in out.columns:
+            out[f"{m}_obj_per_{anchor}_area_mm2"] = pd.to_numeric(out[obj_col], errors="coerce") / denom
+        marker_area = f"{m}_pos_area_mm2"
+        if marker_area in out.columns:
+            out[f"{m}_area_per_{anchor}_area"] = pd.to_numeric(out[marker_area], errors="coerce") / denom
+    if config.emit_double and f"Double+_count" in out.columns:
+        out[f"Double+_per_{anchor}_area_mm2"] = pd.to_numeric(out["Double+_count"], errors="coerce") / denom
+    return out
+
+
 def comparability(df: pd.DataFrame) -> pd.DataFrame:
     """One row per settings_hash: which images share a counting rule.
 
@@ -372,6 +508,9 @@ def report(project_dir: Path, scope: str = "pooled") -> pd.DataFrame:
             w = add_metrics(w, config)
         except ValueError as exc:
             print(f"\n  metrics skipped: {exc}", file=sys.stderr)
+        aw = area_wide(load_area(project_dir), scope=scope)
+        if not aw.empty:
+            w = join_counts_area(w, aw, config)
 
     print()
     print(f"COUNTS ({scope})")
@@ -379,6 +518,12 @@ def report(project_dir: Path, scope: str = "pooled") -> pd.DataFrame:
     show = [c for c in w.columns if c not in drop]
     with pd.option_context("display.max_columns", None, "display.width", 220):
         print(w[show].to_string(index=False))
+    if any(c.endswith("_obj_count") for c in w.columns):
+        print()
+        print("  *_obj_count and Double_overlap_* came from INDEPENDENT marker-channel")
+        print("  detection, not from the nucleus-anchored rule. A marker blob is not")
+        print("  necessarily a cell, and overlap is a weaker claim than one nucleus")
+        print("  carrying both markers. Do not compare them with the columns beside them.")
     print()
     print("Every number above traces to detections you can put on the image in QuPath.")
     print("If the overlay looks wrong, the number is wrong -- re-count, do not reinterpret.")
@@ -478,6 +623,64 @@ def _self_test() -> None:
         a_row = acq[acq["image"] == "imgA"].iloc[0]
         check("pixel-limited" not in a_row["advisories"],
               f"0.46 um/px must NOT be flagged; got {a_row['advisories']!r}")
+
+        # ---- area pass + the metrics that need both tables -----------------------
+        arows = []
+        for img, dapi_area, fos_area in (("imgA", 0.10, 0.02), ("imgB", 0.09, 0.018),
+                                         ("imgC", 0.05, 0.01)):
+            for scope in ("shape", "pooled"):
+                for ch, pos in (("DAPI", dapi_area), ("Fos", fos_area), ("TdT", 0.03)):
+                    arows.append(dict(scope=scope, roi_name="LA", n_shapes=1, z=0,
+                                      roi_area_mm2=0.5, channel=ch, cut=700,
+                                      pos_area_mm2=pos, area_frac=pos / 0.5, mean=12.0,
+                                      mean_pos=40.0, intden=1e6, blob_count=100,
+                                      blob_median_um2=30.0, blob_p90_um2=90.0,
+                                      image=img, settings_hash="aaaa1111"))
+        pd.DataFrame(arows).to_csv(base / ROI_SUBDIR / AREA_COMBINED_NAME, index=False)
+
+        area = load_area(base)
+        check(not area.empty, "load_area found nothing")
+        aw = area_wide(area, scope="pooled")
+        check(len(aw) == 3, f"expected one pooled area row per image, got {len(aw)}")
+        check("DAPI_pos_area_mm2" in aw.columns, f"columns={list(aw.columns)}")
+
+        joined = join_counts_area(m, aw, config)
+        ja = joined[joined["image"] == "imgA"].iloc[0]
+        # THE headline metric: Fos+ count / DAPI+ area. imgA has 100 Fos+ over 0.10 mm^2.
+        check(abs(float(ja["Fos+_per_DAPI_area_mm2"]) - 1000.0) < 1e-6,
+              f"Fos+_per_DAPI_area_mm2 {ja['Fos+_per_DAPI_area_mm2']} != 1000")
+        check(abs(float(ja["Fos_area_per_DAPI_area"]) - 0.2) < 1e-9,
+              f"Fos_area_per_DAPI_area {ja['Fos_area_per_DAPI_area']} != 0.2")
+
+        # A zero anchor area must give NaN, never inf: "the anchor cut found nothing" is
+        # not the same statement as "infinitely many cells per unit area".
+        aw0 = aw.copy()
+        aw0.loc[aw0["image"] == "imgA", "DAPI_pos_area_mm2"] = 0.0
+        j0 = join_counts_area(m, aw0, config)
+        v0 = j0.loc[j0["image"] == "imgA", "Fos+_per_DAPI_area_mm2"].iloc[0]
+        check(pd.isna(v0), f"zero DAPI+ area must give NaN, got {v0}")
+
+        # ---- independent-detection rows stay in their own columns ----------------
+        obj_rows = []
+        for scope in ("shape", "pooled"):
+            for marker, cnt in (("Fos_obj", 500), ("Double_overlap_Fos_TdT", 20)):
+                obj_rows.append(dict(project=base.name, scope=scope, roi_name="LA",
+                                     n_shapes=1, z=0, area_mm2=0.5, marker=marker,
+                                     **{"class": marker},
+                                     anchoring=ANCHORING_OVERLAP, count=cnt,
+                                     density=cnt / 0.5, **prov_a))
+        base_rows = loaded.copy()
+        base_rows["anchoring"] = ANCHORING_NUCLEUS
+        mixed = pd.concat([base_rows, pd.DataFrame(obj_rows)], ignore_index=True)
+        wm = wide(mixed, scope="pooled", anchor_name=config.anchor_name)
+        check("Fos_obj_count" in wm.columns,
+              f"independent-detection counts must keep their own column; {list(wm.columns)}")
+        check("Fos_obj+_count" not in wm.columns,
+              "an independent-detection category must NOT be given the '+' marker form")
+        row = wm[wm["image"] == "imgA"].iloc[0]
+        check(int(row["Fos+_count"]) == 100 and int(row["Fos_obj_count"]) == 500,
+              "nucleus-anchored and independent counts must not be merged: "
+              f"Fos+={row['Fos+_count']} Fos_obj={row['Fos_obj_count']}")
 
         empty = load_combined(Path(tmp) / "nope")
         check(empty.empty, "a missing project must give an empty frame, not raise")
