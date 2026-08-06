@@ -46,7 +46,7 @@ from __future__ import annotations
 import argparse
 import math
 import sys
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
@@ -264,8 +264,20 @@ def report(sheets: list[Path], th: cc.GateThresholds | None = None) -> int:
 
         vs = [by_name[a] for a in th.ventricle_acronyms if a in by_name]
         print()
-        print(f"  <anatomical> ventricle gate  (expects <= "
-              f"{th.ventricle_density_max:g}/mm^2)")
+        # ventricle_density_max is None while the gate is REPORT-ONLY (it was 500.0 and
+        # flagged 16/16 slices, so the band was disarmed rather than left to fire on a
+        # defect nobody had diagnosed). Formatting None with :g crashed here -- the
+        # header must survive a disarmed gate, because a hand count is exactly the
+        # evidence that would re-arm it.
+        if th.ventricle_density_max is None:
+            print("  <anatomical> ventricle gate  (REPORT-ONLY: no band set, because the "
+                  "machine number")
+            print("     flagged 16/16 slices and the cause was never diagnosed. Your eye "
+                  "count is what")
+            print("     would settle whether to re-arm it.)")
+        else:
+            print(f"  <anatomical> ventricle gate  (expects <= "
+                  f"{th.ventricle_density_max:g}/mm^2)")
         if not vs:
             print("    no ventricle boxes counted.")
         else:
@@ -320,7 +332,16 @@ def _self_test() -> None:
             failures.append(label)
 
     th = cc.DEFAULT_THRESHOLDS
+    # The band-branch fixtures below are about BRANCH LOGIC -- "is a wrong band
+    # reported alongside over-detection, or instead of it" -- not about whatever
+    # white_matter_ratio_max happens to be today. Pinning it here decouples them from
+    # the production value, which moved 0.6 -> 1.60 on 2026-08-05 and silently
+    # falsified two checks that were testing something else entirely.
+    th_band = replace(th, white_matter_ratio_max=0.6)
     print("qc_handcount self-test")
+    print(f"  (band-branch fixtures pinned at white_matter_ratio_max="
+          f"{th_band.white_matter_ratio_max:g}; production is "
+          f"{th.white_matter_ratio_max:g})")
 
     with tempfile.TemporaryDirectory() as tmp:
         results = Path(tmp) / "results"
@@ -346,10 +367,10 @@ def _self_test() -> None:
               "area sums from the side actually used per box")
         check("agrees" in verdict(regions["cc"], th), "1.04 reads as agreement")
 
-        # The point of the fixture: wm/cortex by eye is ~1.05, over the 0.6 band,
+        # The point of the fixture: wm/cortex by eye is ~1.05, over the pinned band,
         # while machine/human is ~1.0. Detection is sound, the band is not.
         hand_ratio = regions["cc"].human_per_mm2 / regions["Isocortex"].human_per_mm2
-        check(hand_ratio > th.white_matter_ratio_max,
+        check(hand_ratio > th_band.white_matter_ratio_max,
               f"fixture reproduces the real situation (eye says {hand_ratio:.2f}x cortex)")
         check(abs(regions["cc"].ratio - 1.0) < 0.1,
               "...while the machine matches the eye -- band wrong, detection fine")
@@ -387,7 +408,7 @@ def _self_test() -> None:
         # REGRESSION (b): over-detection and a wrong band are INDEPENDENT findings.
         # Fixture (b) has 3x over-detection in cc AND an eye ratio above 0.6; the
         # first version reported only "the band is wrong" and dropped the defect.
-        out = _capture(lambda: report([sheet_b], th))
+        out = _capture(lambda: report([sheet_b], th_band))
         check("real over-detection" in out,
               "3x in cc is reported even though the eye also exceeds the band")
         check("does not hold for this prep" in out,
