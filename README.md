@@ -75,7 +75,7 @@ override with `export QUPATH_BIN=/your/path/to/QuPath`.
 | you want | read |
 | --- | --- |
 | run a dataset start to finish | `docs/runbook/00-run-a-new-dataset.md` |
-| **count inside ROIs you draw, with no atlas** | **`docs/runbook/05-manual-roi.md`** |
+| **count inside ROIs you draw, with no atlas** | **`ROI Counting/README.md`** |
 | the ABBA registration click-path | `docs/runbook/01-registration.md` |
 | QuPath detection detail | `docs/runbook/02-detection.md` |
 | working in the QuPath GUI | `docs/runbook/04-qupath-gui.md` |
@@ -88,7 +88,7 @@ override with `export QUPATH_BIN=/your/path/to/QuPath`.
 ### Two routes, one set of principles
 
 The **registered route** above maps a whole section to Allen CCFv3 and counts per atlas
-region. The **manual-ROI route** (`scripts/roi_count.groovy`, `notebooks/04_roi.ipynb`)
+region. The **manual-ROI route** — a self-contained module in **`ROI Counting/`** —
 counts inside shapes you draw in QuPath — no atlas, no registration, no `BraiAn.yml`, and
 no requirement that the image be a section at all.
 
@@ -157,7 +157,11 @@ scripts/                    SOURCE of truth for all pipeline code
   cockpit_*.py              the operator's analysis surface
   smoke_test.py             install + regression gate
   sync_project.py           deploy scripts/ + merge config into a QuPath project
-notebooks/                  01_calibrate, 02_batch, 03_animal, 04_roi
+notebooks/                  01_calibrate, 02_batch, 03_animal
+ROI Counting/               self-contained manual-ROI module (README.md starts here)
+  scripts/                  roi_count.groovy, cockpit_roi.py
+  notebooks/04_roi.ipynb    its cockpit
+  docs/manual-roi.md        its runbook
 docs/runbook/               operator documentation
 envs/                       pinned requirements + create_envs.sh
 <Animal Region Date>/       one directory per imaging session

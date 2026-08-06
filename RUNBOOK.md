@@ -22,8 +22,8 @@ compartment measures and marker cut — so the numbers mean the same thing — a
 stores settings **per image**, because images counted this way arrive at
 different magnifications, Z depths and intensities.
 
-Full walkthrough: [`docs/runbook/05-manual-roi.md`](docs/runbook/05-manual-roi.md).
-Operator surface: `notebooks/04_roi.ipynb`.
+Everything for it lives in [`ROI Counting/`](ROI%20Counting/README.md) — scripts,
+notebook and runbook in one folder. Start at its `README.md`.
 
 ## Starting on a new brain / new slice-set
 

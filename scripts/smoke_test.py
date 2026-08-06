@@ -259,6 +259,10 @@ class Ctx:
     fresh: Path
     exported: Path
     groovy_dir: Path
+    # The manual-ROI route is a self-contained module in "ROI Counting/", so its Groovy
+    # does not live beside the registered route's. Kept as its own field for the same
+    # reason groovy_dir is one: --self-test points these at deliberately broken copies.
+    roi_groovy_dir: Path | None = None
     run_self_tests: bool = True
 
 
@@ -649,13 +653,14 @@ def _groovy_results_mkdirs(ctx: Ctx) -> str:
     run (which starts at detection, not calibration) failed at the first write,
     AFTER paying for detection."""
     scanned, offenders = 0, []
-    for g in sorted(ctx.groovy_dir.glob("*.groovy")):
+    dirs = [ctx.groovy_dir] + ([ctx.roi_groovy_dir] if ctx.roi_groovy_dir else [])
+    for g in sorted(g for d in dirs if d.is_dir() for g in d.glob("*.groovy")):
         src = g.read_text()
         if "buildPathInProject" not in src:
             continue
         scanned += 1
         offenders += [f"{g.name} {o}" for o in _groovy_writes_without_mkdirs(src)]
-    _require(scanned > 0, f"no Groovy scripts with project writes found in {ctx.groovy_dir}")
+    _require(scanned > 0, f"no Groovy scripts with project writes found in {dirs}")
     _require(not offenders,
              "Groovy writes into a project subdirectory without creating it first "
              "(fails on a fresh project):\n      " + "\n      ".join(offenders))
@@ -725,7 +730,7 @@ def _roi_math_pinned_to_02(ctx: Ctx) -> str:
 
     Whitespace and comments are normalised away; the arithmetic must match exactly."""
     ref = ctx.groovy_dir / "02_detect_classify.groovy"
-    roi = ctx.groovy_dir / "roi_count.groovy"
+    roi = (ctx.roi_groovy_dir or ctx.groovy_dir) / "roi_count.groovy"
     _require(ref.is_file(), f"{ref} not found")
     _require(roi.is_file(), f"{roi} not found")
     ref_src, roi_src = ref.read_text(), roi.read_text()
@@ -765,7 +770,7 @@ def _roi_one_marker_declaration(ctx: Ctx) -> str:
     declares its markers twice eventually classifies by two different rules. The ROI
     route stores its own SEGMENTATION settings (they are legitimately per-image) but
     must not redeclare which markers exist or which compartment each is measured on."""
-    roi = ctx.groovy_dir / "roi_count.groovy"
+    roi = (ctx.roi_groovy_dir or ctx.groovy_dir) / "roi_count.groovy"
     _require(roi.is_file(), f"{roi} not found")
     src = roi.read_text()
     _require('new File(project.getBaseDirectory(), "pipeline.yml")' in src
@@ -917,7 +922,13 @@ def _notebooks_discover_repo(ctx: Ctx) -> str:
     runs it -- asserting the source merely CONTAINS a discovery helper would not
     prove the helper works."""
     checked = []
-    for nb in sorted((ctx.repo / "notebooks").glob("*.ipynb")):
+    # Every notebook in the repo, wherever it lives -- the manual-ROI cockpit sits in its
+    # own module folder, and a notebook that is not in this list is one whose repo
+    # discovery nobody checks. It is run from its OWN directory, since that is where
+    # JupyterLab would launch it and the walk-up has further to go from there.
+    notebooks = (sorted((ctx.repo / "notebooks").glob("*.ipynb"))
+                 + sorted(ctx.repo.glob("*/notebooks/*.ipynb")))
+    for nb in notebooks:
         doc = json.loads(nb.read_text())
         setup = next((c for c in doc["cells"]
                       if c.get("cell_type") == "code" and "PARAMS" in "".join(c["source"])), None)
@@ -929,15 +940,15 @@ def _notebooks_discover_repo(ctx: Ctx) -> str:
         probe = ctx.tmp / f"probe_{nb.stem}.py"
         probe.write_text(src + "\nprint('REPO=', REPO)\n")
         out = subprocess.run([sys.executable, str(probe)], capture_output=True, text=True,
-                             cwd=str(ctx.repo / "notebooks"),
+                             cwd=str(nb.parent),
                              env=dict(os.environ, MPLBACKEND="Agg"), timeout=300)
         _require(out.returncode == 0,
-                 f"{nb.name}'s setup cell failed when run from notebooks/: "
+                 f"{nb.name}'s setup cell failed when run from {nb.parent}: "
                  f"{(out.stderr or out.stdout).strip().splitlines()[-1:]}")
         _require(f"REPO= {ctx.repo}" in out.stdout,
                  f"{nb.name} resolved the repo root to something unexpected: {out.stdout!r}")
         checked.append(nb.name)
-    return f"{len(checked)} notebooks resolve REPO from notebooks/ and run their setup cell"
+    return f"{len(checked)} notebooks resolve REPO from their own directory and run their setup cell"
 
 
 # ---------------------------------------------------------------------------
@@ -947,7 +958,12 @@ def _self_testable_modules(repo: Path) -> list[Path]:
     """Every sibling module that ships its own --self-test, smoke_test excluded (it
     would recurse)."""
     out = []
-    for p in sorted(repo.glob("scripts/*.py")) + [repo / "czi_mip.py"]:
+    # Includes the self-contained "ROI Counting/" module: a module whose self-test is
+    # not in this list is a module nobody runs, and the install gate would go green with
+    # it broken.
+    for p in (sorted(repo.glob("scripts/*.py"))
+              + sorted(repo.glob("ROI Counting/scripts/*.py"))
+              + [repo / "czi_mip.py"]):
         if p.name == Path(__file__).name or not p.is_file():
             continue
         if '"--self-test"' in p.read_text():
@@ -980,7 +996,9 @@ def build_context(base: Path, run_self_tests: bool = True) -> Ctx:
     exported = write_exported_project(base, "exported project", ["SMOKE_s1", "SMOKE_s2"],
                                       animal="SMOKE")
     return Ctx(repo=REPO_ROOT, tmp=base, fresh=fresh, exported=exported,
-               groovy_dir=REPO_ROOT / "scripts", run_self_tests=run_self_tests)
+               groovy_dir=REPO_ROOT / "scripts",
+               roi_groovy_dir=REPO_ROOT / "ROI Counting" / "scripts",
+               run_self_tests=run_self_tests)
 
 
 def run_checks(ctx: Ctx, checks: list[Check] | None = None) -> list[tuple[Check, bool, str]]:
@@ -1098,6 +1116,7 @@ def _self_test() -> int:
             "percellFile.getParentFile().mkdirs()", "// removed by --self-test"))
         bad_ctx = build_context(base / "c1", run_self_tests=False)
         bad_ctx.groovy_dir = broken
+        bad_ctx.roi_groovy_dir = None   # only the registered-route copy is broken here
         passed, detail = run_one("groovy_results_mkdirs", bad_ctx)
         case("an unguarded results/ write is caught", not passed and "03_export" in detail,
              detail if passed else "")

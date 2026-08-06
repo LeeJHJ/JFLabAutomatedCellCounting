@@ -342,7 +342,7 @@ stages:
     status: active
     kind: gui
     environment: qupath
-    entry: "scripts/roi_count.groovy"
+    entry: "ROI Counting/scripts/roi_count.groovy"
     outputs: ["results/roi/*__percell_export.tsv", "results/roi/*__roi_counts.tsv",
               "results/roi/roi_counts_combined.csv", "roi_settings.yml"]
     notes: >
@@ -362,9 +362,9 @@ stages:
     status: active
     kind: scriptable
     environment: notebook
-    entry: "scripts/cockpit_roi.py"
+    entry: "ROI Counting/scripts/cockpit_roi.py"
     notes: >
-      notebooks/04_roi.ipynb is the operator surface. Groups counts by settings_hash
+      ROI Counting/notebooks/04_roi.ipynb is the operator surface. Groups counts by settings_hash
       and names which provenance fields differ, geometry breaks (pixel size, Z depth,
       channel) first, because those are the ones no threshold rule can absorb. Also
       re-expresses the micron parameters in each image's own PIXELS -- the check that

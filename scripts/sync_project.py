@@ -38,6 +38,38 @@ from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 SRC_SCRIPTS = REPO_ROOT / "scripts"
+
+# The manual-ROI route is a self-contained module in its own folder, but QuPath can
+# still only run Groovy that lives inside the project -- so its scripts deploy from
+# here alongside the registered route's. Listing the directory rather than hardcoding
+# filenames means adding a script to that folder is enough to ship it.
+ROI_SRC_SCRIPTS = REPO_ROOT / "ROI Counting" / "scripts"
+
+
+def source_script_dirs() -> list[Path]:
+    """Every directory whose *.groovy deploys into a QuPath project."""
+    return [d for d in (SRC_SCRIPTS, ROI_SRC_SCRIPTS) if d.is_dir()]
+
+
+def source_scripts() -> list[Path]:
+    """Every Groovy file that deploys, across all source directories.
+
+    A name collision between the two source dirs would mean one silently overwriting
+    the other in every project, so it is refused here rather than discovered later.
+    """
+    seen: dict[str, Path] = {}
+    out = []
+    for d in source_script_dirs():
+        for g in sorted(d.glob("*.groovy")):
+            if g.name in seen:
+                raise SystemExit(
+                    f"two source directories both provide {g.name}:\n"
+                    f"  {seen[g.name]}\n  {g}\n"
+                    f"Deploying both would leave every project carrying whichever copied "
+                    f"last. Rename one.")
+            seen[g.name] = g
+            out.append(g)
+    return out
 ROOT_CONFIG = REPO_ROOT / "pipeline.yml"
 
 # Scripts that were superseded and must be REMOVED from project script dirs, so an
@@ -133,7 +165,7 @@ def sync_scripts(project: Path, dry_run: bool = False) -> dict:
     if not dry_run:
         dest.mkdir(parents=True, exist_ok=True)
 
-    for src in sorted(SRC_SCRIPTS.glob("*.groovy")):
+    for src in source_scripts():
         tgt = dest / src.name
         if not tgt.exists():
             report["new"].append(src.name)
@@ -293,11 +325,16 @@ def _self_test() -> None:
         assert not (proj / "scripts" / "find_threshold().groovy").exists()
         print("  retired-script removal OK")
 
-        n_src = len(list(SRC_SCRIPTS.glob("*.groovy")))
+        srcs = source_scripts()
+        n_src = len(srcs)
         assert len(rep["scripts"]["new"]) == n_src, rep["scripts"]
-        for g in SRC_SCRIPTS.glob("*.groovy"):
+        for g in srcs:
             assert (proj / "scripts" / g.name).read_bytes() == g.read_bytes()
-        print(f"  deployed {n_src} groovy scripts byte-identical to source")
+        assert any(g.parent == ROI_SRC_SCRIPTS for g in srcs), (
+            "no Groovy deployed from the ROI Counting module -- a project would come up "
+            "without the manual-ROI route")
+        print(f"  deployed {n_src} groovy scripts byte-identical to source "
+              f"(from {len(source_script_dirs())} source dirs)")
 
         # Idempotence: a second run must change nothing.
         rep2 = sync_project(proj)
@@ -364,7 +401,8 @@ def main() -> int:
     else:
         sys.exit("ERROR: pass --project <dir>, --all, or --self-test")
 
-    print(f"Source: {SRC_SCRIPTS}")
+    for d in source_script_dirs():
+        print(f"Source: {d}")
     print(f"Config: {ROOT_CONFIG}")
     for t in targets:
         try:

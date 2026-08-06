@@ -35,8 +35,6 @@ nav:
       - "2. BraiAnDetect detection": runbook/02-detection.md
   - Tuning:
       - "3. Every knob, and which way to move it": runbook/03-tuning.md
-  - Manual counting:
-      - "Count inside ROIs you draw": runbook/05-manual-roi.md
 
 # NOTE (D-18d): publishing is manual-only via `mkdocs gh-deploy`. No
 # .github/workflows/ auto-deploy exists and none should be added here --
