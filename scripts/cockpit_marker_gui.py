@@ -270,11 +270,15 @@ def cells_in_crop(df: pd.DataFrame, marker: str, y: int, x: int,
 
 # ── shell report ────────────────────────────────────────────────────────────────
 
-def report(project: Path, marker: str | None = None, ks: np.ndarray | None = None) -> int:
+def report(project: Path, marker: str | None = None, ks: np.ndarray | None = None,
+           results_dir: Path | str | None = None) -> int:
     project = Path(project)
-    results = project / "results"
+    # results_dir exists so the MANUAL-ROI route (scripts/roi_count.groovy, which writes
+    # the identical per-cell schema into results/roi/) can use this picker as-is. Default
+    # None keeps the registered route's behaviour byte-for-byte unchanged.
+    results = Path(results_dir) if results_dir is not None else project / "results"
     if not results.is_dir():
-        print(f"no results/ under {project} -- run the pipeline first.")
+        print(f"no {results} -- run the pipeline first.")
         return 2
     exports = find_percell(results)
     if not exports:
@@ -311,17 +315,24 @@ def report(project: Path, marker: str | None = None, ks: np.ndarray | None = Non
 # ── notebook widget ─────────────────────────────────────────────────────────────
 
 def launch(project: str | Path, marker: str | None = None,
-           crop_px: int = DEFAULT_CROP_PX, n_crops: int = DEFAULT_N_CROPS):
-    """Interactive k picker. Mirrors cockpit_threshold_gui.launch()."""
+           crop_px: int = DEFAULT_CROP_PX, n_crops: int = DEFAULT_N_CROPS,
+           results_dir: Path | str | None = None):
+    """Interactive k picker. Mirrors cockpit_threshold_gui.launch().
+
+    results_dir points the picker at a different export directory — used by the
+    manual-ROI route, whose exports live in results/roi/ but carry the identical
+    schema. Default None is the registered route, unchanged.
+    """
     import ipywidgets as widgets
     import matplotlib.pyplot as plt
     import tifffile
     from IPython.display import display
 
     project = Path(project)
-    exports = find_percell(project / "results")
+    results = Path(results_dir) if results_dir is not None else project / "results"
+    exports = find_percell(results)
     if not exports:
-        raise FileNotFoundError(f"no *__percell_export.tsv under {project / 'results'}")
+        raise FileNotFoundError(f"no *__percell_export.tsv under {results}")
     chans = marker_channel_map(project)
     cache: dict = {}
 
