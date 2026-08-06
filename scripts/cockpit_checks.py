@@ -139,12 +139,21 @@ class GateThresholds:
     white_matter_abs_max: float | None = None  # retired: 1500/mm^2 flagged every good
                                                # slice and duplicated total_density
 
-    # Ventricle. The PREMISE is sound and structural -- CSF is near-empty -- but the
-    # MEASUREMENT is confounded: VS is listed in pipeline.yml exclude_acronyms and
-    # still carries 789-5,019/mm^2 on all 16 validated slices, so the ROI is picking
-    # up ependymal lining and/or registration slop. Deriving a band from a confounded
-    # measurement would launder the defect into an expectation. Report the number,
-    # assert nothing, until the VS exclusion is fixed.
+    # Ventricle. CORRECTED 2026-08-06: the exclusion is NOT broken. An earlier note
+    # here claimed VS "carries detections despite exclude_acronyms" -- it does not.
+    # 02_detect_classify.groovy finds the VS ROIs (4 exclusion annotations per slice)
+    # and the pipeline's own region_table.tsv reports VS with DAPI_count 0, correctly.
+    # This gate reads the OTHER file, BraiAn's <image>_regions.tsv, which counts raw
+    # detections geometrically inside each annotation BEFORE the pipeline excludes
+    # them. That is the more useful number for detector QC -- it answers "is the
+    # anchor cut low enough to be segmenting fluid?" and it tracks the cut cleanly
+    # (M5-hipp3_s1: 2,265 flooded -> 1,046 at span_frac 0.25 -> 389 at 0.75). It is
+    # NOT a claim that ventricle cells reach the counts.
+    #
+    # No band, still, for a different reason than previously stated: the VS ROI always
+    # contains ependymal lining and absorbs registration slop, so the corpus spread is
+    # 789-5,019/mm^2 -- a 6x range across slices the operator accepted. A band that
+    # wide cannot discriminate. Report it; let it inform the eye.
     ventricle_acronyms: tuple[str, ...] = ("VS",)
     ventricle_density_max: float | None = None   # was 500.0 -- flagged 16/16
 
@@ -702,10 +711,11 @@ def gate_ventricle(regions: pd.DataFrame,
                           f"none of {list(th.ventricle_acronyms)} present")
     if th.ventricle_density_max is None:
         return GateResult(name, worst, NA,
-                          f"'{worst_acr}' {worst:,.0f}/mm^2 -- reported, not tested: "
-                          f"VS is in exclude_acronyms yet carries detections on every "
-                          f"validated slice (789-5,019/mm^2), so the measurement is "
-                          f"confounded. No band until that is fixed.",
+                          f"'{worst_acr}' {worst:,.0f}/mm^2 RAW detections inside the "
+                          f"ROI, before pipeline exclusion (the region table correctly "
+                          f"reports VS at 0). Reported, not tested: corpus spans "
+                          f"789-5,019/mm^2, too wide to discriminate. Tracks the anchor "
+                          f"cut -- falling means a stricter cut.",
                           advisory=True, basis=ANATOMICAL)
     ok = worst <= th.ventricle_density_max
     detail = (f"'{worst_acr}'; expect <= {th.ventricle_density_max:g}/mm^2"
