@@ -201,7 +201,21 @@ class GateThresholds:
     # (which would fake a PASS). NOTE: demoting the white-matter gate means DAPI
     # DENSITIES are not trustworthy for that run -- ratio readouts such as
     # P(target+|condition+) are unaffected, as they carry no DAPI denominator.
-    advisory_gates: tuple[str, ...] = ()
+    #
+    # OPERATOR CALL 2026-08-06: every gate demoted. "Let's ignore the gates since I'm
+    # checking by eye ... I'll do the handcounts." The gates are all `<internal>` --
+    # they ask whether a run resembles our other runs, which is a weaker claim than a
+    # person looking at the image, and the project's evidence hierarchy puts SEEN on
+    # top. They still run, still print their number and their FLAG, so nothing is
+    # hidden; they simply no longer decide `overall`.
+    #
+    # Re-arm by emptying this tuple, or name a subset. Do that once hand counts exist:
+    # a gate anchored to a hand count is no longer merely internal, and has earned the
+    # right to block.
+    advisory_gates: tuple[str, ...] = (
+        "white_matter_density", "ventricle_density", "grey_density_median",
+        "grey_contrast_cv", "total_density", "nucleus_area_peak_um2", "k_swing_pp",
+    )
 
 
 DEFAULT_THRESHOLDS = GateThresholds()
@@ -1194,9 +1208,15 @@ def _self_test() -> None:
                   f"{r.name}: value={r.value!r} status={r.status}")
 
         print("\n[5] gate_table -- one row per slice")
-        tbl = gate_table(proj)
+        # armed = the blocking behaviour, requested explicitly: DEFAULT_THRESHOLDS now
+        # ships with every gate demoted to advisory (operator call 2026-08-06), so the
+        # mechanism has to be exercised against a thresholds object that re-arms it.
+        armed = replace(DEFAULT_THRESHOLDS, advisory_gates=())
+        tbl = gate_table(proj, armed)
         check(len(tbl) == 2, f"gate_table has one row per slice (got {len(tbl)})")
         check(tbl.loc[tbl["slice"] == "syn_s1", "overall"].iloc[0] == PASS, "clean slice overall PASS")
+        check(gate_table(proj).loc[lambda d: d["slice"] == "syn_s2", "overall"].iloc[0] == PASS,
+              "shipped default demotes every gate -- nothing blocks (operator call)")
         check(tbl.loc[tbl["slice"] == "syn_s2", "overall"].iloc[0] == FLAG, "bad slice overall FLAG")
         check("white_matter_density__status" in tbl.columns, "gate_table carries per-gate status")
         print(summary_view(tbl).to_string(index=False))
@@ -1227,7 +1247,7 @@ def _self_test() -> None:
         demoted = replace(DEFAULT_THRESHOLDS,
                           advisory_gates=("white_matter_density", "ventricle_density",
                                           "total_density"))
-        base = {r.name: r for r in run_all_gates(bad, proj)}
+        base = {r.name: r for r in run_all_gates(bad, proj, armed)}
         dem = {r.name: r for r in run_all_gates(bad, proj, demoted)}
         check(base["white_matter_density"].status == FLAG
               and dem["white_matter_density"].status == FLAG,
@@ -1238,7 +1258,8 @@ def _self_test() -> None:
               "demoted gate is marked advisory")
         check(dem["nucleus_area_peak_um2"].advisory is False,
               "non-demoted gate keeps blocking")
-        t_dem = gate_table(proj, demoted)
+        t_dem = gate_table(proj, replace(demoted, advisory_gates=(
+            "white_matter_density", "ventricle_density", "total_density")))
         check(t_dem.loc[t_dem["slice"] == "syn_s2", "flagged"].iloc[0] == "nucleus_area_peak_um2",
               "overall verdict now driven only by the remaining blocking gate")
 
