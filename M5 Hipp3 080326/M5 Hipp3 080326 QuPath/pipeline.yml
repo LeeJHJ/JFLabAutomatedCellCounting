@@ -1,3 +1,10 @@
+# Animal identity. WITHOUT this, cockpit_animal derives the animal from each slice
+# label's prefix -- so this session's M5-hipp3_s* would become an animal of its own
+# instead of a third imaging session of M5, and per-region counts would never pool
+# with M5 073026. Set 2026-08-04, operator-confirmed same brain. Legitimate to pool:
+# M5 073026 and this session share one acquisition regime (0.6905355 um/px, 2 Z).
+animal: "M5"
+
 # pipeline.yml -- sidecar pipeline config (D-14)
 #
 # Declares the VARIABLE marker set (D-01), the detection/segmentation ANCHOR
@@ -54,6 +61,14 @@ markers:
   - name: "TdT"                 # engram marker (TdTomato) -- fills the whole cell, whole-cell area-weighted mean (CLAUDE.md, revised 2026-07-25, operator domain call)
     channel: "AF568-T2"         # matches BraiAn.yml classifiers[1].channel
     compartment: "whole-cell"
+    k_robust: 2.0               # PER-MARKER override -- MUST match the M3 arm and
+                                # M5 073026 (set 2026-07-30 on M3 Hipp2 after the
+                                # operator saw dim TdT+ cells being missed at the
+                                # global 3.0). Fos stays at the global 3.0. Added
+                                # 2026-08-04: this project shipped without it and was
+                                # therefore cutting TdT+/Double+ stricter than every
+                                # other dataset on this machine -- a comparability
+                                # bug, not a preference. Operator confirmed the match.
 
 # D-09: region exclusions migrated out of the EXCLUDE_ACRONYMS literal
 # (scripts/02_detect_classify.groovy line 92). DG-sg = DG granule cell layer
@@ -113,14 +128,16 @@ k_robust: 3.0
 #   2. notebooks/01_calibrate.ipynb section 3 plots the histogram + the sweep
 detection_threshold:
   mode: "span_fraction"       # "span_fraction" (recommended) | "absolute" (escape hatch, does NOT generalize)
-  span_frac: 0.25             # [ASSUMED] seed -- reproduces the 2026-07-28 operator visual call; re-check per slice-set
+  span_frac: 0.25              # [ASSUMED] seed -- reproduces the 2026-07-28 operator visual call; re-check per slice-set
   absolute: null              # used ONLY when mode is "absolute"; null otherwise
   # Peak-finding params handed to BraiAnDetect's findThreshold for BOTH endpoints.
   # resolution_level MUST be 0 -- BraiAn's default of 4 is what produced the
   # historical "no valid peak" errors.
   resolution_level: 0
-  smooth_window: 15
+  smooth_window: 101
   peak_prominence: 100
+
+  
 
 # D-09: cytoplasmic expansion ring geometry, migrated from the GAP_UM /
 # RING_WIDTH_UM literals (scripts/02_detect_classify.groovy lines 143-144).
@@ -131,8 +148,13 @@ ring:
   gap_um: 1.0
   width_um: 8.0
 
-threshold_overrides:
-  M5-hipp3_s1:
-    mode: "absolute"
-    absolute: 1700
-    note: "trimodal histogram; span rule locked onto two background peaks"
+# --- DISABLED for the smooth_window=101 comparison (2026-08-05). Restore to re-enable. ---
+# threshold_overrides:
+#   M5-hipp3_s1:
+#     span_frac: 0.60
+#     note: "set by eye 2026-08-04, implied span_frac 0.600"
+#   M5-hipp3_s2:
+#     mode: "absolute" 
+#     absolute: 3250
+#     note: "set by eye 2026-08-04, implied span_frac 0.861"
+

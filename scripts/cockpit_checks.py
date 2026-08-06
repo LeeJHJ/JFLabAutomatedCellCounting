@@ -106,29 +106,80 @@ class GateThresholds:
     area_peak_max: float = 150.0
     area_bin_width: float = 5.0
 
-    # White-matter over-detection guard (the key gate). Fiber tracts must sit
-    # well BELOW cortex; if DAPI haze is being segmented as nuclei they invert.
+    # ── Bands below re-derived 2026-08-05 from THE VALIDATED CORPUS ────────────
+    # 16 slices the operator has accepted by eye: M3 Hipp1 s1-s7, M3 Hipp2 s1-s6,
+    # M5b s1-s3. Excluded a priori, by threshold PROVENANCE and not by outcome:
+    #   M5a_s1          ACQUISITION-CHECKLIST.md records it at cut 104, 5,119/mm^2
+    #                   against ~3,400 for its siblings -- documented over-detection
+    #   M5c_s1, M5c_s6  cut by the peak-finder at smooth_window 15, since shown to
+    #                   lock onto background wrinkles below the detector offset
+    # Reproduce with scratchpad/corpus.py.
+    #
+    # WHAT THESE BANDS ARE, EXACTLY. They are `<internal>` -- consistency with our
+    # own accepted slices -- NOT correctness. They can say "this slice is unlike the
+    # 16"; they cannot catch an error all 16 share, and if the corpus is systematically
+    # wrong they will defend the error. Only a hand count breaks that circle, and
+    # scripts/qc_handcount.py has no counts recorded for any dataset yet. Until it
+    # does, no band here may be cited as evidence that a number is RIGHT.
+
+    # White matter vs cortex. THE PREMISE WAS BACKWARDS. The old limit (0.6x, i.e.
+    # "fiber tracts sit well below cortex") FLAGGED 16 OF 16 validated slices, which
+    # measure 1.11-1.45, while the known-bad flooded M5a_s1 scored best of all at
+    # 1.09 -- the gate was anti-correlated with the failure it was built to catch.
+    # "Sparsely nucleated" is a claim about NEURONS; the anchor channel counts every
+    # nucleus, and white matter is full of small, heterochromatin-dense, very bright
+    # glial nuclei. Confirmed directly on M5-hipp3_s1: raising the cut from 238 to
+    # 4,358 removed CORTICAL objects faster than cc ones (cc/ctx 1.13 -> 1.95 -> 2.29),
+    # so the cc detections are the brightest in the section, not haze.
+    # The ratio still carries information -- with the sign reversed. An EXCESSIVE
+    # ratio now means the cut is too strict: cortex is dying while bright glia survive.
     white_matter_acronyms: tuple[str, ...] = ("cc", "int", "fiber tracts")
     cortex_acronyms: tuple[str, ...] = ("Isocortex",)
-    white_matter_ratio_max: float = 0.6      # wm density / cortex density
-    white_matter_abs_max: float = 1500.0     # per mm^2
+    white_matter_ratio_max: float = 1.60     # corpus 1.11-1.45; A060 1.95 / A075 2.29 flag
+    white_matter_abs_max: float | None = None  # retired: 1500/mm^2 flagged every good
+                                               # slice and duplicated total_density
 
-    # Ventricle guard -- ventricular systems should be near-empty.
+    # Ventricle. The PREMISE is sound and structural -- CSF is near-empty -- but the
+    # MEASUREMENT is confounded: VS is listed in pipeline.yml exclude_acronyms and
+    # still carries 789-5,019/mm^2 on all 16 validated slices, so the ROI is picking
+    # up ependymal lining and/or registration slop. Deriving a band from a confounded
+    # measurement would launder the defect into an expectation. Report the number,
+    # assert nothing, until the VS exclusion is fixed.
     ventricle_acronyms: tuple[str, ...] = ("VS",)
-    ventricle_density_max: float = 500.0
+    ventricle_density_max: float | None = None   # was 500.0 -- flagged 16/16
 
-    # Per-region grey-matter density band (advisory).
+    # Per-region grey-matter density. Was 500-2000/mm^2, borrowed from another
+    # acquisition (see commit 8939d82, which already named this band as the source of
+    # a false over-segmentation narrative) and contradicted by every slice here:
+    # corpus per-structure minima run 1,690-4,312 and maxima 3,689-5,775.
     grey_matter_acronyms: tuple[str, ...] = (
         "Isocortex", "CA1", "CA3", "DG", "TH", "HY", "STR", "MB",
     )
-    grey_density_min: float = 500.0
-    grey_density_max: float = 2000.0
+    grey_density_min: float = 1600.0
+    grey_density_max: float = 5800.0
 
-    # Whole-section total count sanity (advisory). Uses the single root row --
-    # never a sum over nested annotations.
+    # Grey-matter CONTRAST. New gate, and the one that encodes the flooding failure
+    # mode directly: real tissue makes different structures differ (corpus CV across
+    # the grey set 0.05-0.33, median 0.20), whereas a cut low enough to segment
+    # background returns the same density everywhere (M5a_s1 CV 0.02; M5-hipp3_s1 at
+    # cut 238 CV 0.05). Separation is real but not wide -- M3-hipp1_s1 sits at 0.05
+    # with only 4 of 7 structures present -- so this is ADVISORY and reads alongside
+    # total_density rather than instead of it.
+    grey_cv_min: float = 0.08
+
+    # Whole-section density -- THE PRIMARY GATE, and now blocking. The old
+    # 300-8,000/mm^2 was wide enough that it never once fired. The corpus spans
+    # 2,896-4,431 and this single number separates every failure on record:
+    # M5a_s1 5,119 above; M5c_s1/s6 748/638 and the too-strict M5 Hipp3 candidates
+    # 684-1,552 below; the flooded M5-hipp3_s1 4,897 above its own regime's siblings.
+    # NOTE the band spans two acquisition regimes (M3 at 0.46 um/px x 4 Z sits high,
+    # 3,566-4,431; M5 at 0.69 um/px x 2 Z sits low, 2,896-3,739). It is therefore a
+    # coarse "in the family" test. Per the comparability rule, the like-for-like check
+    # is against the SAME regime's siblings; narrow this band per regime once a regime
+    # has enough accepted slices to derive one (M5 alone would give 2,896-3,739).
     root_classification: str = "allen_mouse_10um_java"
-    total_density_min: float = 300.0
-    total_density_max: float = 8000.0
+    total_density_min: float = 2800.0
+    total_density_max: float = 4600.0
 
     # k-sweep stability of P(target+ | condition+).
     k_values: tuple[float, ...] = (2.0, 2.5, 3.0)
@@ -578,9 +629,19 @@ def gate_nucleus_area_peak(percell: pd.DataFrame,
 
 def gate_white_matter(regions: pd.DataFrame,
                       th: GateThresholds = DEFAULT_THRESHOLDS) -> GateResult:
-    """KEY GATE. Fiber tracts are sparsely nucleated; their density must sit well
-    below cortex. When background DAPI haze gets segmented, white matter inverts
-    and outstrips cortex.
+    """White matter carried relative to cortex. REINTERPRETED 2026-08-05 -- read the
+    GateThresholds comment before using this number.
+
+    This gate used to assert that fiber tracts sit BELOW cortex (0.6x) and blamed
+    "DAPI haze" when they did not. That premise is wrong for a pan-nuclear anchor:
+    every one of the 16 validated slices runs 1.11-1.45, and the known-bad flooded
+    slice scored the LOWEST of all. White matter is densely populated by small, bright
+    glial nuclei.
+
+    What the ratio does track is the cut being too STRICT: as the anchor threshold
+    rises, dim cortical nuclei drop out before bright glial ones, so the ratio climbs.
+    A value above the corpus range is therefore a hint to LOWER the cut, the opposite
+    of what the old message said.
 
     Each white-matter region is measured independently and the WORST is reported --
     'fiber tracts' already contains cc and int, so summing them would double-count.
@@ -600,25 +661,36 @@ def gate_white_matter(regions: pd.DataFrame,
         return GateResult(name, float("nan"), NA,
                           f"none of {list(th.white_matter_acronyms)} present")
 
-    over_abs = worst > th.white_matter_abs_max
+    over_abs = (th.white_matter_abs_max is not None and worst > th.white_matter_abs_max)
     over_rel = np.isfinite(cortex) and cortex > 0 and worst > th.white_matter_ratio_max * cortex
     ok = not (over_abs or over_rel)
 
     ratio = worst / cortex if np.isfinite(cortex) and cortex > 0 else float("nan")
     why = []
     if over_rel:
-        why.append(f"{ratio:.2f}x cortex > {th.white_matter_ratio_max:g}x")
+        why.append(f"{ratio:.2f}x cortex > {th.white_matter_ratio_max:g}x "
+                   f"(corpus 1.11-1.45); anchor cut likely TOO STRICT -- dim cortical "
+                   f"nuclei are dropping out while bright glial ones survive")
     if over_abs:
         why.append(f"> {th.white_matter_abs_max:g}/mm^2")
     detail = (f"worst='{worst_acr}' {worst:,.0f}/mm^2 vs cortex {cortex:,.0f}/mm^2 "
               f"(ratio {ratio:.2f})"
-              + ("" if ok else "  <-- " + "; ".join(why) + "; DAPI haze likely"))
-    return GateResult(name, worst, _verdict(ok), detail, basis=ANATOMICAL)
+              + ("" if ok else "  <-- " + "; ".join(why)))
+    return GateResult(name, worst, _verdict(ok), detail, basis=INTERNAL)
 
 
 def gate_ventricle(regions: pd.DataFrame,
                    th: GateThresholds = DEFAULT_THRESHOLDS) -> GateResult:
-    """Ventricular systems are fluid-filled and should be near-empty."""
+    """Ventricular systems are fluid-filled and should be near-empty.
+
+    REPORT-ONLY while `ventricle_density_max` is None. The premise is structural and
+    still believed; the measurement is not usable as a test, because VS is named in
+    pipeline.yml `exclude_acronyms` and nevertheless carries 789-5,019/mm^2 on all 16
+    validated slices. Something upstream -- the exclusion not taking effect, ependymal
+    lining inside the ROI, registration slop, or all three -- has to be fixed before a
+    number here means anything. Setting a band now would turn that defect into an
+    expectation.
+    """
     name = "ventricle_density"
     worst_acr, worst = None, float("-inf")
     for acr in th.ventricle_acronyms:
@@ -628,6 +700,13 @@ def gate_ventricle(regions: pd.DataFrame,
     if worst_acr is None:
         return GateResult(name, float("nan"), NA,
                           f"none of {list(th.ventricle_acronyms)} present")
+    if th.ventricle_density_max is None:
+        return GateResult(name, worst, NA,
+                          f"'{worst_acr}' {worst:,.0f}/mm^2 -- reported, not tested: "
+                          f"VS is in exclude_acronyms yet carries detections on every "
+                          f"validated slice (789-5,019/mm^2), so the measurement is "
+                          f"confounded. No band until that is fixed.",
+                          advisory=True, basis=ANATOMICAL)
     ok = worst <= th.ventricle_density_max
     detail = (f"'{worst_acr}'; expect <= {th.ventricle_density_max:g}/mm^2"
               + ("" if ok else "  <-- detections inside ventricle"))
@@ -657,13 +736,55 @@ def gate_grey_matter_density(regions: pd.DataFrame,
     detail = (f"{in_band}/{len(per)} regions inside "
               f"{th.grey_density_min:g}-{th.grey_density_max:g}/mm^2 "
               f"({', '.join(f'{a} {d:,.0f}' for a, d in per)})")
-    return GateResult(name, median, _verdict(ok), detail, advisory=True, basis=ASSUMED)
+    return GateResult(name, median, _verdict(ok), detail, advisory=True, basis=INTERNAL)
+
+
+def gate_grey_contrast(regions: pd.DataFrame,
+                       th: GateThresholds = DEFAULT_THRESHOLDS) -> GateResult:
+    """Advisory. Do different grey structures come out at different densities?
+
+    Real tissue does: the corpus spreads 0.05-0.33 (CV across the grey set, median
+    0.20). A cut low enough to segment background returns the SAME density everywhere,
+    because what is being counted is no longer cells -- the flooded M5a_s1 sits at 0.02
+    and M5-hipp3_s1 at cut 238 sat at 0.05 while reading ~5,000/mm^2 in every region
+    including white matter.
+
+    Advisory, not blocking: the separation is real but narrow at the low end, since a
+    slice carrying only a few of the reference structures can score low honestly
+    (M3-hipp1_s1 is 0.05 with 4 of 7 present). Read it next to total_density, which
+    catches the same failure with more margin.
+    """
+    name = "grey_contrast_cv"
+    vals = np.array([d for acr in th.grey_matter_acronyms
+                     for d in (region_density(regions, acr)[2],) if np.isfinite(d)])
+    if vals.size < 3:
+        return GateResult(name, float("nan"), NA,
+                          f"only {vals.size} reference grey regions present; need 3",
+                          advisory=True, basis=INTERNAL)
+    cv = float(vals.std() / vals.mean()) if vals.mean() > 0 else float("nan")
+    ok = cv >= th.grey_cv_min
+    detail = (f"CV {cv:.2f} across {vals.size} grey structures "
+              f"(corpus 0.05-0.33, median 0.20; flooded M5a_s1 0.02)"
+              + ("" if ok else "  <-- structures are indistinguishable; the anchor cut "
+                               "is likely segmenting background, not nuclei"))
+    return GateResult(name, cv, _verdict(ok), detail, advisory=True, basis=INTERNAL)
 
 
 def gate_total_count(regions: pd.DataFrame,
                      th: GateThresholds = DEFAULT_THRESHOLDS) -> GateResult:
-    """Advisory. Detections per registered mm^2 across the whole section, taken
-    from the SINGLE root row so nested annotations are never double-counted."""
+    """THE PRIMARY GATE, and the only blocking one that has ever discriminated on this
+    machine. Detections per registered mm^2 across the whole section, taken from the
+    SINGLE root row so nested annotations are never double-counted.
+
+    Promoted from advisory 2026-08-05. Its old 300-8,000/mm^2 band never fired once;
+    the corpus band 2,800-4,600 separates every failure on record -- over-detection
+    above (M5a_s1 5,119, M5-hipp3_s1-at-cut-238 4,897) and under-detection below
+    (M5c_s1/s6 748/638, the too-strict M5 Hipp3 candidates 684-1,552).
+
+    It is `<internal>`: it asks whether this slice looks like our 16 accepted ones, not
+    whether either is right. And it spans two acquisition regimes, so it is coarse --
+    see the GateThresholds comment.
+    """
     name = "total_density"
     root = regions[regions["classification"].str.strip() == th.root_classification]
     if root.empty:
@@ -677,9 +798,13 @@ def gate_total_count(regions: pd.DataFrame,
         return GateResult(name, float("nan"), NA, "root area is zero", advisory=True)
     dens = count / area
     ok = th.total_density_min <= dens <= th.total_density_max
-    detail = (f"{count:,.0f} detections over {area:,.1f} mm^2 registered; expect "
-              f"{th.total_density_min:g}-{th.total_density_max:g}/mm^2")
-    return GateResult(name, dens, _verdict(ok), detail, advisory=True, basis=ASSUMED)
+    which = "" if ok else ("  <-- ABOVE corpus; cut likely too low"
+                           if dens > th.total_density_max
+                           else "  <-- BELOW corpus; cut likely too high")
+    detail = (f"{count:,.0f} detections over {area:,.1f} mm^2 registered; corpus "
+              f"{th.total_density_min:g}-{th.total_density_max:g}/mm^2 "
+              f"(16 validated slices)" + which)
+    return GateResult(name, dens, _verdict(ok), detail, basis=INTERNAL)
 
 
 # --- k-sweep stability -------------------------------------------------------
@@ -791,6 +916,7 @@ def run_all_gates(sl: SliceFiles, project_dir: Path,
         results.append(gate_white_matter(regions, th))
         results.append(gate_ventricle(regions, th))
         results.append(gate_grey_matter_density(regions, th))
+        results.append(gate_grey_contrast(regions, th))
         results.append(gate_total_count(regions, th))
     else:
         for nm, adv in (("white_matter_density", False), ("ventricle_density", False),
@@ -898,18 +1024,27 @@ def _write_synthetic_project(base: Path, two_marker: bool = True) -> Path:
 
     def _regions(good: bool) -> pd.DataFrame:
         # density = count / (area_um2 / 1e6)
+        #
+        # Numbers rebuilt 2026-08-05 against the re-derived corpus bands. The clean
+        # slice sits mid-corpus (3,500/mm^2 total, grey structures spread 2,000-4,500,
+        # cc at 1.25x cortex like every real slice). The degraded slice models the
+        # failure the OLD fixture could not express -- an anchor cut that is too
+        # STRICT: total density collapses below the corpus, grey falls under the band,
+        # and white matter climbs to 3x cortex because dim cortical nuclei die while
+        # bright glial ones survive. (The flooding mode is covered separately by the
+        # gate_grey_contrast check in the self-test, which needs a flat frame.)
         spec = [
-            ("Root", "allen_mouse_10um_java", 40e6, 40_000),
-            ("Isocortex", "Left: Isocortex", 7e6, 7_000),     # 1000 /mm^2
-            ("Isocortex", "Right: Isocortex", 7e6, 7_000),
-            ("CA1", "Left: CA1", 0.7e6, 700),
-            ("CA3", "Left: CA3", 0.5e6, 500),
-            ("DG", "Left: DG", 0.5e6, 600),
-            ("TH", "Left: TH", 2e6, 2_000),
-            ("cc", "Left: cc", 1.0e6, 300 if good else 5_000),   # 300 vs 5000 /mm^2
-            ("int", "Left: int", 0.4e6, 120 if good else 1_800),
-            ("fiber tracts", "Left: fiber tracts", 2.0e6, 600 if good else 9_000),
-            ("VS", "Left: VS", 0.7e6, 140 if good else 1_400),   # 200 vs 2000 /mm^2
+            ("Root", "allen_mouse_10um_java", 40e6, 140_000 if good else 48_000),
+            ("Isocortex", "Left: Isocortex", 7e6, 24_500 if good else 7_000),
+            ("Isocortex", "Right: Isocortex", 7e6, 24_500 if good else 7_000),
+            ("CA1", "Left: CA1", 0.7e6, 1_540 if good else 630),
+            ("CA3", "Left: CA3", 0.5e6, 1_000 if good else 400),
+            ("DG", "Left: DG", 0.5e6, 1_400 if good else 500),
+            ("TH", "Left: TH", 2e6, 9_000 if good else 2_400),
+            ("cc", "Left: cc", 1.0e6, 4_375 if good else 3_000),   # 1.25x vs 3.0x cortex
+            ("int", "Left: int", 0.4e6, 1_600 if good else 900),
+            ("fiber tracts", "Left: fiber tracts", 2.0e6, 8_400 if good else 4_000),
+            ("VS", "Left: VS", 0.7e6, 1_000 if good else 1_400),   # report-only now
         ]
         return pd.DataFrame([{
             "Image Name": "syn", "Name": n, "Classification": c,
@@ -1001,7 +1136,7 @@ def _self_test() -> None:
 
         regions_good = load_regions_tsv(good.regions_tsv, "DAPI-T4")
         _c, _a, d = region_density(regions_good, "Isocortex")
-        check(abs(d - 1000.0) < 1e-6, f"region_density pools hemispheres (Isocortex {d:.0f}/mm^2)")
+        check(abs(d - 3500.0) < 1e-6, f"region_density pools hemispheres (Isocortex {d:.0f}/mm^2)")
 
         print("\n[2] gates -- clean slice should PASS")
         for r in run_all_gates(good, proj):
@@ -1009,7 +1144,11 @@ def _self_test() -> None:
         res_good = {r.name: r for r in run_all_gates(good, proj)}
         check(res_good["nucleus_area_peak_um2"].status == PASS, "area peak PASS on clean slice")
         check(res_good["white_matter_density"].status == PASS, "white matter PASS on clean slice")
-        check(res_good["ventricle_density"].status == PASS, "ventricle PASS on clean slice")
+        check(res_good["total_density"].status == PASS, "total density inside corpus band")
+        check(res_good["grey_contrast_cv"].status == PASS, "grey structures differ on clean slice")
+        check(res_good["ventricle_density"].status == NA
+              and res_good["ventricle_density"].advisory,
+              "ventricle is report-only while its measurement is confounded")
         check(res_good["k_swing_pp"].status == PASS, "k-sweep stable on clean bimodal signal")
 
         toks = resolve_marker_tokens(load_percell_for_slice(good), cfg)
@@ -1021,8 +1160,23 @@ def _self_test() -> None:
             print(r.render())
         res_bad = {r.name: r for r in run_all_gates(bad, proj)}
         check(res_bad["nucleus_area_peak_um2"].status == FLAG, "area peak FLAG when over-split")
-        check(res_bad["white_matter_density"].status == FLAG, "white matter FLAG on DAPI haze")
-        check(res_bad["ventricle_density"].status == FLAG, "ventricle FLAG when populated")
+        check(res_bad["white_matter_density"].status == FLAG,
+              "white matter FLAG when the cut is too strict (3x cortex)")
+        check(res_bad["total_density"].status == FLAG, "total density FLAG below corpus")
+        check("too high" in res_bad["total_density"].detail,
+              "total density says WHICH WAY the cut is wrong")
+        # The ventricle band is retired, not deleted: setting one re-arms the gate.
+        armed = replace(DEFAULT_THRESHOLDS, ventricle_density_max=500.0)
+        r_v = gate_ventricle(load_regions_tsv(bad.regions_tsv, "DAPI-T4"), armed)
+        check(r_v.status == FLAG, "ventricle FLAGs again once a band is set")
+
+        # Flooding is the other failure mode, and needs a frame where every structure
+        # reads the same -- the shape M5a_s1 and M5-hipp3_s1-at-238 both had.
+        flat = load_regions_tsv(good.regions_tsv, "DAPI-T4").copy()
+        flat["density"] = 5_000.0
+        flat["count"] = flat["area_mm2"] * 5_000.0
+        check(gate_grey_contrast(flat).status == FLAG,
+              "grey contrast FLAGs when every structure reads the same (flooding)")
 
         print("\n[4] every gate exposes (value, status)")
         for r in run_all_gates(good, proj):
@@ -1061,7 +1215,8 @@ def _self_test() -> None:
 
         print("\n[9] advisory_gates demotes without hiding the number")
         demoted = replace(DEFAULT_THRESHOLDS,
-                          advisory_gates=("white_matter_density", "ventricle_density"))
+                          advisory_gates=("white_matter_density", "ventricle_density",
+                                          "total_density"))
         base = {r.name: r for r in run_all_gates(bad, proj)}
         dem = {r.name: r for r in run_all_gates(bad, proj, demoted)}
         check(base["white_matter_density"].status == FLAG
