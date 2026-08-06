@@ -42,6 +42,7 @@ CONDA_ENV = "braian"
 TUTORIAL_HOME = "docs/index.md (preview with `mkdocs serve`)"
 REGISTRATION_DOC = "docs/runbook/01-registration.md"
 DETECTION_DOC = "docs/runbook/02-detection.md"
+MANUAL_ROI_DOC = "docs/runbook/05-manual-roi.md"
 
 
 def _conda_run(script_rel: str, *args: str) -> int:
@@ -102,6 +103,37 @@ def action_gui_classify_export() -> int:
     print("  This launcher cannot drive QuPath — come back here once the "
           "export has run.")
     return 0
+
+
+def action_gui_manual_roi() -> int:
+    """[GUI] STOP — count inside ROIs you draw by hand (no atlas)."""
+    print("  [GUI] This is the MANUAL route, parallel to the registered one above.")
+    print("  No ABBA, no registration, no BraiAn.yml — just the image and your shapes.")
+    print("  In QuPath:")
+    print("    1. Open the image and draw ROIs (any area tool). Name them to name")
+    print("       their CSV rows; same name on several shapes also pools them.")
+    print("    2. Automate > Script editor > scripts/roi_count.groovy > Run.")
+    print("    3. Adjust the settings dialog, press OK, then LOOK at the overlay.")
+    print("  Re-running is safe. The dialog's Stage control skips detection when only")
+    print("  the marker cut changed, so tuning k costs seconds rather than minutes.")
+    print("")
+    print("  Read the counts (no QuPath needed):")
+    print("    conda run -n braian python scripts/cockpit_roi.py --project \"<project>\"")
+    print("    or notebooks/04_roi.ipynb — which also sets both cuts BY EYE.")
+    print(f"  Full walkthrough: {MANUAL_ROI_DOC}")
+    print("  This launcher cannot drive QuPath — the looking is the point.")
+    return 0
+
+
+def action_roi_readout() -> int:
+    """[SCRIPTABLE] Read manual-ROI counts + check what is poolable."""
+    print("Reading results/roi/ and grouping the counts by the RULE that produced")
+    print("them, so a magnification difference cannot be read as biology.")
+    project = input("  QuPath project directory: ").strip()
+    if not project:
+        print("  Cancelled.")
+        return 1
+    return _conda_run("scripts/cockpit_roi.py", "--project", project)
 
 
 def action_aggregate_zero_leak() -> int:
@@ -168,6 +200,8 @@ MENU = [
     ("ABBA atlas registration", "GUI", action_gui_registration),
     ("BraiAnDetect detection", "GUI", action_gui_detection),
     ("Classify + export (\"Run for project\" in QuPath)", "GUI", action_gui_classify_export),
+    ("Count inside ROIs you draw by hand (no atlas)", "GUI", action_gui_manual_roi),
+    ("Manual-ROI readout + comparability check", "SCRIPTABLE", action_roi_readout),
     ("Aggregate combined CSV + re-prove zero-leak", "SCRIPTABLE", action_aggregate_zero_leak),
     ("Verify per-slice export integrity", "SCRIPTABLE", action_verify_export_integrity),
     ("Show where outputs landed", "SCRIPTABLE", action_show_outputs),

@@ -13,6 +13,18 @@ BraiAnDetect → classify → export → per-region table) lives in
 `docs/` is the single source of truth; this file is only a pointer so the
 repo landing page finds a runbook.
 
+## Counting inside ROIs you draw, without an atlas
+
+A parallel route for images you want counts from but would never register: draw
+ROIs in QuPath, run one script, get CSVs. No ABBA, no registration, no
+`BraiAn.yml`. It reuses the registered route's segmentation, threshold rule,
+compartment measures and marker cut — so the numbers mean the same thing — and
+stores settings **per image**, because images counted this way arrive at
+different magnifications, Z depths and intensities.
+
+Full walkthrough: [`docs/runbook/05-manual-roi.md`](docs/runbook/05-manual-roi.md).
+Operator surface: `notebooks/04_roi.ipynb`.
+
 ## Starting on a new brain / new slice-set
 
 The two steps that are easy to miss, and that everything else depends on:

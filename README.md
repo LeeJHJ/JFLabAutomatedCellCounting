@@ -41,7 +41,7 @@ will break `braian` if co-installed.
 ~/miniforge3/envs/braian/bin/python scripts/smoke_test.py
 ```
 
-Expect **`24/24 checks passed`**. This is the install gate, not a formality — it builds
+Expect **`26/26 checks passed`**. This is the install gate, not a formality — it builds
 a throwaway project from nothing and runs the chain against it, so a PASS means the
 pipeline works independent of whatever state the workspace happens to be in. Every bug
 it pins was originally found by a human hitting it mid-run.
@@ -75,6 +75,7 @@ override with `export QUPATH_BIN=/your/path/to/QuPath`.
 | you want | read |
 | --- | --- |
 | run a dataset start to finish | `docs/runbook/00-run-a-new-dataset.md` |
+| **count inside ROIs you draw, with no atlas** | **`docs/runbook/05-manual-roi.md`** |
 | the ABBA registration click-path | `docs/runbook/01-registration.md` |
 | QuPath detection detail | `docs/runbook/02-detection.md` |
 | working in the QuPath GUI | `docs/runbook/04-qupath-gui.md` |
@@ -83,6 +84,19 @@ override with `export QUPATH_BIN=/your/path/to/QuPath`.
 | how to image so the data is usable | `ACQUISITION-CHECKLIST.md` |
 | where the data currently stands | `NEXT-SESSION.md` |
 | durable rules and constraints | `CLAUDE.md` |
+
+### Two routes, one set of principles
+
+The **registered route** above maps a whole section to Allen CCFv3 and counts per atlas
+region. The **manual-ROI route** (`scripts/roi_count.groovy`, `notebooks/04_roi.ipynb`)
+counts inside shapes you draw in QuPath — no atlas, no registration, no `BraiAn.yml`, and
+no requirement that the image be a section at all.
+
+They share the machinery that decides the numbers: the same watershed segmentation, the
+same relative anchor threshold, the same local-background-subtracted compartment measures,
+and the same robust marker cut — held identical by a smoke-test pin. They differ only in
+what defines a region: an atlas transform, or your hand. A project runs one route or the
+other, never both on the same entry.
 
 There is also a guided launcher for the scriptable steps:
 
@@ -143,7 +157,7 @@ scripts/                    SOURCE of truth for all pipeline code
   cockpit_*.py              the operator's analysis surface
   smoke_test.py             install + regression gate
   sync_project.py           deploy scripts/ + merge config into a QuPath project
-notebooks/                  01_calibrate, 02_batch, 03_animal
+notebooks/                  01_calibrate, 02_batch, 03_animal, 04_roi
 docs/runbook/               operator documentation
 envs/                       pinned requirements + create_envs.sh
 <Animal Region Date>/       one directory per imaging session

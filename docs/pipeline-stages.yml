@@ -315,6 +315,62 @@ stages:
       Nothing currently calls this. Needs stage `export_coords`. Kept because the 3D
       readout is a stated project goal, but treat as unfinished until wired up.
 
+  # ── Manual-ROI branch ──────────────────────────────────────────────────────
+  # A PARALLEL PATH, not a step in the one above. It answers "how many cells are in
+  # this shape I drew", with no atlas, no registration and no BraiAn.yml. It shares
+  # the segmentation engine, the threshold rule, the compartment measures and the
+  # marker cut with the registered route, and shares NOTHING else: a project runs one
+  # route or the other, never both on the same entry.
+  #
+  # It exists because images worth counting are not always worth registering, and
+  # because they arrive at magnifications, Z depths and intensities that the
+  # registered route's single locked parameter set was never meant to span.
+
+  - id: roi_draw
+    name: "Draw counting ROIs by hand"
+    status: active
+    kind: gui
+    environment: qupath
+    notes: >
+      Any area tool. Naming a shape names its CSV row; several shapes sharing a name
+      also pool into one row. Unnamed shapes are auto-named and the name is written
+      back, so QuPath and the CSV always agree about what a row refers to. This stage
+      cannot be automated and should not be: the drawing IS the region definition.
+
+  - id: roi_count
+    name: "Count inside the drawn ROIs"
+    status: active
+    kind: gui
+    environment: qupath
+    entry: "scripts/roi_count.groovy"
+    outputs: ["results/roi/*__percell_export.tsv", "results/roi/*__roi_counts.tsv",
+              "results/roi/roi_counts_combined.csv", "roi_settings.yml"]
+    notes: >
+      One button: detect, measure, classify, export. Opens a settings dialog seeded
+      from this image's saved block, so tuning never means editing YAML. Detection is
+      BraiAnDetect's ChannelDetections pointed at the drawn annotations instead of the
+      atlas Root -- the same watershed, not an imitation. Anchor cut offers image_span
+      (the registered route's whole-image rule), roi_span (the same rule measured
+      inside the ROIs only) and absolute (set by eye), and PRINTS ALL THREE every run
+      so a disagreement between them is visible before it is committed to. Classified
+      by the same robust median + k x 1.4826 x MAD cut, held identical to
+      02_detect_classify.groovy by smoke_test check `roi_math_pinned_to_02`. Settings
+      live PER IMAGE in roi_settings.yml and every count row carries a settings_hash.
+
+  - id: roi_readout
+    name: "Manual-ROI readout and comparability check"
+    status: active
+    kind: scriptable
+    environment: notebook
+    entry: "scripts/cockpit_roi.py"
+    notes: >
+      notebooks/04_roi.ipynb is the operator surface. Groups counts by settings_hash
+      and names which provenance fields differ, geometry breaks (pixel size, Z depth,
+      channel) first, because those are the ones no threshold rule can absorb. Also
+      re-expresses the micron parameters in each image's own PIXELS -- the check that
+      makes a parameter set borrowed across magnifications visible. Advisory only.
+      Engram metrics are imported from cockpit_animal, never recomputed here.
+
 # Cross-cutting rules a consumer may want to surface alongside the stages.
 principles:
   evidence_hierarchy: >
@@ -328,4 +384,10 @@ principles:
     Relative thresholds absorb brightness drift but NOT geometry (pixel size, Z depth)
     or separability (SNR). One acquisition regime per comparison.
   one_classification_path: >
-    Classification happens only in 02_detect_classify.groovy, driven by pipeline.yml.
+    On the registered route, classification happens only in 02_detect_classify.groovy,
+    driven by pipeline.yml -- every project's BraiAn.yml `classifiers:` block stays
+    empty. The manual-ROI route (roi_count.groovy) is a separate entry point that
+    carries a COPY of the same cut so that 02 could be left untouched; the copy is held
+    identical by smoke_test check `roi_math_pinned_to_02`, which fails if either file's
+    arithmetic moves. Either way there is one MARKER DECLARATION, pipeline.yml, and a
+    given entry is only ever classified by one route.
