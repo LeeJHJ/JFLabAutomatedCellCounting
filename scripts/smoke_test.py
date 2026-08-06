@@ -631,7 +631,12 @@ def _groovy_writes_without_mkdirs(source: str) -> list[str]:
             continue
         var = m.group(1)
         window = "\n".join(lines[i:i + _MKDIRS_WINDOW])
-        if f"{var}.getParentFile().mkdirs()" not in window:
+        # Either guard is sufficient. `.getParentFile().mkdirs()` is right when the
+        # variable names a FILE; `.mkdirs()` is right (and strictly stronger) when it
+        # names a DIRECTORY the script is about to write into, as the manual-ROI export
+        # does with results/roi. Accepting only the first form failed a correct script.
+        if (f"{var}.getParentFile().mkdirs()" not in window
+                and f"{var}.mkdirs()" not in window):
             offenders.append(f"line {i + 1}: {line.strip()}")
     return offenders
 
@@ -681,6 +686,108 @@ def _groovy_classifier_dir(ctx: Ctx) -> str:
                  f"throws FileNotFoundException on a fresh project, AFTER detection has "
                  f"already run.")
     return f"{len(hits)} call site(s), each creating the directory before writing"
+
+
+def _extract_closure(source: str, name: str) -> str:
+    """The body of `def <name> = { ... }`, by brace matching. '' when absent."""
+    marker = f"def {name} = {{"
+    start = source.find(marker)
+    if start < 0:
+        return ""
+    i = start + len(marker) - 1
+    depth = 0
+    for j in range(i, len(source)):
+        if source[j] == "{":
+            depth += 1
+        elif source[j] == "}":
+            depth -= 1
+            if depth == 0:
+                return source[i:j + 1]
+    return ""
+
+
+def _normalize_groovy(body: str) -> str:
+    """Strip comments, whitespace and statement separators so only the arithmetic remains."""
+    import re
+    body = re.sub(r"/\*.*?\*/", "", body, flags=re.S)
+    body = re.sub(r"//[^\n]*", "", body)
+    return re.sub(r"[\s;]+", "", body)
+
+
+@check("roi_math_pinned_to_02", "classify",
+       "manual-ROI marker cut is identical to the registered route's")
+def _roi_math_pinned_to_02(ctx: Ctx) -> str:
+    """The manual-ROI route carries its OWN copy of the robust marker cut, so that
+    02_detect_classify.groovy could stay untouched while a second, ROI-shaped entry
+    point was added. A copy is only safe while it stays a copy: the failure this
+    holds down is someone fixing the cut in one file and not the other, after which
+    two routes in the same project silently disagree about which cells are positive.
+
+    Whitespace and comments are normalised away; the arithmetic must match exactly."""
+    ref = ctx.groovy_dir / "02_detect_classify.groovy"
+    roi = ctx.groovy_dir / "roi_count.groovy"
+    _require(ref.is_file(), f"{ref} not found")
+    _require(roi.is_file(), f"{roi} not found")
+    ref_src, roi_src = ref.read_text(), roi.read_text()
+
+    for name in ("medianOf", "madOf", "robustThreshold"):
+        a = _extract_closure(ref_src, name)
+        b = _extract_closure(roi_src, name)
+        _require(a, f"02_detect_classify.groovy no longer defines `{name}` -- has the "
+                    f"marker cut moved? Re-point this check before deleting it.")
+        _require(b, f"roi_count.groovy no longer defines `{name}`")
+        _require(_normalize_groovy(a) == _normalize_groovy(b),
+                 f"`{name}` DIFFERS between 02_detect_classify.groovy and roi_count.groovy.\n"
+                 f"      The two routes would now call different cells positive.\n"
+                 f"      02 : {_normalize_groovy(a)[:180]}\n"
+                 f"      roi: {_normalize_groovy(b)[:180]}")
+
+    # The comparison operator decides the boundary case, and a `>` for a `>=` is the
+    # kind of edit that changes counts slightly and is never noticed.
+    for path, src in ((ref, ref_src), (roi, roi_src)):
+        _require("1.4826d * mad" in src.replace("(1.4826d*mad)", "1.4826d * mad"),
+                 f"{path.name} no longer scales MAD by 1.4826 -- the cut is no longer "
+                 f"in robust SDs")
+    _require('[nuclear: "Nucleus", cytoplasmic: "Cytoplasm", "whole-cell": "Cell"]' in ref_src,
+             "02_detect_classify.groovy changed its compartment->label map")
+    _require('[nuclear: "Nucleus", cytoplasmic: "Cytoplasm", "whole-cell": "Cell"]' in roi_src,
+             "roi_count.groovy's compartment->label map no longer matches 02's, so the two "
+             "routes read different measurement keys for the same marker")
+    _require('mean (bg-sub)' in ref_src and 'mean (bg-sub)' in roi_src,
+             "the background-subtracted measurement key changed in one route only")
+    return "medianOf/madOf/robustThreshold identical; compartment map and bg-sub key match"
+
+
+@check("roi_reads_one_marker_declaration", "classify",
+       "manual-ROI route reads the marker set from pipeline.yml, not its own copy")
+def _roi_one_marker_declaration(ctx: Ctx) -> str:
+    """CLAUDE.md's 'one classification path' rule exists because a project that
+    declares its markers twice eventually classifies by two different rules. The ROI
+    route stores its own SEGMENTATION settings (they are legitimately per-image) but
+    must not redeclare which markers exist or which compartment each is measured on."""
+    roi = ctx.groovy_dir / "roi_count.groovy"
+    _require(roi.is_file(), f"{roi} not found")
+    src = roi.read_text()
+    _require('new File(project.getBaseDirectory(), "pipeline.yml")' in src
+             or 'new File(getProject().getBaseDirectory(), "pipeline.yml")' in src,
+             "roi_count.groovy no longer reads pipeline.yml -- the marker set would be "
+             "declared in two places")
+    # roi_settings.yml is the per-image SETTINGS file. The keys it round-trips are
+    # enumerated in SETTING_KEYS, so that list is where a marker or anchor declaration
+    # would have to appear in order to leak into a second declaration site.
+    import re
+    m = re.search(r"def SETTING_KEYS = \[(.*?)\]", src, flags=re.S)
+    _require(m, "roi_count.groovy no longer defines SETTING_KEYS -- re-point this check")
+    keys = set(re.findall(r'"([^"]+)"', m.group(1)))
+    _require(keys, "SETTING_KEYS parsed empty")
+    leaked = keys & {"markers", "anchor", "anchor_name", "anchor_channel", "compartment",
+                     "channel", "ring_gap_um", "ring_width_um"}
+    _require(not leaked,
+             f"roi_settings.yml would round-trip {sorted(leaked)}, which pipeline.yml already "
+             f"declares. Two files declaring the marker set is how a project ends up "
+             f"classifying the same cells by two different rules (CLAUDE.md).")
+    return (f"marker set read from pipeline.yml; roi_settings.yml round-trips "
+            f"{len(keys)} settings keys, none of them marker declarations")
 
 
 # ---------------------------------------------------------------------------
