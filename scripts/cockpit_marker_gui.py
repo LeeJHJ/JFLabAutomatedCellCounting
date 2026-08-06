@@ -155,6 +155,33 @@ def marker_channel_map(project_dir: Path) -> dict[str, str]:
     return {e["name"]: e["channel"] for e in parse_markers(project_dir) if "channel" in e}
 
 
+def anchor_channel_name(project_dir: Path) -> str:
+    """The anchor channel from pipeline.yml, e.g. 'DAPI-T4'.
+
+    Read from config rather than guessed by name, for the same reason every other
+    consumer does: the anchor is config-declared (D-02) and is not always called DAPI.
+    """
+    cfg = project_dir / "pipeline.yml"
+    if not cfg.exists():
+        return ""
+    text = cfg.read_text()
+    m = re.search(r"^anchor:\s*$", text, re.M)
+    if not m:
+        return ""
+    tail = text[m.end():]
+    ch = re.search(r"^\s+channel:\s*\"?([^\"\n]+?)\"?\s*$", tail, re.M)
+    return ch.group(1).strip() if ch else ""
+
+
+def pixel_um_of(project_dir: Path) -> float | None:
+    """requestedPixelSizeMicrons from BraiAn.yml. Used only to size the orphan filter."""
+    cfg = project_dir / "BraiAn.yml"
+    if not cfg.exists():
+        return None
+    m = re.search(r"requestedPixelSizeMicrons:\s*([0-9.eE+-]+)", cfg.read_text())
+    return float(m.group(1)) if m else None
+
+
 def marker_compartment(project_dir: Path, marker: str) -> str:
     for e in parse_markers(project_dir):
         if e["name"] == marker:
@@ -268,6 +295,91 @@ def cells_in_crop(df: pd.DataFrame, marker: str, y: int, x: int,
     return sub[sel]
 
 
+def stretch(a: np.ndarray, lo_pct: float = 1.0, hi_pct: float = 99.5) -> np.ndarray:
+    """Percentile-stretch to 0..1 for display. Display only -- never fed to a cut."""
+    a = np.asarray(a, dtype=float)
+    if a.size == 0:
+        return a
+    lo, hi = np.percentile(a, [lo_pct, hi_pct])
+    return np.clip((a - lo) / max(hi - lo, 1e-9), 0, 1)
+
+
+def composite(marker_crop: np.ndarray, anchor_crop: np.ndarray | None,
+              marker_colour: str = "green") -> np.ndarray:
+    """Marker in one colour, anchor (DAPI) in blue -- an RGB image for the eye.
+
+    WHY THE ANCHOR BELONGS IN THIS PICTURE. Every marker call is nucleus-anchored: a
+    cell is Fos+ only if a DETECTED nucleus carries the signal. So a bright marker
+    blob with no circle on it is ambiguous in a single-channel view, and the two
+    readings imply opposite actions:
+
+      blob sits on a visible DAPI nucleus  -> the nucleus was MISSED. Anchor cut or
+                                              segmentation, not k. Fix it in 3b.
+      blob has no DAPI under it            -> not a nucleus here at all: debris,
+                                              autofluorescence, or a nucleus lying
+                                              outside the single DAPI plane (the MIP
+                                              is HYBRID -- anchor is one Z plane,
+                                              markers are max-projected over all of
+                                              them, so a nucleus in the other plane
+                                              has marker signal and no DAPI).
+
+    Grayscale cannot separate those. Colour can, at a glance.
+    """
+    m = stretch(marker_crop)
+    rgb = np.zeros((*m.shape, 3), dtype=float)
+    idx = {"green": 1, "red": 0, "magenta": 0}[marker_colour]
+    rgb[..., idx] = m
+    if marker_colour == "magenta":
+        rgb[..., 2] = m
+    if anchor_crop is not None:
+        rgb[..., 2] = np.maximum(rgb[..., 2], stretch(anchor_crop) * 0.9)
+    return np.clip(rgb, 0, 1)
+
+
+def orphan_blobs(marker_crop: np.ndarray, centroids_yx: np.ndarray,
+                 pixel_um: float | None,
+                 min_area_um2: float = 15.0) -> tuple[int, int]:
+    """(blobs with no detected nucleus, total nucleus-sized bright blobs) in a crop.
+
+    A rough visual aid, NOT a measurement: it does not reproduce BraiAnDetect, so the
+    absolute count means little. The RATIO is what is worth reading -- if most bright
+    marker blobs carry no detection, the anchor stage is missing nuclei and no value
+    of k will fix it.
+
+    Splits foreground with OTSU, not a percentile. A fixed high percentile silently
+    finds NOTHING whenever the bright signal covers more than (100 - pct)% of the
+    crop: the percentile lands on the signal value itself and the strict `>` excludes
+    every pixel. Since the crop picker deliberately chooses positive-DENSE tiles, that
+    is the common case here, not the rare one.
+    """
+    from scipy import ndimage as ndi
+    from skimage.filters import threshold_otsu
+
+    if marker_crop.size == 0 or pixel_um is None or pixel_um <= 0:
+        return 0, 0
+    finite = marker_crop[np.isfinite(marker_crop)]
+    if finite.size == 0 or finite.min() == finite.max():
+        return 0, 0
+    mask = marker_crop > threshold_otsu(finite)
+    lab, n = ndi.label(mask)
+    if n == 0:
+        return 0, 0
+    px_area = pixel_um ** 2
+    sizes = np.bincount(lab.ravel())[1:] * px_area
+    big = {i + 1 for i, s in enumerate(sizes) if s >= min_area_um2}
+    if not big:
+        return 0, 0
+    hit = set()
+    h, w = marker_crop.shape
+    for cy, cx in centroids_yx:
+        iy, ix = int(cy), int(cx)
+        if 0 <= iy < h and 0 <= ix < w:
+            v = lab[iy, ix]
+            if v:
+                hit.add(int(v))
+    return len(big - hit), len(big)
+
+
 # ── shell report ────────────────────────────────────────────────────────────────
 
 def report(project: Path, marker: str | None = None, ks: np.ndarray | None = None,
@@ -347,6 +459,11 @@ def launch(project: str | Path, marker: str | None = None,
                                description="k_robust:", continuous_update=False,
                                readout_format=".2f", layout=widgets.Layout(width="520px"))
     crop_dd = widgets.Dropdown(description="crop:", layout=widgets.Layout(width="300px"))
+    show_dapi = widgets.Checkbox(value=True, description="overlay DAPI (blue)",
+                                 indent=False, layout=widgets.Layout(width="220px"))
+    colour_dd = widgets.Dropdown(options=["green", "red", "magenta"], value="green",
+                                 description="marker colour:",
+                                 layout=widgets.Layout(width="260px"))
     out = widgets.Output()
 
     def _load(path: Path):
@@ -385,11 +502,25 @@ def launch(project: str | Path, marker: str | None = None,
         k = k_sl.value
         s = summarize(vals, k)
 
-        origins = positive_dense_crops(df, name, k, crop_px, n_crops)
-        if crop_dd.options != tuple(range(len(origins))):
-            crop_dd.options = [(f"{i+1} of {len(origins)}  (y={y}, x={x})", i)
-                               for i, (y, x) in enumerate(origins)]
+        # Crops and the histogram are CACHED per (slice, marker). Neither depends on
+        # k in a way that needs recomputing: positive_dense_crops rescans every row
+        # and the histogram re-bins every value, and doing both on each slider move
+        # is what made this unusable on a 276k-cell section. Recomputing crops per k
+        # also made the view jump under the operator mid-judgement.
+        ck = (str(slice_dd.value), name)
+        if cache.get("crops_key") != ck:
+            cache["crops"] = positive_dense_crops(df, name, configured_k(project, name) or k,
+                                                  crop_px, n_crops)
+            finite = vals[np.isfinite(vals)]
+            cache["hist"] = np.histogram(
+                finite, bins=200,
+                range=(float(np.nanpercentile(finite, .5)),
+                       float(np.nanpercentile(finite, 99.8)))) if finite.size else None
+            cache["crops_key"] = ck
+            crop_dd.options = [(f"{i+1} of {len(cache['crops'])}  (y={yy}, x={xx})", i)
+                               for i, (yy, xx) in enumerate(cache["crops"])]
             crop_dd.value = 0
+        origins = cache["crops"]
         y, x = origins[min(crop_dd.value or 0, len(origins) - 1)]
 
         with out:
@@ -403,26 +534,39 @@ def launch(project: str | Path, marker: str | None = None,
                     a.set_xticks([]); a.set_yticks([])
             else:
                 crop = plane[y:y + crop_px, x:x + crop_px]
-                lo, hi = np.percentile(crop, [1, 99.5])
+                anchor_name = anchor_channel_name(project)
+                anchor_plane = _plane(anchor_name) if show_dapi.value else None
+                anchor_crop = (anchor_plane[y:y + crop_px, x:x + crop_px]
+                               if anchor_plane is not None else None)
+                rgb = composite(crop, anchor_crop, colour_dd.value)
                 for a in axes[:2]:
-                    a.imshow(crop, cmap="gray", vmin=lo, vmax=max(hi, lo + 1))
+                    a.imshow(rgb)
                     a.set_xticks([]); a.set_yticks([])
-                axes[0].set_title(f"{chans.get(name)}   (y={y}, x={x})")
+                axes[0].set_title(
+                    f"{chans.get(name)} in {colour_dd.value}"
+                    + (f" + {anchor_name} in blue" if anchor_crop is not None else "")
+                    + f"   (y={y}, x={x})")
                 cc = cells_in_crop(df, name, y, x, crop_px)
                 cv = cc[f"{name}_bgsub"].to_numpy(float)
                 pos = cv >= s["threshold"]
                 axes[1].scatter(cc["centroid_x_px"] - x, cc["centroid_y_px"] - y,
-                                s=46, facecolors="none", edgecolors="#38b000", linewidths=.9)
+                                s=46, facecolors="none", edgecolors="#ffffff",
+                                linewidths=.8, alpha=.55)
                 axes[1].scatter(cc["centroid_x_px"][pos] - x, cc["centroid_y_px"][pos] - y,
-                                s=46, facecolors="#ff2d00", edgecolors="#ff2d00",
-                                alpha=.55, linewidths=.9)
+                                s=52, facecolors="none", edgecolors="#ffd400", linewidths=1.6)
                 axes[1].set_xlim(0, crop_px); axes[1].set_ylim(crop_px, 0)
-                axes[1].set_title(f"filled = {name}+ at k={k:g}   "
+                axes[1].set_title(f"yellow = {name}+ at k={k:g}   "
                                   f"({int(pos.sum())} of {len(cc)} in crop)")
+                cache["orphans"] = orphan_blobs(
+                    crop,
+                    np.c_[cc["centroid_y_px"].to_numpy() - y,
+                          cc["centroid_x_px"].to_numpy() - x],
+                    pixel_um_of(project))
 
-            axes[2].hist(vals, bins=200, color="0.45",
-                         range=(float(np.nanpercentile(vals, .5)),
-                                float(np.nanpercentile(vals, 99.8))))
+            if cache.get("hist") is not None:
+                counts_, edges_ = cache["hist"]
+                axes[2].bar(edges_[:-1], counts_, width=np.diff(edges_),
+                            align="edge", color="0.45")
             axes[2].set_yscale("log")
             axes[2].axvline(s["median"], color="tab:blue", ls="--", lw=1.4,
                             label=f"median {s['median']:,.0f}")
@@ -444,15 +588,33 @@ def launch(project: str | Path, marker: str | None = None,
                       f"({cur['frac_pos']*100:.2f} %) -- a change of "
                       f"{s['n_pos'] - cur['n_pos']:+,} cells")
             print(advisory(name, s["frac_pos"]).rstrip())
+
+            orph, tot = cache.get("orphans", (0, 0))
+            if tot:
+                print(f"\n  ORPHANS in this crop: {orph} of {tot} nucleus-sized bright "
+                      f"{name} blobs carry NO detected nucleus ({orph / tot * 100:.0f}%).")
+                if orph / tot > 0.25:
+                    print("    That is an ANCHOR problem, not a k problem -- no value of k")
+                    print("    can call a cell that was never detected. Two readings, and")
+                    print("    the DAPI overlay tells you which:")
+                    print("      blob sits on visible DAPI  -> the anchor cut missed it; fix in 3b")
+                    print("      no DAPI under the blob     -> not a nucleus here, OR its nucleus")
+                    print("                                    lies outside the single anchor Z")
+                    print("                                    plane (the MIP is HYBRID: anchor is")
+                    print("                                    one plane, markers are max over all)")
+                print("    Rough visual aid: a percentile cut on the crop, not BraiAnDetect.")
+                print("    Read the RATIO, not the count.")
+
             print("\n  paste into pipeline.yml markers: ")
             print(config_block(name, chans.get(name, "?"),
                                marker_compartment(project, name), k))
 
-    for w in (slice_dd, marker_dd, k_sl, crop_dd):
+    for w in (slice_dd, marker_dd, k_sl, crop_dd, show_dapi, colour_dd):
         w.observe(_redraw, names="value")
     _redraw()
     display(widgets.VBox([widgets.HBox([slice_dd, marker_dd]),
-                          widgets.HBox([k_sl, crop_dd]), out]))
+                          widgets.HBox([k_sl, crop_dd]),
+                          widgets.HBox([show_dapi, colour_dd]), out]))
 
 
 # ── self-test ───────────────────────────────────────────────────────────────────
@@ -489,6 +651,37 @@ def _self_test() -> int:
     pop = marker_population(df, "TdT")
     check("classifiable drops Excluded and NaN", pop.size == 2 and set(pop) == {1.0, 2.0},
           f"{pop}")
+
+    # display helpers: colour placement and the anchor overlay
+    m = np.zeros((8, 8)); m[2:5, 2:5] = 100.0
+    a = np.zeros((8, 8)); a[5:7, 5:7] = 100.0
+    rgb = composite(m, a, "green")
+    check("composite is RGB", rgb.shape == (8, 8, 3), str(rgb.shape))
+    check("marker lands in GREEN", rgb[3, 3, 1] > 0.9 and rgb[3, 3, 0] == 0)
+    check("anchor lands in BLUE", rgb[6, 6, 2] > 0.5)
+    check("red option moves the marker channel", composite(m, None, "red")[3, 3, 0] > 0.9)
+    check("no anchor -> blue stays empty",
+          float(composite(m, None, "green")[..., 2].max()) == 0.0)
+    check("stretch is 0..1 and NaN-free",
+          0.0 <= float(stretch(m).min()) and float(stretch(m).max()) <= 1.0)
+
+    # orphan detection: a bright blob with no centroid on it is an orphan; one with a
+    # centroid is not. This is the check that would have caught the 72% Fos result
+    # being a rendering artifact rather than a real anchor gap.
+    crop = np.zeros((60, 60)); crop[10:20, 10:20] = 500.0; crop[40:50, 40:50] = 500.0
+    orph, tot = orphan_blobs(crop, np.array([[15.0, 15.0]]), pixel_um=1.0)
+    check("one covered blob, one orphan", (orph, tot) == (1, 2), f"{(orph, tot)}")
+    # REGRESSION: a percentile cut returned (0, 0) here because the two bright squares
+    # are 5.6% of the crop, so percentile(99) landed ON 500 and `> 500` matched nothing.
+    # The crop picker chooses positive-DENSE tiles, so that was the common case.
+    dense = np.zeros((40, 40)); dense[:, :20] = 500.0
+    _, tot_dense = orphan_blobs(dense, np.zeros((0, 2)), pixel_um=1.0)
+    check("dense signal still finds its blob (percentile cut found none)", tot_dense >= 1,
+          f"tot={tot_dense}")
+    orph2, _ = orphan_blobs(crop, np.array([[15.0, 15.0], [45.0, 45.0]]), pixel_um=1.0)
+    check("both covered -> no orphans", orph2 == 0, str(orph2))
+    check("no pixel size -> refuses rather than guessing",
+          orphan_blobs(crop, np.array([[15.0, 15.0]]), pixel_um=None) == (0, 0))
 
     # a monotone sweep: raising k can never increase positives
     vals = np.random.default_rng(0).normal(100, 10, 5000)
